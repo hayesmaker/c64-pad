@@ -1,23 +1,54 @@
 import type { EdgeTab } from './edge-tabs'
+import type { Project } from '@/c64/project'
 
 export type EditorKind = 'sprites' | 'charsets' | 'maps'
 
 /**
- * Edge tabs for a project's editors. Tabs for other editors go to the project
- * page until the project model can tell us the last-opened asset of each kind.
+ * Edge tabs for a project's editors. Each opens the first asset of its kind
+ * (or the project page if there is none).
  */
 export function editorTabs(
-  projectId: string,
+  project: Project,
   current: EditorKind,
 ): Array<EdgeTab> {
-  const tab = (label: string, kind: EditorKind): EdgeTab => ({
-    label,
-    current: kind === current,
-    link: { to: '/projects/$projectId', params: { projectId } },
-  })
+  const projectId = project.id
+  const toProject: EdgeTab['link'] = {
+    to: '/projects/$projectId',
+    params: { projectId },
+  }
+  const set = project.spriteSets.at(0)
+  const charset = project.charsets.at(0)
+  const map = project.maps.at(0)
   return [
-    tab('SPRITES', 'sprites'),
-    tab('CHARS', 'charsets'),
-    tab('SCREEN', 'maps'),
+    {
+      label: 'SPRITES',
+      current: current === 'sprites',
+      link: set
+        ? {
+            to: '/projects/$projectId/sprites/$setId',
+            params: { projectId, setId: set.id },
+          }
+        : toProject,
+    },
+    {
+      label: 'CHARS',
+      current: current === 'charsets',
+      link: charset
+        ? {
+            to: '/projects/$projectId/charsets/$charsetId',
+            params: { projectId, charsetId: charset.id },
+          }
+        : toProject,
+    },
+    {
+      label: 'SCREEN',
+      current: current === 'maps',
+      link: map
+        ? {
+            to: '/projects/$projectId/maps/$mapId',
+            params: { projectId, mapId: map.id },
+          }
+        : toProject,
+    },
   ]
 }

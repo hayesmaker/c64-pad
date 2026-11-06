@@ -1,6 +1,9 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, notFound } from '@tanstack/react-router'
 import { PlaceholderPage } from '@/components/layout/placeholder-page'
+import { SaveStatus } from '@/components/save-status'
 import { editorTabs } from '@/components/worksheet/editor-tabs'
+import { findAsset } from '@/c64/project'
+import { useCurrentProject } from '@/storage/use-current-project'
 
 export const Route = createFileRoute(
   '/projects/$projectId/charsets/$charsetId',
@@ -9,21 +12,28 @@ export const Route = createFileRoute(
 })
 
 function CharsetEditor() {
-  const { projectId, charsetId } = Route.useParams()
+  const { charsetId } = Route.useParams()
+  const { project, status, error } = useCurrentProject()
+  const asset = findAsset(project, 'charsets', charsetId)
+  if (!asset) throw notFound()
   return (
     <PlaceholderPage
       title="Character Worksheet"
       crumbs={[
         { label: 'My Projects', link: { to: '/projects' } },
         {
-          label: projectId,
-          link: { to: '/projects/$projectId', params: { projectId } },
+          label: project.name,
+          link: {
+            to: '/projects/$projectId',
+            params: { projectId: project.id },
+          },
         },
-        { label: charsetId },
+        { label: asset.name },
       ]}
-      tabs={editorTabs(projectId, 'charsets')}
+      actions={<SaveStatus status={status} error={error} />}
+      tabs={editorTabs(project, 'charsets')}
     >
-      Charset {charsetId}
+      Charset “{asset.name}”: the editor arrives in a later milestone.
     </PlaceholderPage>
   )
 }

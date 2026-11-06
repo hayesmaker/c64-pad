@@ -10,17 +10,20 @@ export function PlaceholderPage({
   title,
   crumbs = [],
   tabs,
+  actions,
   children,
 }: {
   title: string
   crumbs?: Array<Crumb>
   tabs?: Array<EdgeTab>
+  actions?: ReactNode
   children?: ReactNode
 }) {
   return (
     <WorksheetLayout
       title={title}
       breadcrumbs={<Breadcrumbs items={crumbs} />}
+      actions={actions}
       tabs={tabs && <EdgeTabs tabs={tabs} />}
       className="p-6 text-muted-foreground"
     >

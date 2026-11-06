@@ -28,13 +28,14 @@ See `PLAN.md` → _Decisions_ for the reasoning behind these.
 
 ### M2: Persistence
 
-- [ ] IndexedDB repository (e.g. `idb`), autosave with debounce
-- [ ] My Projects page: list, create, rename, duplicate, delete, last-modified
-- [ ] Project page: list sprite sets / charsets / maps with thumbnails; add, rename, duplicate, delete assets (block/reassign when deleting a charset in use)
-- [ ] Project file export/import (`.c64pad` versioned JSON, with migration hook)
+- [x] IndexedDB repository (e.g. `idb`), autosave with debounce
+- [x] My Projects page: list, create, rename, duplicate, delete, last-modified
+- [x] Project page: list sprite sets / charsets / maps with thumbnails; add, rename, duplicate, delete assets (block/reassign when deleting a charset in use)
+- [x] Project file export/import (`.c64pad` versioned JSON, with migration hook)
 
 ### M3: Sprite designer (MVP)
 
+- [ ] Editor pages fill exactly one screen (no page scroll); sheet body scrolls inside where needed
 - [ ] Layout fits the target tablet viewport: **1200×752 CSS px** landscape (RedMagic Astra 2), as well as 1280×800
 - [ ] Canvas pixel grid renderer (24×21, double-wide cells in MC), 8-px column separators + 7-row bands like the worksheet
 - [ ] Bit-weight header (128…1 ×3) and row numbers; live DATA panel (3 bytes × 21 rows, dec/hex toggle)

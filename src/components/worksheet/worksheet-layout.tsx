@@ -34,18 +34,18 @@ export function WorksheetLayout({
           !tabs && 'mr-3',
         )}
       >
-        <header className="flex h-14 shrink-0 items-center gap-4 border-b border-rule-soft px-5">
-          <div className="flex w-[300px] min-w-0 items-center">
-            {breadcrumbs}
-          </div>
-          <div className="flex flex-1 items-center gap-4">
-            <DoubleRule />
-            <h1 className="text-2xl font-light tracking-[0.01em] whitespace-nowrap">
-              {title}
-            </h1>
+        <header className="grid h-14 shrink-0 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-4 border-b border-rule-soft px-5">
+          <div className="flex min-w-0 items-center gap-4">
+            <div className="min-w-0 shrink">{breadcrumbs}</div>
             <DoubleRule />
           </div>
-          <div className="flex w-[300px] justify-end gap-2">{actions}</div>
+          <h1 className="text-2xl font-light tracking-[0.01em] whitespace-nowrap">
+            {title}
+          </h1>
+          <div className="flex min-w-0 items-center gap-4">
+            <DoubleRule />
+            <div className="flex shrink-0 items-center gap-2">{actions}</div>
+          </div>
         </header>
         <div className={cn('min-h-0 flex-1', className)}>{children}</div>
       </div>
@@ -56,6 +56,9 @@ export function WorksheetLayout({
 
 function DoubleRule() {
   return (
-    <div aria-hidden="true" className="h-[3px] flex-1 border-y border-rule" />
+    <div
+      aria-hidden="true"
+      className="h-[3px] min-w-6 flex-1 border-y border-rule"
+    />
   )
 }
