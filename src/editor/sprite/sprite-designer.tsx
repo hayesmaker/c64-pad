@@ -17,6 +17,7 @@ import {
   FlipVertical2,
   Move,
   PaintBucket,
+  Play,
   Pencil,
   Redo2,
   Trash2,
@@ -63,6 +64,9 @@ import { ModelError } from '@/c64/errors'
 import { useAssetHistory } from '../asset-history'
 import { AnimationControls, useAnimationFrame } from './animation'
 import { ExportSpritesDialog } from './export-dialog'
+import { EmulatorOverlay } from '@/emulator/emulator-overlay'
+import { buildViewerPrg, spriteSetShowcase } from '@/emulator/sprite-viewer'
+import { safeFileName } from '@/platform/save-file'
 import { Button } from '@/components/ui/button'
 import { DEFAULT_VIEW, zoomAround } from '../view'
 import type { GridView } from '../view'
@@ -122,6 +126,10 @@ export function SpriteDesigner({
   const [animationId, setAnimationId] = useState<string | null>(null)
   const [playing, setPlaying] = useState(false)
   const [exporting, setExporting] = useState(false)
+  const [running, setRunning] = useState<{
+    prg: Uint8Array
+    title: string
+  } | null>(null)
   const animation = set.animations.find((a) => a.id === animationId)
   const frameId = useAnimationFrame(animation, playing)
   const [tool, setTool] = useState<Tool>('draw')
@@ -220,6 +228,24 @@ export function SpriteDesigner({
       actions={
         <>
           <SaveStatus status={status} error={error} />
+          <Button
+            onClick={() => {
+              const prg = buildViewerPrg(
+                spriteSetShowcase(set, {
+                  selectedId: selected.id,
+                  animationId: animation?.id ?? null,
+                  background: background ?? 6,
+                }),
+              )
+              setRunning({
+                prg,
+                title: `${set.name}${animation ? ` · ${animation.name}` : ` · sprite ${set.sprites.indexOf(selected)}`}`,
+              })
+            }}
+          >
+            <Play aria-hidden="true" />
+            Run
+          </Button>
           <Button variant="outline" onClick={() => setExporting(true)}>
             <Download aria-hidden="true" />
             Export
@@ -586,6 +612,14 @@ export function SpriteDesigner({
           currentIndex={set.sprites.indexOf(selected)}
           background={background}
           onClose={() => setExporting(false)}
+        />
+      )}
+      {running && (
+        <EmulatorOverlay
+          prg={running.prg}
+          title={running.title}
+          fileName={`${safeFileName(project.name)}-${safeFileName(set.name)}.prg`}
+          onClose={() => setRunning(null)}
         />
       )}
     </WorksheetLayout>

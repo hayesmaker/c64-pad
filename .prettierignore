@@ -4,3 +4,4 @@ yarn.lock.output
 dist
 android
 src/routeTree.gen.ts
+public/c64

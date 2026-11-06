@@ -21,6 +21,7 @@ export default [
       '.output/**',
       'dist/**',
       'android/**',
+      'public/c64/**',
       'src/routeTree.gen.ts',
     ],
   },

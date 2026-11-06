@@ -63,11 +63,12 @@ See `PLAN.md` → _Decisions_ for the reasoning behind these.
 
 ### M5: c64-ready integration
 
-- [ ] Add `c64-ready` npm dependency; copy its runtime assets (`c64.wasm`, audio worklet) into the static build under `/c64/` (see thrust-c64 level-editor `vite.config.ts` / `server/paths.ts`)
-- [ ] `EmulatorOverlay` component wrapping `C64Player` + `CanvasRenderer` (start/stop/destroy, mute, generation guard like thrust's `player.ts`)
-- [ ] KickAss sprite-viewer stub (`stubs/sprite-viewer.asm`): shows up to 8 sprites/overlays, MC colours, expand flags, animates frames; build script emits `.prg` + offsets JSON
-- [ ] TS PRG patcher: inject sprite data/colours/anim table into the stub; unit-test offsets against the assembled labels
-- [ ] "Run in c64-ready" button → embedded overlay; also "Download .prg"
+- [x] Add `c64-ready` npm dependency; copy its runtime assets (`c64.wasm`, audio worklet) into `public/c64/` before dev/build (`scripts/copy-c64-assets.mjs`)
+- [x] `EmulatorOverlay` component wrapping `C64Player` + `CanvasRenderer` (deferred start + chained teardown, StrictMode-safe)
+- [x] KickAss sprite-viewer stub (`stubs/sprite-viewer.asm`): 8 slots, overlays, MC colours, expand flags, loop/ping-pong animation; `npm run stubs` embeds it as TS
+- [x] TS PRG builder (`src/emulator/sprite-viewer.ts`) + showcase layout; unit-tested; animation verified headless in c64-ready's core
+- [x] "Run" button → embedded overlay; "Save .prg" in the overlay
+- [ ] Verify Run (incl. animation) on the tablet
 - [ ] (Web only) "Open in c64-ready" link via `?game=<url>`, configurable base URL
 - [ ] KickAss charset/map-viewer stub (after M7): charset, map window, colour RAM, bg/MC/ECM colours
 

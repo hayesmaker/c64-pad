@@ -19,7 +19,11 @@
     "android:sync": "npm run build && cap sync android",
     "android:run": "npm run android:sync && cap run android --no-sync ${ANDROID_TARGET:+--target $ANDROID_TARGET}",
     "android:open": "cap open android",
-    "android:apk": "npm run android:sync && cd android && ./gradlew assembleDebug"
+    "android:apk": "npm run android:sync && cd android && ./gradlew assembleDebug",
+    "c64-assets": "node scripts/copy-c64-assets.mjs",
+    "predev": "npm run c64-assets",
+    "prebuild": "npm run c64-assets",
+    "stubs": "./scripts/build-stubs.sh"
   },
   "dependencies": {
     "@capacitor/android": "^8.6.0",
@@ -33,6 +37,7 @@
     "@tanstack/react-router": "1.170.46",
     "@tanstack/react-router-devtools": "1.167.2",
     "@tanstack/react-start": "1.169.4",
+    "c64-ready": "^3.1.0",
     "class-variance-authority": "^0.7.1",
     "cn": "^0.5.2",
     "idb": "^8.0.4",
