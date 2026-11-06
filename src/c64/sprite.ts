@@ -3,6 +3,7 @@ import {
   blank,
   byteLength,
   flipHorizontal,
+  floodFill,
   flipVertical,
   getPixel,
   invert,
@@ -45,7 +46,7 @@ export function createSprite(init: Partial<Sprite> = {}): Sprite {
     name: 'Sprite',
     notes: '',
     mode: 'multicolor',
-    color: 1,
+    color: 10, // light red: distinct from the default multicolours
     data: blank(SPRITE_SHAPE),
     expandX: false,
     expandY: false,
@@ -128,4 +129,14 @@ export function spriteMemoryBlock(sprite: Sprite): Uint8Array {
   const out = new Uint8Array(SPRITE_STRIDE)
   out.set(sprite.data)
   return out
+}
+
+export function fillSprite(
+  sprite: Sprite,
+  x: number,
+  y: number,
+  value: number,
+): Sprite {
+  const data = floodFill(sprite.data, SPRITE_SHAPE, sprite.mode, x, y, value)
+  return data === sprite.data ? sprite : { ...sprite, data }
 }

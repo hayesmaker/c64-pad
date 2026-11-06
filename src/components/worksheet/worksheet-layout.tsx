@@ -10,6 +10,8 @@ interface WorksheetLayoutProps {
   actions?: ReactNode
   /** Edge tabs shown down the right side of the sheet. */
   tabs?: ReactNode
+  /** Fill exactly one screen (editors); the body must handle its own overflow. */
+  fitScreen?: boolean
   className?: string
   children: ReactNode
 }
@@ -23,11 +25,17 @@ export function WorksheetLayout({
   breadcrumbs,
   actions,
   tabs,
+  fitScreen = false,
   className,
   children,
 }: WorksheetLayoutProps) {
   return (
-    <div className="flex min-h-dvh bg-desk pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
+    <div
+      className={cn(
+        'flex bg-desk pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]',
+        fitScreen ? 'h-dvh overflow-hidden' : 'min-h-dvh',
+      )}
+    >
       <div
         className={cn(
           'my-3 ml-3 flex min-w-0 flex-1 flex-col overflow-hidden rounded-[10px] border border-rule bg-paper',

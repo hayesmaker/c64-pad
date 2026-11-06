@@ -5,6 +5,7 @@ import {
   blank,
   flipHorizontal,
   flipVertical,
+  floodFill,
   getPixel,
   invert,
   pixelWidth,
@@ -162,5 +163,22 @@ describe('transforms', () => {
   })
   it('inverts every bit', () => {
     expect(Array.from(invert(Uint8Array.of(0x00, 0xf0)))).toEqual([0xff, 0x0f])
+  })
+})
+
+describe('floodFill', () => {
+  it('fills the connected region only', () => {
+    // hires char: left column filled (wall), fill the right side
+    const wall = Uint8Array.of(0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80)
+    const out = floodFill(wall, CHAR_SHAPE, 'hires', 5, 5, 1)
+    expect(Array.from(out)).toEqual(Array(8).fill(0xff))
+    const box = Uint8Array.of(0xff, 0x81, 0x81, 0xff, 0, 0, 0, 0)
+    const inside = floodFill(box, CHAR_SHAPE, 'hires', 3, 1, 1)
+    expect(Array.from(inside.slice(0, 5))).toEqual([0xff, 0xff, 0xff, 0xff, 0])
+  })
+  it('fills multicolour pixels with bit pairs and is a no-op on same value', () => {
+    const b = blank(CHAR_SHAPE)
+    expect(floodFill(b, CHAR_SHAPE, 'multicolor', 0, 0, 2)[0]).toBe(0b10101010)
+    expect(floodFill(b, CHAR_SHAPE, 'multicolor', 0, 0, 0)).toBe(b)
   })
 })

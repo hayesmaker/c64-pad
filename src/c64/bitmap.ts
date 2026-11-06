@@ -201,3 +201,31 @@ export function invert(bytes: Uint8Array): Uint8Array {
 export function blank(shape: BitmapShape): Uint8Array {
   return new Uint8Array(byteLength(shape))
 }
+
+/** Fill the 4-connected area of same-valued pixels at (x, y) with `value`. */
+export function floodFill(
+  bytes: Uint8Array,
+  shape: BitmapShape,
+  mode: PixelMode,
+  x: number,
+  y: number,
+  value: number,
+): Uint8Array {
+  checkValue(mode, value)
+  const target = getPixel(bytes, shape, mode, x, y)
+  if (target === value) return bytes
+  const w = pixelWidth(shape, mode)
+  const pixels = readPixels(bytes, shape, mode)
+  const stack: Array<number> = [y * w + x]
+  while (stack.length) {
+    const i = stack.pop()!
+    if (pixels[i] !== target) continue
+    pixels[i] = value
+    const px = i % w
+    if (px > 0) stack.push(i - 1)
+    if (px < w - 1) stack.push(i + 1)
+    if (i >= w) stack.push(i - w)
+    if (i + w < pixels.length) stack.push(i + w)
+  }
+  return writePixels(pixels, shape, mode)
+}

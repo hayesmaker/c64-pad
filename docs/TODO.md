@@ -35,17 +35,18 @@ See `PLAN.md` → _Decisions_ for the reasoning behind these.
 
 ### M3: Sprite designer (MVP)
 
-- [ ] Editor pages fill exactly one screen (no page scroll); sheet body scrolls inside where needed
+- [x] Editor pages fill exactly one screen (no page scroll); sheet body scrolls inside where needed
 - [ ] Layout fits the target tablet viewport: **1200×752 CSS px** landscape (RedMagic Astra 2), as well as 1280×800
-- [ ] Canvas pixel grid renderer (24×21, double-wide cells in MC), 8-px column separators + 7-row bands like the worksheet
-- [ ] Bit-weight header (128…1 ×3) and row numbers; live DATA panel (3 bytes × 21 rows, dec/hex toggle)
-- [ ] Pointer input: draw/erase/fill, stylus + finger, pinch-zoom, two-finger pan, palm rejection
-- [ ] Colour panel: single colour / multicolour 00–11 legend like the worksheet; click-to-select active pen
-- [ ] Hires ↔ multicolour toggle with sensible conversion
-- [ ] Tools: flip H/V, shift/roll, clear, invert, copy/paste sprite
-- [ ] Sprite list within a set (sprite number, name), add/delete/reorder; switch between sets
-- [ ] Metadata fields: sprite name, program, date designed, notes
-- [ ] Actual-size + X/Y-expand preview
+- [x] Canvas pixel grid renderer (24×21, double-wide cells in MC), 8-px column separators + 7-row bands like the worksheet
+- [x] Bit-weight header (128…1 ×3) and row numbers; live DATA panel (3 bytes × 21 rows, dec/hex toggle)
+- [x] Pointer input: draw/erase/fill, stylus + finger, gap-free strokes, palm rejection, second finger cancels stroke
+- [ ] Pinch-zoom / two-finger pan on the grid (if cells are too small on the tablet)
+- [x] Colour panel: single colour / multicolour 00–11 legend like the worksheet; click-to-select active pen
+- [x] Hires ↔ multicolour toggle with sensible conversion
+- [x] Tools: flip H/V, shift/roll, clear, invert, copy/paste sprite
+- [x] Sprite list within a set (sprite number, name), add/delete/reorder; switch between sets
+- [x] Metadata fields: sprite name, notes (program and date designed live on the project page)
+- [x] Actual-size + X/Y-expand preview
 - [ ] Animation: frame ranges, looping preview, speed control
 - [ ] Overlay: link hires sprite over MC sprite, combined preview, edit either layer
 - [ ] **Ship to tablet**: test full sprite flow on Android build

@@ -16,10 +16,12 @@ const RGB = PALETTE.map(({ hex }) => [
 export function IndexedCanvas({
   image,
   className,
+  style,
   label,
 }: {
   image: IndexedImage
   className?: string
+  style?: React.CSSProperties
   label: string
 }) {
   const ref = useRef<HTMLCanvasElement>(null)
@@ -45,6 +47,7 @@ export function IndexedCanvas({
       width={image.width}
       height={image.height}
       className={cn('[image-rendering:pixelated]', className)}
+      style={style}
     />
   )
 }

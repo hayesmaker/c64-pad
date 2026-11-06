@@ -1,37 +1,25 @@
 import { createFileRoute, notFound } from '@tanstack/react-router'
-import { PlaceholderPage } from '@/components/layout/placeholder-page'
-import { SaveStatus } from '@/components/save-status'
-import { editorTabs } from '@/components/worksheet/editor-tabs'
 import { findAsset } from '@/c64/project'
 import { useCurrentProject } from '@/storage/use-current-project'
+import { SpriteDesigner } from '@/editor/sprite/sprite-designer'
 
 export const Route = createFileRoute('/projects/$projectId/sprites/$setId')({
-  component: SpriteDesigner,
+  component: SpriteDesignerPage,
 })
 
-function SpriteDesigner() {
+function SpriteDesignerPage() {
   const { setId } = Route.useParams()
-  const { project, status, error } = useCurrentProject()
-  const asset = findAsset(project, 'spriteSets', setId)
-  if (!asset) throw notFound()
+  const { session, project, status, error } = useCurrentProject()
+  const set = findAsset(project, 'spriteSets', setId)
+  if (!set) throw notFound()
   return (
-    <PlaceholderPage
-      title="Sprite Worksheet"
-      crumbs={[
-        { label: 'My Projects', link: { to: '/projects' } },
-        {
-          label: project.name,
-          link: {
-            to: '/projects/$projectId',
-            params: { projectId: project.id },
-          },
-        },
-        { label: asset.name },
-      ]}
-      actions={<SaveStatus status={status} error={error} />}
-      tabs={editorTabs(project, 'sprites')}
-    >
-      Sprite set “{asset.name}”: the editor arrives in a later milestone.
-    </PlaceholderPage>
+    <SpriteDesigner
+      key={set.id}
+      session={session}
+      project={project}
+      set={set}
+      status={status}
+      error={error}
+    />
   )
 }
