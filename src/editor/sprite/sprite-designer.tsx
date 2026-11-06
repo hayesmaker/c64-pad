@@ -57,6 +57,8 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
 import { useAssetHistory } from '../asset-history'
+import { DEFAULT_VIEW, zoomAround } from '../view'
+import type { GridView } from '../view'
 import { SpriteGrid } from './sprite-grid'
 import { DataColumn } from './data-column'
 import { PaletteGrid, PensPanel, spritePens } from './pens-panel'
@@ -112,6 +114,9 @@ export function SpriteDesigner({
   const [asHex, setAsHex] = useState(false)
   const [background, setBackground] = useStoredBackground()
   const cell = useCellSize()
+  const [view, setView] = useState<GridView>(DEFAULT_VIEW)
+  // A new cell size changes the frame; start again at 1×.
+  useEffect(() => setView(DEFAULT_VIEW), [cell.size])
   const strokeId = useRef(0)
 
   useEffect(() => {
@@ -211,10 +216,10 @@ export function SpriteDesigner({
         </>
       }
       tabs={<EdgeTabs tabs={editorTabs(project, 'sprites')} />}
-      className="flex gap-6 px-5 py-3"
+      className="flex gap-4 px-4 py-3"
     >
       {/* Left: sprite details, pens, palette, preview */}
-      <div className="flex w-[264px] shrink-0 flex-col gap-2.5 overflow-y-auto">
+      <div className="flex w-[240px] shrink-0 flex-col gap-2.5 overflow-y-auto">
         <div className="flex gap-2">
           <Field label="Sprite name" className="flex-1">
             <Input
@@ -368,18 +373,46 @@ export function SpriteDesigner({
             >
               <Trash2 />
             </ToolButton>
+            <div aria-hidden="true" className="mx-1.5 my-1 h-px bg-rule-soft" />
+            <ToolButton
+              label={
+                view.zoom > 1
+                  ? 'Reset zoom (pinch to zoom)'
+                  : 'Zoom in (or pinch)'
+              }
+              pressed={view.zoom > 1}
+              onClick={() =>
+                setView(
+                  view.zoom > 1
+                    ? DEFAULT_VIEW
+                    : zoomAround(
+                        DEFAULT_VIEW,
+                        2,
+                        { x: (24 * cell.size) / 2, y: (21 * cell.size) / 2 },
+                        24 * cell.size,
+                        21 * cell.size,
+                      ),
+                )
+              }
+            >
+              <span className="font-mono text-[11px] font-medium">
+                {zoomLabel(view.zoom)}
+              </span>
+            </ToolButton>
           </div>
 
           <div className="flex min-h-0 flex-col">
-            <BitHeader cell={cell.size} />
+            <BitHeader cell={cell.size} view={view} />
             <div ref={cell.slotRef} className="flex min-h-0 flex-1 gap-1">
-              <RowNumbers cell={cell.size} />
+              <RowNumbers cell={cell.size} view={view} />
               <div className="h-fit rounded-[2px] border-2 border-[#77756f]">
                 <SpriteGrid
                   set={set}
                   sprite={sprite}
                   cell={cell.size}
                   background={background}
+                  view={view}
+                  onViewChange={setView}
                   onStrokeStart={(x, y) => {
                     strokeId.current++
                     paint(x, y, true)
@@ -446,7 +479,7 @@ export function SpriteDesigner({
       </div>
 
       {/* Right: data bytes aligned to the grid rows */}
-      <div className="flex w-[168px] shrink-0 flex-col">
+      <div className="flex w-[152px] shrink-0 flex-col">
         <div
           aria-hidden="true"
           className="flex items-end gap-2 font-mono text-[9px] leading-[14px] text-muted-foreground"
@@ -461,7 +494,7 @@ export function SpriteDesigner({
         <DataColumn sprite={sprite} cell={cell.size} asHex={asHex} />
         <div className="mt-2.5 flex items-center justify-between">
           <span className="text-xs text-muted-foreground">Data</span>
-          <div className="w-[104px]">
+          <div className="w-[96px]">
             <Segmented
               label="Number format"
               size="sm"
@@ -517,51 +550,65 @@ function ToolButton({
   )
 }
 
-function BitHeader({ cell }: { cell: number }) {
+function BitHeader({ cell, view }: { cell: number; view: GridView }) {
   const weights = [128, 64, 32, 16, 8, 4, 2, 1]
+  const size = cell * view.zoom
   return (
     <div
       aria-hidden="true"
-      className="flex shrink-0 items-end font-mono leading-[14px] text-muted-foreground"
-      style={{
-        height: BIT_HEADER_H,
-        paddingLeft: ROW_NUMBERS_W + 2,
-        fontSize: cell < 22 ? 8 : 9,
-      }}
+      className="flex shrink-0 items-end"
+      style={{ height: BIT_HEADER_H, paddingLeft: ROW_NUMBERS_W + 2 }}
     >
-      {[0, 1, 2].flatMap((b) =>
-        weights.map((w) => (
-          <div
-            key={`${b}-${w}`}
-            className="text-center"
-            style={{ width: cell }}
-          >
-            {w}
-          </div>
-        )),
-      )}
+      <div className="overflow-hidden" style={{ width: 24 * cell }}>
+        <div
+          className="flex font-mono leading-[14px] text-muted-foreground"
+          style={{
+            transform: `translateX(${view.x}px)`,
+            fontSize: size < 22 ? 8 : 9,
+          }}
+        >
+          {[0, 1, 2].flatMap((b) =>
+            weights.map((w) => (
+              <div
+                key={`${b}-${w}`}
+                className="shrink-0 text-center"
+                style={{ width: size }}
+              >
+                {w}
+              </div>
+            )),
+          )}
+        </div>
+      </div>
     </div>
   )
 }
 
-function RowNumbers({ cell }: { cell: number }) {
+function RowNumbers({ cell, view }: { cell: number; view: GridView }) {
+  const size = cell * view.zoom
   return (
     <div
       aria-hidden="true"
-      className="flex shrink-0 flex-col pt-[2px]"
-      style={{ width: ROW_NUMBERS_W - 4 }}
+      className="mt-[2px] shrink-0 overflow-hidden"
+      style={{ width: ROW_NUMBERS_W - 4, height: 21 * cell }}
     >
-      {Array.from({ length: 21 }, (_, i) => (
-        <div
-          key={i}
-          className="flex items-center justify-end font-mono text-[10px] text-muted-foreground"
-          style={{ height: cell }}
-        >
-          {i + 1}
-        </div>
-      ))}
+      <div style={{ transform: `translateY(${view.y}px)` }}>
+        {Array.from({ length: 21 }, (_, i) => (
+          <div
+            key={i}
+            className="flex items-center justify-end font-mono text-[10px] text-muted-foreground"
+            style={{ height: size }}
+          >
+            {i + 1}
+          </div>
+        ))}
+      </div>
     </div>
   )
+}
+
+function zoomLabel(zoom: number) {
+  return zoom < 1.05 ? '1×' : `${zoom.toFixed(1)}×`
 }
 
 const BG_KEY = 'c64pad:sprite-background'

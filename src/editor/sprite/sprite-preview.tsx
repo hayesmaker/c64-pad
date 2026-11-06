@@ -37,13 +37,15 @@ export function SpritePreview({
     [set, sprite],
   )
   const scale = 2.5
-  const chip = (axis: 'expandX' | 'expandY', label: string) => (
+  const chip = (axis: 'expandX' | 'expandY', label: string, title: string) => (
     <button
       type="button"
       aria-pressed={sprite[axis]}
+      aria-label={title}
+      title={title}
       onClick={() => onToggleExpand(axis)}
       className={cn(
-        'h-8 rounded-full border px-3 text-xs',
+        'h-8 rounded-full border px-2.5 font-mono text-xs whitespace-nowrap',
         sprite[axis]
           ? 'border-primary bg-accent text-primary'
           : 'border-rule-soft',
@@ -58,8 +60,8 @@ export function SpritePreview({
         <span className="text-xs text-muted-foreground">Preview</span>
         <div className="flex gap-1">
           <BackgroundPicker value={background} onChange={onBackground} />
-          {chip('expandX', 'Expand X')}
-          {chip('expandY', 'Expand Y')}
+          {chip('expandX', 'X×2', 'Expand X (double width)')}
+          {chip('expandY', 'Y×2', 'Expand Y (double height)')}
         </div>
       </div>
       <div

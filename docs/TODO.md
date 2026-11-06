@@ -40,7 +40,7 @@ See `PLAN.md` → _Decisions_ for the reasoning behind these.
 - [x] Canvas pixel grid renderer (24×21, double-wide cells in MC), 8-px column separators + 7-row bands like the worksheet
 - [x] Bit-weight header (128…1 ×3) and row numbers; live DATA panel (3 bytes × 21 rows, dec/hex toggle)
 - [x] Pointer input: draw/erase/fill, stylus + finger, gap-free strokes, palm rejection, second finger cancels stroke
-- [ ] Pinch-zoom / two-finger pan on the grid (if cells are too small on the tablet)
+- [x] Pinch-zoom / two-finger pan on the grid (1–8×), wheel zoom, zoom button; headers follow the pan
 - [x] Colour panel: single colour / multicolour 00–11 legend like the worksheet; click-to-select active pen
 - [x] Hires ↔ multicolour toggle with sensible conversion
 - [x] Tools: flip H/V, shift/roll, clear, invert, copy/paste sprite
