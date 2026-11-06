@@ -68,7 +68,7 @@ See `PLAN.md` → _Decisions_ for the reasoning behind these.
 - [x] KickAss sprite-viewer stub (`stubs/sprite-viewer.asm`): 8 slots, overlays, MC colours, expand flags, loop/ping-pong animation; `npm run stubs` embeds it as TS
 - [x] TS PRG builder (`src/emulator/sprite-viewer.ts`) + showcase layout; unit-tested; animation verified headless in c64-ready's core
 - [x] "Run" button → embedded overlay; "Save .prg" in the overlay
-- [ ] Verify Run (incl. animation) on the tablet
+- [x] Verify Run (incl. animation) on the tablet
 - [ ] (Web only) "Open in c64-ready" link via `?game=<url>`, configurable base URL
 - [ ] KickAss charset/map-viewer stub (after M7): charset, map window, colour RAM, bg/MC/ECM colours
 
