@@ -49,7 +49,7 @@ See `PLAN.md` → _Decisions_ for the reasoning behind these.
 - [x] Actual-size + X/Y-expand preview
 - [x] Animation: frame ranges, looping preview, speed control
 - [x] Overlay: link hires sprite over MC sprite, combined preview, edit either layer
-- [ ] **Ship to tablet**: test full sprite flow on Android build
+- [x] **Ship to tablet**: test full sprite flow on Android build (drawing, zoom button, animation on device; overlay in Chrome; pinch needs a human)
 
 ### M4: Exporters (sprites)
 

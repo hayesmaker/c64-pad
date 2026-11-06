@@ -228,7 +228,11 @@ function AnimationDialog({
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-[680px] sm:max-w-[680px]">
+      <DialogContent
+        className="max-w-[680px] sm:max-w-[680px]"
+        // Don't focus the name field: on a tablet that pops up the keyboard.
+        onOpenAutoFocus={(e) => e.preventDefault()}
+      >
         <DialogHeader>
           <DialogTitle>Edit animation</DialogTitle>
           <DialogDescription>
