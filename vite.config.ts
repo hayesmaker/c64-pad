@@ -13,7 +13,10 @@ const config = defineConfig({
     devtools(),
     nitro({ rollupConfig: { external: [/^@sentry\//] } }),
     tailwindcss(),
-    tanstackStart(),
+    tanstackStart({
+      // Static SPA build so Capacitor/Electron can bundle it (see docs/PLAN.md)
+      spa: { enabled: true, prerender: { outputPath: '/index' } },
+    }),
     viteReact(),
   ],
 })

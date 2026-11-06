@@ -1,9 +1,10 @@
 # C64-Pad: Todo
 
 Each `###` heading is intended to become a GitHub Milestone and each checkbox an Issue.
-See `PLAN.md` → *Decisions* for the reasoning behind these.
+See `PLAN.md` → _Decisions_ for the reasoning behind these.
 
 ### M0: Foundations
+
 - [ ] Switch TanStack Start to SPA/static output; confirm `vite build` emits a self-contained `dist` usable offline
 - [ ] Add Vitest + a first test; add `typecheck` script (`tsc --noEmit`)
 - [ ] GitHub Actions CI: install, lint, typecheck, test, build
@@ -13,6 +14,7 @@ See `PLAN.md` → *Decisions* for the reasoning behind these.
 - [ ] Worksheet design system: Tailwind theme tokens (paper bg, grid greys, label font), field/box components, sheet header ("Sprite Worksheet" style)
 
 ### M1: Core C64 model (pure TS, fully unit-tested)
+
 - [ ] C64 palette (16 colours, named; pick a standard e.g. Pepto/Colodore)
 - [ ] Bitplane helpers: get/set pixel for hires (1bpp) and multicolour (2bpp pairs)
 - [ ] Sprite model: 63 bytes, mode, sprite colour, overlay link, expand flags
@@ -24,12 +26,14 @@ See `PLAN.md` → *Decisions* for the reasoning behind these.
 - [ ] Undo/redo command stack (generic, per-document), with stroke coalescing
 
 ### M2: Persistence
+
 - [ ] IndexedDB repository (e.g. `idb`), autosave with debounce
 - [ ] My Projects page: list, create, rename, duplicate, delete, last-modified
 - [ ] Project page: list sprite sets / charsets / maps with thumbnails; add, rename, duplicate, delete assets (block/reassign when deleting a charset in use)
 - [ ] Project file export/import (`.c64pad` versioned JSON, with migration hook)
 
 ### M3: Sprite designer (MVP)
+
 - [ ] Canvas pixel grid renderer (24×21, double-wide cells in MC), 8-px column separators + 7-row bands like the worksheet
 - [ ] Bit-weight header (128…1 ×3) and row numbers; live DATA panel (3 bytes × 21 rows, dec/hex toggle)
 - [ ] Pointer input: draw/erase/fill, stylus + finger, pinch-zoom, two-finger pan, palm rejection
@@ -44,6 +48,7 @@ See `PLAN.md` → *Decisions* for the reasoning behind these.
 - [ ] **Ship to tablet**: test full sprite flow on Android build
 
 ### M4: Exporters (sprites)
+
 - [ ] Raw `.bin`: 64 bytes/sprite (63 + pad), selectable range
 - [ ] KickAssembler source: `.byte` lines with labels + comments
 - [ ] SpritePad `.spd` (research spec; round-trip test; user verifies in SpritePad)
@@ -52,6 +57,7 @@ See `PLAN.md` → *Decisions* for the reasoning behind these.
 - [ ] KickAss example loader snippet in docs (`.import binary`, set sprite pointers/colours)
 
 ### M5: c64-ready integration
+
 - [ ] Add `c64-ready` npm dependency; copy its runtime assets (`c64.wasm`, audio worklet) into the static build under `/c64/` (see thrust-c64 level-editor `vite.config.ts` / `server/paths.ts`)
 - [ ] `EmulatorOverlay` component wrapping `C64Player` + `CanvasRenderer` (start/stop/destroy, mute, generation guard like thrust's `player.ts`)
 - [ ] KickAss sprite-viewer stub (`stubs/sprite-viewer.asm`): shows up to 8 sprites/overlays, MC colours, expand flags, animates frames; build script emits `.prg` + offsets JSON
@@ -61,6 +67,7 @@ See `PLAN.md` → *Decisions* for the reasoning behind these.
 - [ ] KickAss charset/map-viewer stub (after M7): charset, map window, colour RAM, bg/MC/ECM colours
 
 ### M6: Charset editor
+
 - [ ] 8×8 char grid editor reusing sprite canvas/input (hires / MC / ECM)
 - [ ] Charset palette view (16×16 grid), select/copy/paste/swap chars
 - [ ] New charset dialog: blank (default) or optional PETSCII starter (upper/graphics or lower case); ROM charset kept as a separate data file
@@ -69,6 +76,7 @@ See `PLAN.md` → *Decisions* for the reasoning behind these.
 - [ ] Tools: flip, rotate, shift, invert, clear
 
 ### M7: Charmap editor
+
 - [ ] New map: choose W×H and which project charset it uses; resize; change charset
 - [ ] Map canvas rendering chars with per-char colours; 40×25 viewport overlay; position/address readout (1024 + x + 40·y style)
 - [ ] Palette-pick placement, rectangle select/copy/paste, fill
@@ -76,6 +84,7 @@ See `PLAN.md` → *Decisions* for the reasoning behind these.
 - [ ] Live charset edits reflected in map
 
 ### M8: Exporters (chars/maps)
+
 - [ ] Raw `.bin`: charset, map, attributes/colours
 - [ ] KickAssembler source
 - [ ] CharPad `.ctm` (research spec; user verifies in CharPad)
@@ -83,6 +92,7 @@ See `PLAN.md` → *Decisions* for the reasoning behind these.
 - [ ] KickAss example loader (copy map to screen RAM, colours to $D800)
 
 ### M9: Desktop + later
+
 - [ ] Electron (or Tauri) shell for Linux/Windows with native file dialogs
 - [ ] Homepage polish (worksheet-styled entry tiles: Sprites / Characters / Screens)
 - [ ] Optional: CharPad tiles/blocks layer
