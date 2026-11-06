@@ -75,7 +75,7 @@ export function PensPanel({
           aria-pressed={p.value === pen}
           onClick={() => onPen(p.value)}
           className={cn(
-            'flex h-9 items-center gap-2.5 rounded-lg border px-2.5 text-left',
+            'flex h-8 items-center gap-2.5 rounded-lg border px-2.5 text-left',
             p.value === pen
               ? 'border-primary bg-accent ring-1 ring-primary'
               : 'border-rule-soft hover:bg-muted',
@@ -126,7 +126,7 @@ export function PaletteGrid({
             title={`${entry.name} (${entry.index})`}
             onClick={() => onPick(entry.index)}
             className={cn(
-              'h-7 rounded-[5px] border border-rule disabled:opacity-45',
+              'h-6 rounded-[5px] border border-rule disabled:opacity-45',
               selected === entry.index &&
                 'ring-2 ring-primary ring-offset-2 ring-offset-paper',
             )}

@@ -273,7 +273,7 @@ export function SpriteDesigner({
             changeSprite((s) => ({ ...s, [axis]: !s[axis] }))
           }
         />
-        <Field label="Notes" className="min-h-[72px] flex-1">
+        <Field label="Notes" className="min-h-[56px] flex-1">
           <Textarea
             value={sprite.notes}
             onChange={(e) =>

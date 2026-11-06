@@ -36,7 +36,7 @@ export function SpritePreview({
     }),
     [set, sprite],
   )
-  const scale = 2.5
+  const scale = 2
   const chip = (axis: 'expandX' | 'expandY', label: string, title: string) => (
     <button
       type="button"
@@ -65,7 +65,7 @@ export function SpritePreview({
         </div>
       </div>
       <div
-        className="flex h-[118px] items-center justify-center rounded-lg border-[5px] border-c64-border"
+        className="flex h-[100px] items-center justify-center rounded-lg border-[5px] border-c64-border"
         style={{ background: PALETTE[background ?? 6].hex }}
       >
         <IndexedCanvas
