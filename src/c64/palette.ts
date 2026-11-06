@@ -35,3 +35,9 @@ export function colorHex(color: C64Color): string {
   if (!isC64Color(color)) throw new RangeError(`Not a C64 colour: ${color}`)
   return PALETTE[color].hex
 }
+
+/** Throws unless value is a C64 colour index. */
+export function assertC64Color(value: number, what = 'Colour'): C64Color {
+  if (!isC64Color(value)) throw new RangeError(`${what} ${value} is not 0-15`)
+  return value
+}

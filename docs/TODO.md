@@ -17,14 +17,14 @@ See `PLAN.md` → _Decisions_ for the reasoning behind these.
 ### M1: Core C64 model (pure TS, fully unit-tested)
 
 - [x] C64 palette (16 colours, named; pick a standard e.g. Pepto/Colodore)
-- [ ] Bitplane helpers: get/set pixel for hires (1bpp) and multicolour (2bpp pairs)
-- [ ] Sprite model: 63 bytes, mode, sprite colour, overlay link, expand flags
-- [ ] Char model: 8 bytes; charset of 256 (64 in ECM) + per-char attribute colour
-- [ ] Sprite set model: sprites[], shared MC1/MC2, animations, overlay links
-- [ ] Charmap model: W×H of char indices + `charsetId` reference
-- [ ] Project model: name, program, notes, date; `spriteSets[]`, `charsets[]`, `maps[]` (each with id, name, notes); referential integrity helpers (charset in use by maps)
-- [ ] Mode-constraint rules (e.g. MC char requires colour ≥ 8; MC sprite pixel snapping) enforced in model, not UI
-- [ ] Undo/redo command stack (generic, per-document), with stroke coalescing
+- [x] Bitplane helpers: get/set pixel for hires (1bpp) and multicolour (2bpp pairs)
+- [x] Sprite model: 63 bytes, mode, sprite colour, overlay link, expand flags
+- [x] Char model: 8 bytes; charset of 256 (64 in ECM) + per-char attribute colour
+- [x] Sprite set model: sprites[], shared MC1/MC2, animations, overlay links
+- [x] Charmap model: W×H of char indices + `charsetId` reference
+- [x] Project model: name, program, notes, date; `spriteSets[]`, `charsets[]`, `maps[]` (each with id, name, notes); referential integrity helpers (charset in use by maps)
+- [x] Mode-constraint rules (e.g. MC char requires colour ≥ 8; MC sprite pixel snapping) enforced in model, not UI
+- [x] Undo/redo command stack (generic, per-document), with stroke coalescing
 
 ### M2: Persistence
 
