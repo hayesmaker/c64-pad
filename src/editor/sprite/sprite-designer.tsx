@@ -10,6 +10,7 @@ import {
   ArrowLeft,
   ArrowRight,
   ArrowUp,
+  Download,
   Contrast,
   Eraser,
   FlipHorizontal2,
@@ -61,6 +62,8 @@ import { cn } from '@/lib/utils'
 import { ModelError } from '@/c64/errors'
 import { useAssetHistory } from '../asset-history'
 import { AnimationControls, useAnimationFrame } from './animation'
+import { ExportSpritesDialog } from './export-dialog'
+import { Button } from '@/components/ui/button'
 import { DEFAULT_VIEW, zoomAround } from '../view'
 import type { GridView } from '../view'
 import { SpriteGrid } from './sprite-grid'
@@ -118,6 +121,7 @@ export function SpriteDesigner({
   const sprite = layer === 'overlay' && overlay ? overlay : selected
   const [animationId, setAnimationId] = useState<string | null>(null)
   const [playing, setPlaying] = useState(false)
+  const [exporting, setExporting] = useState(false)
   const animation = set.animations.find((a) => a.id === animationId)
   const frameId = useAnimationFrame(animation, playing)
   const [tool, setTool] = useState<Tool>('draw')
@@ -216,6 +220,10 @@ export function SpriteDesigner({
       actions={
         <>
           <SaveStatus status={status} error={error} />
+          <Button variant="outline" onClick={() => setExporting(true)}>
+            <Download aria-hidden="true" />
+            Export
+          </Button>
           <ToolButton
             label="Undo"
             disabled={!history.canUndo}
@@ -571,6 +579,15 @@ export function SpriteDesigner({
           </SpriteStrip>
         </div>
       </div>
+      {exporting && (
+        <ExportSpritesDialog
+          project={project}
+          set={set}
+          currentIndex={set.sprites.indexOf(selected)}
+          background={background}
+          onClose={() => setExporting(false)}
+        />
+      )}
     </WorksheetLayout>
   )
 }

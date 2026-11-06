@@ -53,12 +53,13 @@ See `PLAN.md` → _Decisions_ for the reasoning behind these.
 
 ### M4: Exporters (sprites)
 
-- [ ] Raw `.bin`: 64 bytes/sprite (63 + pad), selectable range
-- [ ] KickAssembler source: `.byte` lines with labels + comments
-- [ ] SpritePad `.spd` (research spec; round-trip test; user verifies in SpritePad)
-- [ ] PNG export (sheet & single, chosen scale)
-- [ ] Save/download via browser on web, Capacitor Filesystem/Share on Android
-- [ ] KickAss example loader snippet in docs (`.import binary`, set sprite pointers/colours)
+- [x] Raw `.bin`: 64 bytes/sprite (63 + zero pad or SpritePad attribute byte), selectable range
+- [x] KickAssembler source: `.byte` lines with labels, row pictures, colour `.label`s (verified with KickAss 5)
+- [x] SpritePad `.spd` V1 writer (spec from batchpad docs/spritepad.md)
+- [ ] User verifies a `.spd` export opens correctly in SpritePad
+- [x] PNG export (sheet & single, chosen scale, columns, transparent or screen colour)
+- [x] Save/download via browser on web, Capacitor Filesystem/Share on Android (binary + text)
+- [x] KickAss example loader snippet in docs (`docs/kickass-sprites.md`, both assembled and checked)
 
 ### M5: c64-ready integration
 
