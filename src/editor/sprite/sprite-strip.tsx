@@ -7,6 +7,7 @@ import {
   Copy,
   CopyPlus,
   EllipsisVertical,
+  Layers,
   Plus,
   Trash2,
 } from 'lucide-react'
@@ -18,7 +19,12 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import {
@@ -41,6 +47,8 @@ export interface StripActions {
   paste: (() => void) | null
   move: (delta: -1 | 1) => void
   remove: (() => void) | null
+  /** Draw `overlayId` on top of the selected sprite (null = none). */
+  setOverlay: (overlayId: string | null) => void
 }
 
 function Thumb({ set, sprite }: { set: SpriteSet; sprite: Sprite }) {
@@ -61,14 +69,23 @@ export function SpriteStrip({
   set,
   selectedId,
   actions,
+  children,
 }: {
   project: Project
   set: SpriteSet
   selectedId: string
   actions: StripActions
+  /** Extra controls at the end of the strip (layer toggle, animation). */
+  children?: React.ReactNode
 }) {
   const navigate = useNavigate()
   const index = set.sprites.findIndex((s) => s.id === selectedId)
+  const selected = set.sprites.at(index)
+  // Overlay rules (see setOverlay): one level only, never itself.
+  const isOverlay = set.sprites.some((s) => s.overlayId === selectedId)
+  const overlayChoices = set.sprites
+    .map((sprite, i) => ({ sprite, i }))
+    .filter(({ sprite }) => sprite.id !== selectedId)
 
   return (
     <div className="flex items-center gap-2">
@@ -156,6 +173,29 @@ export function SpriteStrip({
           >
             <ClipboardPaste aria-hidden="true" /> Paste pixels
           </DropdownMenuItem>
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger disabled={isOverlay}>
+              <Layers aria-hidden="true" />
+              {isOverlay ? 'Used as an overlay' : 'Overlay sprite'}
+            </DropdownMenuSubTrigger>
+            <DropdownMenuSubContent>
+              <DropdownMenuRadioGroup
+                value={selected?.overlayId ?? ''}
+                onValueChange={(v) => actions.setOverlay(v || null)}
+              >
+                <DropdownMenuRadioItem value="">None</DropdownMenuRadioItem>
+                {overlayChoices.map(({ sprite, i }) => (
+                  <DropdownMenuRadioItem
+                    key={sprite.id}
+                    value={sprite.id}
+                    disabled={sprite.overlayId !== null}
+                  >
+                    {i} · {sprite.name}
+                  </DropdownMenuRadioItem>
+                ))}
+              </DropdownMenuRadioGroup>
+            </DropdownMenuSubContent>
+          </DropdownMenuSub>
           <DropdownMenuSeparator />
           <DropdownMenuItem
             disabled={index <= 0}
@@ -179,6 +219,7 @@ export function SpriteStrip({
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+      {children}
     </div>
   )
 }

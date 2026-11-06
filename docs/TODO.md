@@ -47,8 +47,8 @@ See `PLAN.md` → _Decisions_ for the reasoning behind these.
 - [x] Sprite list within a set (sprite number, name), add/delete/reorder; switch between sets
 - [x] Metadata fields: sprite name, notes (program and date designed live on the project page)
 - [x] Actual-size + X/Y-expand preview
-- [ ] Animation: frame ranges, looping preview, speed control
-- [ ] Overlay: link hires sprite over MC sprite, combined preview, edit either layer
+- [x] Animation: frame ranges, looping preview, speed control
+- [x] Overlay: link hires sprite over MC sprite, combined preview, edit either layer
 - [ ] **Ship to tablet**: test full sprite flow on Android build
 
 ### M4: Exporters (sprites)

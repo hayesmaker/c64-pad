@@ -37,8 +37,10 @@ import {
   addSprite,
   duplicateSprite,
   moveSprite,
+  findSprite,
   removeSprite,
   setMulticolors,
+  setOverlay,
   updateSprite,
 } from '@/c64/sprite-set'
 import { WorksheetLayout } from '@/components/worksheet/worksheet-layout'
@@ -56,7 +58,9 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
+import { ModelError } from '@/c64/errors'
 import { useAssetHistory } from '../asset-history'
+import { AnimationControls, useAnimationFrame } from './animation'
 import { DEFAULT_VIEW, zoomAround } from '../view'
 import type { GridView } from '../view'
 import { SpriteGrid } from './sprite-grid'
@@ -104,8 +108,18 @@ export function SpriteDesigner({
   const [selectedId, setSelectedId] = useState(
     () => lastSelected.get(set.id) ?? set.sprites.at(0)?.id ?? '',
   )
-  const sprite =
+  const selected =
     set.sprites.find((s) => s.id === selectedId) ?? set.sprites.at(0)
+  const [layer, setLayer] = useState<'base' | 'overlay'>('base')
+  const overlay = selected?.overlayId
+    ? (findSprite(set, selected.overlayId) ?? null)
+    : null
+  /** The sprite being edited: the selected one, or its overlay layer. */
+  const sprite = layer === 'overlay' && overlay ? overlay : selected
+  const [animationId, setAnimationId] = useState<string | null>(null)
+  const [playing, setPlaying] = useState(false)
+  const animation = set.animations.find((a) => a.id === animationId)
+  const frameId = useAnimationFrame(animation, playing)
   const [tool, setTool] = useState<Tool>('draw')
   const [penByMode, setPenByMode] = useState<Record<PixelMode, number>>({
     hires: 1,
@@ -120,10 +134,13 @@ export function SpriteDesigner({
   const strokeId = useRef(0)
 
   useEffect(() => {
-    if (sprite) lastSelected.set(set.id, sprite.id)
-  }, [set.id, sprite])
+    if (selected) lastSelected.set(set.id, selected.id)
+  }, [set.id, selected])
 
-  const select = (id: string) => setSelectedId(id)
+  const select = (id: string) => {
+    setSelectedId(id)
+    setLayer('base')
+  }
 
   /** Apply a change to the selected sprite. */
   const changeSprite = useCallback(
@@ -153,7 +170,7 @@ export function SpriteDesigner({
     return () => window.removeEventListener('keydown', onKey)
   }, [history])
 
-  if (!sprite) {
+  if (!sprite || !selected) {
     return null // a set always has at least one sprite; see removeSprite guard below
   }
 
@@ -266,11 +283,13 @@ export function SpriteDesigner({
         />
         <SpritePreview
           set={set}
-          sprite={sprite}
+          sprite={(frameId && findSprite(set, frameId)) || selected}
           background={background}
           onBackground={setBackground}
           onToggleExpand={(axis) =>
-            changeSprite((s) => ({ ...s, [axis]: !s[axis] }))
+            history.change((s) =>
+              updateSprite(s, selected.id, (x) => ({ ...x, [axis]: !x[axis] })),
+            )
           }
         />
         <Field label="Notes" className="min-h-[56px] flex-1">
@@ -288,144 +307,178 @@ export function SpriteDesigner({
         </Field>
       </div>
 
-      {/* Centre: tool rail, grid, sprites in set */}
-      <div ref={cell.areaRef} className="flex min-w-0 flex-1 flex-col">
-        <div className="flex min-h-0 flex-1 justify-center gap-3">
-          <div
-            role="toolbar"
-            aria-label="Drawing tools"
-            aria-orientation="vertical"
-            className="flex shrink-0 flex-col gap-1"
-            style={{ paddingTop: BIT_HEADER_H + 2 }}
-          >
-            <ToolButton
-              label="Draw"
-              pressed={tool === 'draw'}
-              onClick={() => setTool('draw')}
-            >
-              <Pencil />
-            </ToolButton>
-            <ToolButton
-              label="Erase"
-              pressed={tool === 'erase'}
-              onClick={() => setTool('erase')}
-            >
-              <Eraser />
-            </ToolButton>
-            <ToolButton
-              label="Fill"
-              pressed={tool === 'fill'}
-              onClick={() => setTool('fill')}
-            >
-              <PaintBucket />
-            </ToolButton>
-            <div aria-hidden="true" className="mx-1.5 my-1 h-px bg-rule-soft" />
-            <ToolButton
-              label="Flip horizontally"
-              onClick={() => changeSprite(flipSpriteHorizontal)}
-            >
-              <FlipHorizontal2 />
-            </ToolButton>
-            <ToolButton
-              label="Flip vertically"
-              onClick={() => changeSprite(flipSpriteVertical)}
-            >
-              <FlipVertical2 />
-            </ToolButton>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <ToolButton label="Shift (wraps around)">
-                  <Move />
+      {/* Main: tool rail + grid + data bytes, sprites strip below */}
+      <div className="flex min-w-0 flex-1 flex-col">
+        <div className="flex min-h-0 flex-1 gap-4">
+          <div ref={cell.areaRef} className="flex min-w-0 flex-1 flex-col">
+            <div className="flex min-h-0 flex-1 justify-center gap-3">
+              <div
+                role="toolbar"
+                aria-label="Drawing tools"
+                aria-orientation="vertical"
+                className="flex shrink-0 flex-col gap-1"
+                style={{ paddingTop: BIT_HEADER_H + 2 }}
+              >
+                <ToolButton
+                  label="Draw"
+                  pressed={tool === 'draw'}
+                  onClick={() => setTool('draw')}
+                >
+                  <Pencil />
                 </ToolButton>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent side="right" align="start">
-                <DropdownMenuItem
-                  onSelect={() => changeSprite((s) => shiftSprite(s, 0, -1))}
+                <ToolButton
+                  label="Erase"
+                  pressed={tool === 'erase'}
+                  onClick={() => setTool('erase')}
                 >
-                  <ArrowUp aria-hidden="true" /> Shift up
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onSelect={() => changeSprite((s) => shiftSprite(s, 0, 1))}
+                  <Eraser />
+                </ToolButton>
+                <ToolButton
+                  label="Fill"
+                  pressed={tool === 'fill'}
+                  onClick={() => setTool('fill')}
                 >
-                  <ArrowDown aria-hidden="true" /> Shift down
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onSelect={() => changeSprite((s) => shiftSprite(s, -1, 0))}
-                >
-                  <ArrowLeft aria-hidden="true" /> Shift left
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onSelect={() => changeSprite((s) => shiftSprite(s, 1, 0))}
-                >
-                  <ArrowRight aria-hidden="true" /> Shift right
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <ToolButton
-              label="Invert"
-              onClick={() => changeSprite(invertSprite)}
-            >
-              <Contrast />
-            </ToolButton>
-            <ToolButton
-              label="Clear sprite"
-              onClick={() => changeSprite(clearSprite)}
-            >
-              <Trash2 />
-            </ToolButton>
-            <div aria-hidden="true" className="mx-1.5 my-1 h-px bg-rule-soft" />
-            <ToolButton
-              label={
-                view.zoom > 1
-                  ? 'Reset zoom (pinch to zoom)'
-                  : 'Zoom in (or pinch)'
-              }
-              pressed={view.zoom > 1}
-              onClick={() =>
-                setView(
-                  view.zoom > 1
-                    ? DEFAULT_VIEW
-                    : zoomAround(
-                        DEFAULT_VIEW,
-                        2,
-                        { x: (24 * cell.size) / 2, y: (21 * cell.size) / 2 },
-                        24 * cell.size,
-                        21 * cell.size,
-                      ),
-                )
-              }
-            >
-              <span className="font-mono text-[11px] font-medium">
-                {zoomLabel(view.zoom)}
-              </span>
-            </ToolButton>
-          </div>
-
-          <div className="flex min-h-0 flex-col">
-            <BitHeader cell={cell.size} view={view} />
-            <div ref={cell.slotRef} className="flex min-h-0 flex-1 gap-1">
-              <RowNumbers cell={cell.size} view={view} />
-              <div className="h-fit rounded-[2px] border-2 border-[#77756f]">
-                <SpriteGrid
-                  set={set}
-                  sprite={sprite}
-                  cell={cell.size}
-                  background={background}
-                  view={view}
-                  onViewChange={setView}
-                  onStrokeStart={(x, y) => {
-                    strokeId.current++
-                    paint(x, y, true)
-                  }}
-                  onStrokeMove={(x, y) => paint(x, y, false)}
-                  onStrokeEnd={history.endGroup}
-                  onStrokeCancel={() => {
-                    history.endGroup()
-                    history.undo()
-                  }}
+                  <PaintBucket />
+                </ToolButton>
+                <div
+                  aria-hidden="true"
+                  className="mx-1.5 my-1 h-px bg-rule-soft"
                 />
+                <ToolButton
+                  label="Flip horizontally"
+                  onClick={() => changeSprite(flipSpriteHorizontal)}
+                >
+                  <FlipHorizontal2 />
+                </ToolButton>
+                <ToolButton
+                  label="Flip vertically"
+                  onClick={() => changeSprite(flipSpriteVertical)}
+                >
+                  <FlipVertical2 />
+                </ToolButton>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <ToolButton label="Shift (wraps around)">
+                      <Move />
+                    </ToolButton>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent side="right" align="start">
+                    <DropdownMenuItem
+                      onSelect={() =>
+                        changeSprite((s) => shiftSprite(s, 0, -1))
+                      }
+                    >
+                      <ArrowUp aria-hidden="true" /> Shift up
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onSelect={() => changeSprite((s) => shiftSprite(s, 0, 1))}
+                    >
+                      <ArrowDown aria-hidden="true" /> Shift down
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onSelect={() =>
+                        changeSprite((s) => shiftSprite(s, -1, 0))
+                      }
+                    >
+                      <ArrowLeft aria-hidden="true" /> Shift left
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onSelect={() => changeSprite((s) => shiftSprite(s, 1, 0))}
+                    >
+                      <ArrowRight aria-hidden="true" /> Shift right
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                <ToolButton
+                  label="Invert"
+                  onClick={() => changeSprite(invertSprite)}
+                >
+                  <Contrast />
+                </ToolButton>
+                <ToolButton
+                  label="Clear sprite"
+                  onClick={() => changeSprite(clearSprite)}
+                >
+                  <Trash2 />
+                </ToolButton>
+                <div
+                  aria-hidden="true"
+                  className="mx-1.5 my-1 h-px bg-rule-soft"
+                />
+                <ToolButton
+                  label={
+                    view.zoom > 1
+                      ? 'Reset zoom (pinch to zoom)'
+                      : 'Zoom in (or pinch)'
+                  }
+                  pressed={view.zoom > 1}
+                  onClick={() =>
+                    setView(
+                      view.zoom > 1
+                        ? DEFAULT_VIEW
+                        : zoomAround(
+                            DEFAULT_VIEW,
+                            2,
+                            {
+                              x: (24 * cell.size) / 2,
+                              y: (21 * cell.size) / 2,
+                            },
+                            24 * cell.size,
+                            21 * cell.size,
+                          ),
+                    )
+                  }
+                >
+                  <span className="font-mono text-[11px] font-medium">
+                    {zoomLabel(view.zoom)}
+                  </span>
+                </ToolButton>
+              </div>
+
+              <div className="flex min-h-0 flex-col">
+                <BitHeader cell={cell.size} view={view} />
+                <div ref={cell.slotRef} className="flex min-h-0 flex-1 gap-1">
+                  <RowNumbers cell={cell.size} view={view} />
+                  <div className="h-fit rounded-[2px] border-2 border-[#77756f]">
+                    <SpriteGrid
+                      set={set}
+                      sprite={sprite}
+                      layers={{ base: selected, overlay }}
+                      cell={cell.size}
+                      background={background}
+                      view={view}
+                      onViewChange={setView}
+                      onStrokeStart={(x, y) => {
+                        strokeId.current++
+                        paint(x, y, true)
+                      }}
+                      onStrokeMove={(x, y) => paint(x, y, false)}
+                      onStrokeEnd={history.endGroup}
+                      onStrokeCancel={() => {
+                        history.endGroup()
+                        history.undo()
+                      }}
+                    />
+                  </div>
+                </div>
               </div>
             </div>
+          </div>
+
+          {/* Data bytes aligned to the grid rows */}
+          <div className="flex w-[152px] shrink-0 flex-col">
+            <div
+              className="flex items-end gap-2 font-mono text-[9px] leading-[14px] text-muted-foreground"
+              style={{ height: BIT_HEADER_H }}
+              title="63 bytes + 1 pad = 64 per sprite. Sprite pointer = address ÷ 64."
+            >
+              {['byte 0', 'byte 1', 'byte 2'].map((b) => (
+                <div key={b} className="flex-1 text-center">
+                  {b}
+                </div>
+              ))}
+            </div>
+            <DataColumn sprite={sprite} cell={cell.size} asHex={asHex} />
           </div>
         </div>
 
@@ -433,19 +486,19 @@ export function SpriteDesigner({
           <SpriteStrip
             project={project}
             set={set}
-            selectedId={sprite.id}
+            selectedId={selected.id}
             actions={{
               select,
               add: () => {
                 const created = createSprite({
                   name: `Sprite ${set.sprites.length}`,
-                  mode: sprite.mode,
+                  mode: selected.mode,
                 })
                 history.change((s) => addSprite(s, created))
                 select(created.id)
               },
               duplicate: () => {
-                history.change((s) => duplicateSprite(s, sprite.id))
+                history.change((s) => duplicateSprite(s, selected.id))
               },
               copy: () => {
                 clipboard = { data: sprite.data.slice(), mode: sprite.mode }
@@ -461,57 +514,108 @@ export function SpriteDesigner({
                   }
                 : null,
               move: (delta) => {
-                const from = set.sprites.indexOf(sprite)
+                const from = set.sprites.indexOf(selected)
                 history.change((s) => moveSprite(s, from, from + delta))
               },
               remove:
                 set.sprites.length > 1
                   ? () => {
-                      const i = set.sprites.indexOf(sprite)
+                      const i = set.sprites.indexOf(selected)
                       const next = set.sprites[i + 1] ?? set.sprites[i - 1]
-                      history.change((s) => removeSprite(s, sprite.id))
+                      history.change((s) => removeSprite(s, selected.id))
                       select(next.id)
                     }
                   : null,
+              setOverlay: (overlayId) => {
+                try {
+                  history.change((s) => setOverlay(s, selected.id, overlayId))
+                  setLayer(overlayId ? 'overlay' : 'base')
+                } catch (e) {
+                  if (!(e instanceof ModelError)) throw e
+                }
+              },
             }}
-          />
-        </div>
-      </div>
-
-      {/* Right: data bytes aligned to the grid rows */}
-      <div className="flex w-[152px] shrink-0 flex-col">
-        <div
-          aria-hidden="true"
-          className="flex items-end gap-2 font-mono text-[9px] leading-[14px] text-muted-foreground"
-          style={{ height: BIT_HEADER_H }}
-        >
-          {['byte 0', 'byte 1', 'byte 2'].map((b) => (
-            <div key={b} className="flex-1 text-center">
-              {b}
-            </div>
-          ))}
-        </div>
-        <DataColumn sprite={sprite} cell={cell.size} asHex={asHex} />
-        <div className="mt-2.5 flex items-center justify-between">
-          <span className="text-xs text-muted-foreground">Data</span>
-          <div className="w-[96px]">
-            <Segmented
-              label="Number format"
-              size="sm"
-              value={asHex ? 'hex' : 'dec'}
-              options={[
-                { value: 'dec', label: 'Dec' },
-                { value: 'hex', label: 'Hex' },
-              ]}
-              onChange={(v) => setAsHex(v === 'hex')}
+          >
+            {overlay && (
+              <LayerToggle
+                layer={layer}
+                onLayer={setLayer}
+                overlayNumber={set.sprites.indexOf(overlay)}
+                baseNumber={set.sprites.indexOf(selected)}
+              />
+            )}
+            <AnimationControls
+              set={set}
+              animationId={animation?.id ?? null}
+              onAnimationId={setAnimationId}
+              playing={playing && !!animation}
+              onPlaying={setPlaying}
+              onChange={history.change}
+              background={background}
             />
-          </div>
+            <div className="ml-auto flex shrink-0 flex-col gap-0.5">
+              <span className="text-[11px] text-muted-foreground">Data</span>
+              <div className="w-[96px]">
+                <Segmented
+                  label="Number format"
+                  size="sm"
+                  value={asHex ? 'hex' : 'dec'}
+                  options={[
+                    { value: 'dec', label: 'Dec' },
+                    { value: 'hex', label: 'Hex' },
+                  ]}
+                  onChange={(v) => setAsHex(v === 'hex')}
+                />
+              </div>
+            </div>
+          </SpriteStrip>
         </div>
-        <p className="mt-2 text-[11px] leading-snug text-muted-foreground">
-          63 bytes + 1 pad = 64 per sprite. Pointer = address ÷ 64.
-        </p>
       </div>
     </WorksheetLayout>
+  )
+}
+
+/** Choose which layer of an overlaid sprite the grid edits. */
+function LayerToggle({
+  layer,
+  onLayer,
+  overlayNumber,
+  baseNumber,
+}: {
+  layer: 'base' | 'overlay'
+  onLayer: (layer: 'base' | 'overlay') => void
+  overlayNumber: number
+  baseNumber: number
+}) {
+  const wrongOrder = overlayNumber > baseNumber
+  return (
+    <div className="flex shrink-0 flex-col gap-0.5">
+      <span
+        className={cn(
+          'text-[11px]',
+          wrongOrder ? 'text-destructive' : 'text-muted-foreground',
+        )}
+        title={
+          wrongOrder
+            ? 'On the C64 a lower-numbered sprite is drawn on top, so move the overlay before its base.'
+            : undefined
+        }
+      >
+        {wrongOrder ? `Overlay #${overlayNumber} is behind!` : `Editing layer`}
+      </span>
+      <div className="w-[150px]">
+        <Segmented
+          label="Layer to edit"
+          size="sm"
+          value={layer}
+          options={[
+            { value: 'base', label: `Base #${baseNumber}` },
+            { value: 'overlay', label: `Over #${overlayNumber}` },
+          ]}
+          onChange={onLayer}
+        />
+      </div>
+    </div>
   )
 }
 

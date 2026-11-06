@@ -34,6 +34,7 @@ export interface StrokeHandlers {
 export function SpriteGrid({
   set,
   sprite,
+  layers,
   cell,
   background,
   view,
@@ -41,7 +42,10 @@ export function SpriteGrid({
   ...handlers
 }: {
   set: SpriteSet
+  /** The sprite being edited (its mode decides pixel width). */
   sprite: Sprite
+  /** Base + optional overlay; the layer not being edited is drawn faded. */
+  layers: { base: Sprite; overlay: Sprite | null }
   cell: number
   /** Colour shown for transparent pixels; null = worksheet paper. */
   background: C64Color | null
@@ -60,8 +64,8 @@ export function SpriteGrid({
     canvas.width = Math.round(width * dpr)
     canvas.height = Math.round(height * dpr)
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
-    draw(ctx, set, sprite, cell, background, view, width, height)
-  }, [set, sprite, cell, width, height, background, view])
+    draw(ctx, set, sprite, layers, cell, background, view, width, height)
+  }, [set, sprite, layers, cell, width, height, background, view])
 
   // Latest values without re-binding listeners.
   const live = useRef({
@@ -246,6 +250,7 @@ function draw(
   ctx: CanvasRenderingContext2D,
   set: SpriteSet,
   sprite: Sprite,
+  layers: { base: Sprite; overlay: Sprite | null },
   baseCell: number,
   background: C64Color | null,
   view: GridView,
@@ -261,16 +266,22 @@ function draw(
   ctx.fillStyle = background === null ? PAPER : PALETTE[background].hex
   ctx.fillRect(0, 0, w, h)
 
-  const pixels = renderSprite(set, sprite)
-  for (let y = 0; y < SPRITE_HEIGHT; y++) {
-    for (let x = 0; x < SPRITE_RENDER_WIDTH; x++) {
-      const index = pixels[y * SPRITE_RENDER_WIDTH + x]
-      if (index < 0) continue
-      ctx.fillStyle = PALETTE[index].hex
-      // Slight overlap avoids hairline seams at fractional zoom.
-      ctx.fillRect(x * cell, y * cell, cell + 0.5, cell + 0.5)
+  for (const layer of [layers.base, layers.overlay]) {
+    if (!layer) continue
+    // Fade the layer that isn't being edited.
+    ctx.globalAlpha = layers.overlay && layer.id !== sprite.id ? 0.35 : 1
+    const pixels = renderSprite(set, layer, { withOverlay: false })
+    for (let y = 0; y < SPRITE_HEIGHT; y++) {
+      for (let x = 0; x < SPRITE_RENDER_WIDTH; x++) {
+        const index = pixels[y * SPRITE_RENDER_WIDTH + x]
+        if (index < 0) continue
+        ctx.fillStyle = PALETTE[index].hex
+        // Slight overlap avoids hairline seams at fractional zoom.
+        ctx.fillRect(x * cell, y * cell, cell + 0.5, cell + 0.5)
+      }
     }
   }
+  ctx.globalAlpha = 1
 
   const step = sprite.mode === 'multicolor' ? 2 : 1
   const line = (
