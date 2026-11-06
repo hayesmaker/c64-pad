@@ -200,3 +200,23 @@ Loaders simplify your data fetching logic dramatically. Check out more informati
 You can learn more about all of the offerings from TanStack in the [TanStack documentation](https://tanstack.com).
 
 For TanStack Start specific documentation, visit [TanStack Start](https://tanstack.com/start).
+
+## Running on an Android device
+
+Builds the web app, syncs it into `android/` and installs a debug build.
+
+```zsh
+adb devices -l                                  # find the device serial / ip:port
+ANDROID_TARGET=192.168.0.34:5555 npm run android:run
+```
+
+Without `ANDROID_TARGET`, Capacitor picks a target itself (often the emulator).
+
+Wireless adb via a one-off USB connection (works on any Android):
+
+```zsh
+adb tcpip 5555 && adb connect <tablet-ip>:5555   # then unplug
+```
+
+TCP mode lasts until the tablet reboots. On Linux, adb needs a udev rule for
+the device's USB vendor ID (for example `19d2` for ZTE/RedMagic).

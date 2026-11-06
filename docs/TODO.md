@@ -9,7 +9,7 @@ See `PLAN.md` → _Decisions_ for the reasoning behind these.
 - [x] Add Vitest + a first test; add `typecheck` script (`tsc --noEmit`)
 - [x] GitHub Actions CI: install, lint, typecheck, test, build
 - [x] Capacitor Android shell: `@capacitor/core`, `cap add android`, build scripts, debug APK builds
-- [ ] Install and run on the tablet (`npm run android:run` with device connected)
+- [x] Install and run on the tablet (RedMagic Astra 2 over Wi-Fi adb; see README)
 - [x] Viewport/meta for tablet: disable browser pinch-zoom/overscroll on editor surfaces, `touch-action: none` on canvases
 - [x] App shell + routes: `/`, `/projects`, `/projects/$projectId`, `/projects/$projectId/sprites/$setId`, `/projects/$projectId/charsets/$charsetId`, `/projects/$projectId/maps/$mapId`
 - [x] Worksheet design system: Tailwind theme tokens (paper bg, grid greys, label font), field/box components, sheet header ("Sprite Worksheet" style); see `docs/DESIGN.md`
@@ -35,6 +35,7 @@ See `PLAN.md` → _Decisions_ for the reasoning behind these.
 
 ### M3: Sprite designer (MVP)
 
+- [ ] Layout fits the target tablet viewport: **1200×752 CSS px** landscape (RedMagic Astra 2), as well as 1280×800
 - [ ] Canvas pixel grid renderer (24×21, double-wide cells in MC), 8-px column separators + 7-row bands like the worksheet
 - [ ] Bit-weight header (128…1 ×3) and row numbers; live DATA panel (3 bytes × 21 rows, dec/hex toggle)
 - [ ] Pointer input: draw/erase/fill, stylus + finger, pinch-zoom, two-finger pan, palm rejection

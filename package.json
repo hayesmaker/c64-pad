@@ -17,7 +17,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "android:sync": "npm run build && cap sync android",
-    "android:run": "npm run android:sync && cap run android",
+    "android:run": "npm run android:sync && cap run android --no-sync ${ANDROID_TARGET:+--target $ANDROID_TARGET}",
     "android:open": "cap open android",
     "android:apk": "npm run android:sync && cd android && ./gradlew assembleDebug"
   },
