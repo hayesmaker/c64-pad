@@ -5,17 +5,17 @@ See `PLAN.md` → _Decisions_ for the reasoning behind these.
 
 ### M0: Foundations
 
-- [ ] Switch TanStack Start to SPA/static output; confirm `vite build` emits a self-contained `dist` usable offline
-- [ ] Add Vitest + a first test; add `typecheck` script (`tsc --noEmit`)
-- [ ] GitHub Actions CI: install, lint, typecheck, test, build
-- [ ] Capacitor Android shell: `@capacitor/core`, `cap add android`, build script, run on tablet
-- [ ] Viewport/meta for tablet: disable browser pinch-zoom/overscroll on editor surfaces, `touch-action: none` on canvases
-- [ ] App shell + routes: `/`, `/projects`, `/projects/$projectId`, `/projects/$projectId/sprites/$setId`, `/projects/$projectId/charsets/$charsetId`, `/projects/$projectId/maps/$mapId`
+- [x] Switch TanStack Start to SPA/static output; confirm `vite build` emits a self-contained `dist` usable offline
+- [x] Add Vitest + a first test; add `typecheck` script (`tsc --noEmit`)
+- [x] GitHub Actions CI: install, lint, typecheck, test, build
+- [x] Capacitor Android shell: `@capacitor/core`, `cap add android`, build script, run on tablet
+- [x] Viewport/meta for tablet: disable browser pinch-zoom/overscroll on editor surfaces, `touch-action: none` on canvases
+- [x] App shell + routes: `/`, `/projects`, `/projects/$projectId`, `/projects/$projectId/sprites/$setId`, `/projects/$projectId/charsets/$charsetId`, `/projects/$projectId/maps/$mapId`
 - [ ] Worksheet design system: Tailwind theme tokens (paper bg, grid greys, label font), field/box components, sheet header ("Sprite Worksheet" style)
 
 ### M1: Core C64 model (pure TS, fully unit-tested)
 
-- [ ] C64 palette (16 colours, named; pick a standard e.g. Pepto/Colodore)
+- [x] C64 palette (16 colours, named; pick a standard e.g. Pepto/Colodore)
 - [ ] Bitplane helpers: get/set pixel for hires (1bpp) and multicolour (2bpp pairs)
 - [ ] Sprite model: 63 bytes, mode, sprite colour, overlay link, expand flags
 - [ ] Char model: 8 bytes; charset of 256 (64 in ECM) + per-char attribute colour

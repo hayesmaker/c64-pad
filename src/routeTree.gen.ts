@@ -10,33 +10,105 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ProjectsIndexRouteImport } from './routes/projects.index'
+import { Route as ProjectsProjectIdIndexRouteImport } from './routes/projects.$projectId.index'
+import { Route as ProjectsProjectIdCharsetsCharsetIdRouteImport } from './routes/projects.$projectId.charsets.$charsetId'
+import { Route as ProjectsProjectIdMapsMapIdRouteImport } from './routes/projects.$projectId.maps.$mapId'
+import { Route as ProjectsProjectIdSpritesSetIdRouteImport } from './routes/projects.$projectId.sprites.$setId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ProjectsIndexRoute = ProjectsIndexRouteImport.update({
+  id: '/projects/',
+  path: '/projects/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProjectsProjectIdIndexRoute = ProjectsProjectIdIndexRouteImport.update({
+  id: '/projects/$projectId/',
+  path: '/projects/$projectId/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProjectsProjectIdCharsetsCharsetIdRoute =
+  ProjectsProjectIdCharsetsCharsetIdRouteImport.update({
+    id: '/projects/$projectId/charsets/$charsetId',
+    path: '/projects/$projectId/charsets/$charsetId',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ProjectsProjectIdMapsMapIdRoute =
+  ProjectsProjectIdMapsMapIdRouteImport.update({
+    id: '/projects/$projectId/maps/$mapId',
+    path: '/projects/$projectId/maps/$mapId',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ProjectsProjectIdSpritesSetIdRoute =
+  ProjectsProjectIdSpritesSetIdRouteImport.update({
+    id: '/projects/$projectId/sprites/$setId',
+    path: '/projects/$projectId/sprites/$setId',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/projects/': typeof ProjectsIndexRoute
+  '/projects/$projectId/': typeof ProjectsProjectIdIndexRoute
+  '/projects/$projectId/charsets/$charsetId': typeof ProjectsProjectIdCharsetsCharsetIdRoute
+  '/projects/$projectId/maps/$mapId': typeof ProjectsProjectIdMapsMapIdRoute
+  '/projects/$projectId/sprites/$setId': typeof ProjectsProjectIdSpritesSetIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/projects': typeof ProjectsIndexRoute
+  '/projects/$projectId': typeof ProjectsProjectIdIndexRoute
+  '/projects/$projectId/charsets/$charsetId': typeof ProjectsProjectIdCharsetsCharsetIdRoute
+  '/projects/$projectId/maps/$mapId': typeof ProjectsProjectIdMapsMapIdRoute
+  '/projects/$projectId/sprites/$setId': typeof ProjectsProjectIdSpritesSetIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/projects/': typeof ProjectsIndexRoute
+  '/projects/$projectId/': typeof ProjectsProjectIdIndexRoute
+  '/projects/$projectId/charsets/$charsetId': typeof ProjectsProjectIdCharsetsCharsetIdRoute
+  '/projects/$projectId/maps/$mapId': typeof ProjectsProjectIdMapsMapIdRoute
+  '/projects/$projectId/sprites/$setId': typeof ProjectsProjectIdSpritesSetIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/projects/'
+    | '/projects/$projectId/'
+    | '/projects/$projectId/charsets/$charsetId'
+    | '/projects/$projectId/maps/$mapId'
+    | '/projects/$projectId/sprites/$setId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/projects'
+    | '/projects/$projectId'
+    | '/projects/$projectId/charsets/$charsetId'
+    | '/projects/$projectId/maps/$mapId'
+    | '/projects/$projectId/sprites/$setId'
+  id:
+    | '__root__'
+    | '/'
+    | '/projects/'
+    | '/projects/$projectId/'
+    | '/projects/$projectId/charsets/$charsetId'
+    | '/projects/$projectId/maps/$mapId'
+    | '/projects/$projectId/sprites/$setId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ProjectsIndexRoute: typeof ProjectsIndexRoute
+  ProjectsProjectIdIndexRoute: typeof ProjectsProjectIdIndexRoute
+  ProjectsProjectIdCharsetsCharsetIdRoute: typeof ProjectsProjectIdCharsetsCharsetIdRoute
+  ProjectsProjectIdMapsMapIdRoute: typeof ProjectsProjectIdMapsMapIdRoute
+  ProjectsProjectIdSpritesSetIdRoute: typeof ProjectsProjectIdSpritesSetIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,11 +120,52 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/projects/': {
+      id: '/projects/'
+      path: '/projects'
+      fullPath: '/projects/'
+      preLoaderRoute: typeof ProjectsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/projects/$projectId/': {
+      id: '/projects/$projectId/'
+      path: '/projects/$projectId'
+      fullPath: '/projects/$projectId/'
+      preLoaderRoute: typeof ProjectsProjectIdIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/projects/$projectId/charsets/$charsetId': {
+      id: '/projects/$projectId/charsets/$charsetId'
+      path: '/projects/$projectId/charsets/$charsetId'
+      fullPath: '/projects/$projectId/charsets/$charsetId'
+      preLoaderRoute: typeof ProjectsProjectIdCharsetsCharsetIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/projects/$projectId/maps/$mapId': {
+      id: '/projects/$projectId/maps/$mapId'
+      path: '/projects/$projectId/maps/$mapId'
+      fullPath: '/projects/$projectId/maps/$mapId'
+      preLoaderRoute: typeof ProjectsProjectIdMapsMapIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/projects/$projectId/sprites/$setId': {
+      id: '/projects/$projectId/sprites/$setId'
+      path: '/projects/$projectId/sprites/$setId'
+      fullPath: '/projects/$projectId/sprites/$setId'
+      preLoaderRoute: typeof ProjectsProjectIdSpritesSetIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ProjectsIndexRoute: ProjectsIndexRoute,
+  ProjectsProjectIdIndexRoute: ProjectsProjectIdIndexRoute,
+  ProjectsProjectIdCharsetsCharsetIdRoute:
+    ProjectsProjectIdCharsetsCharsetIdRoute,
+  ProjectsProjectIdMapsMapIdRoute: ProjectsProjectIdMapsMapIdRoute,
+  ProjectsProjectIdSpritesSetIdRoute: ProjectsProjectIdSpritesSetIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

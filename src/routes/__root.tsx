@@ -3,6 +3,7 @@ import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import { TanStackDevtools } from '@tanstack/react-devtools'
 
 import appCss from '../styles.css?url'
+import { AppHeader } from '@/components/layout/app-header'
 
 export const Route = createRootRoute({
   head: () => ({
@@ -12,10 +13,11 @@ export const Route = createRootRoute({
       },
       {
         name: 'viewport',
-        content: 'width=device-width, initial-scale=1',
+        content:
+          'width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content',
       },
       {
-        title: 'TanStack Start Starter',
+        title: 'C64-Pad',
       },
     ],
     links: [
@@ -35,18 +37,21 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <HeadContent />
       </head>
       <body>
-        {children}
-        <TanStackDevtools
-          config={{
-            position: 'bottom-right',
-          }}
-          plugins={[
-            {
-              name: 'Tanstack Router',
-              render: <TanStackRouterDevtoolsPanel />,
-            },
-          ]}
-        />
+        <AppHeader />
+        <main className="flex-1">{children}</main>
+        {import.meta.env.DEV && (
+          <TanStackDevtools
+            config={{
+              position: 'bottom-right',
+            }}
+            plugins={[
+              {
+                name: 'Tanstack Router',
+                render: <TanStackRouterDevtoolsPanel />,
+              },
+            ]}
+          />
+        )}
         <Scripts />
       </body>
     </html>
