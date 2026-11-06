@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">C64-Pad</string>
+    <string name="title_activity_main">C64-Pad</string>
+    <string name="package_name">com.hayesmaker64.c64pad</string>
+    <string name="custom_url_scheme">com.hayesmaker64.c64pad</string>
+</resources>
