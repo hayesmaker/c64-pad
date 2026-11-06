@@ -12,7 +12,7 @@ See `PLAN.md` → _Decisions_ for the reasoning behind these.
 - [ ] Install and run on the tablet (`npm run android:run` with device connected)
 - [x] Viewport/meta for tablet: disable browser pinch-zoom/overscroll on editor surfaces, `touch-action: none` on canvases
 - [x] App shell + routes: `/`, `/projects`, `/projects/$projectId`, `/projects/$projectId/sprites/$setId`, `/projects/$projectId/charsets/$charsetId`, `/projects/$projectId/maps/$mapId`
-- [ ] Worksheet design system: Tailwind theme tokens (paper bg, grid greys, label font), field/box components, sheet header ("Sprite Worksheet" style)
+- [x] Worksheet design system: Tailwind theme tokens (paper bg, grid greys, label font), field/box components, sheet header ("Sprite Worksheet" style); see `docs/DESIGN.md`
 
 ### M1: Core C64 model (pure TS, fully unit-tested)
 
@@ -96,6 +96,9 @@ See `PLAN.md` → _Decisions_ for the reasoning behind these.
 
 - [ ] Electron (or Tauri) shell for Linux/Windows with native file dialogs
 - [ ] Homepage polish (worksheet-styled entry tiles: Sprites / Characters / Screens)
+- [ ] Portrait layouts: tablet portrait, then phone
+- [ ] Printable blank worksheets (sprite, character, screen): print stylesheet and/or PDF export rendered from the editor components
+- [ ] Dark mode
 - [ ] Optional: CharPad tiles/blocks layer
 - [ ] Publish to deployed backend (auth, server functions, sharing)
 - [ ] Remote KickAssembler build service (containerised, CORS PRG URLs); "Build on server" option for custom asm templates; enables "Open in c64-ready" from app builds

@@ -8,8 +8,14 @@ export const Route = createFileRoute('/projects/$projectId/')({
 function Project() {
   const { projectId } = Route.useParams()
   return (
-    <PlaceholderPage title="Project">
-      Project {projectId}: sprite sets, charsets and maps will be listed here.
+    <PlaceholderPage
+      title="Project"
+      crumbs={[
+        { label: 'My Projects', link: { to: '/projects' } },
+        { label: projectId },
+      ]}
+    >
+      Sprite sets, charsets and maps will be listed here.
     </PlaceholderPage>
   )
 }

@@ -30,18 +30,19 @@ my open source web based emulator: "c64-ready".
 
 ## Decisions (agreed 2026-11-06)
 
-| Area         | Decision                                                                                                                                                                                                               |
-| ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| MVP          | **Sprite designer** first; charset editor, then charmap editor                                                                                                                                                         |
-| Visual style | **Worksheet-inspired**: clean paper-like layout echoing the Sketch & Design sheets (bit-weight headers `128 64 … 1`, row numbers, live DATA byte column, labelled fields: name, program, number, date designed, notes) |
-| Input        | **Stylus and finger** equally: pointer events, pinch-zoom / two-finger pan, palm rejection, large touch targets                                                                                                        |
-| Storage (v1) | **IndexedDB autosave** + explicit project file export/import (`.c64pad` JSON). Publishing to a server is a later phase                                                                                                 |
-| Build mode   | TanStack Start in **SPA/static mode** so Capacitor/Electron can bundle static assets; server functions only later for publishing                                                                                       |
-| Packaging    | **Capacitor Android early** (milestone 1), Electron later                                                                                                                                                              |
-| Assembler    | **KickAssembler** syntax for ASM exports & example loaders                                                                                                                                                             |
-| c64-ready    | **"Run in c64-ready" button**: launches c64-ready with a generated stub program that displays the sprite/screen                                                                                                        |
-| Engineering  | Vitest (esp. encoders), GitHub Actions CI, undo/redo command architecture from day one, todo list → GitHub Issues/Milestones                                                                                           |
-| File formats | Implement from public specs (SpritePad `.spd`, CharPad `.ctm`); user verifies against real tools                                                                                                                       |
+| Area         | Decision                                                                                                                                                     |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| MVP          | **Sprite designer** first; charset editor, then charmap editor                                                                                               |
+| Visual style | **Worksheet-inspired**, approved mock-up; see `docs/DESIGN.md`. Paper sheet on a desk, double-rule titles, right-edge editor tabs, IBM Plex, C64-blue accent |
+| Input        | **Stylus and finger** equally: pointer events, pinch-zoom / two-finger pan, palm rejection, large touch targets                                              |
+| Orientation  | **Tablet landscape first** for MVP; portrait tablet and phone layouts after MVP                                                                              |
+| Storage (v1) | **IndexedDB autosave** + explicit project file export/import (`.c64pad` JSON). Publishing to a server is a later phase                                       |
+| Build mode   | TanStack Start in **SPA/static mode** so Capacitor/Electron can bundle static assets; server functions only later for publishing                             |
+| Packaging    | **Capacitor Android early** (milestone 1), Electron later                                                                                                    |
+| Assembler    | **KickAssembler** syntax for ASM exports & example loaders                                                                                                   |
+| c64-ready    | **"Run in c64-ready" button**: launches c64-ready with a generated stub program that displays the sprite/screen                                              |
+| Engineering  | Vitest (esp. encoders), GitHub Actions CI, undo/redo command architecture from day one, todo list → GitHub Issues/Milestones                                 |
+| File formats | Implement from public specs (SpritePad `.spd`, CharPad `.ctm`); user verifies against real tools                                                             |
 
 ### Project model (project-first)
 
