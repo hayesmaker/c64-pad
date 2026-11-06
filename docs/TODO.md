@@ -8,7 +8,8 @@ See `PLAN.md` → _Decisions_ for the reasoning behind these.
 - [x] Switch TanStack Start to SPA/static output; confirm `vite build` emits a self-contained `dist` usable offline
 - [x] Add Vitest + a first test; add `typecheck` script (`tsc --noEmit`)
 - [x] GitHub Actions CI: install, lint, typecheck, test, build
-- [x] Capacitor Android shell: `@capacitor/core`, `cap add android`, build script, run on tablet
+- [x] Capacitor Android shell: `@capacitor/core`, `cap add android`, build scripts, debug APK builds
+- [ ] Install and run on the tablet (`npm run android:run` with device connected)
 - [x] Viewport/meta for tablet: disable browser pinch-zoom/overscroll on editor surfaces, `touch-action: none` on canvases
 - [x] App shell + routes: `/`, `/projects`, `/projects/$projectId`, `/projects/$projectId/sprites/$setId`, `/projects/$projectId/charsets/$charsetId`, `/projects/$projectId/maps/$mapId`
 - [ ] Worksheet design system: Tailwind theme tokens (paper bg, grid greys, label font), field/box components, sheet header ("Sprite Worksheet" style)
