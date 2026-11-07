@@ -55,7 +55,8 @@ export function SpritePreview({
     </button>
   )
   return (
-    <div className="flex flex-col gap-1.5">
+    // Bottom padding keeps the Notes label (below the fold on tablets) out of sight.
+    <div className="flex flex-col gap-1.5 pb-4">
       <div className="flex items-center justify-between">
         <span className="text-xs text-muted-foreground">Preview</span>
         <div className="flex gap-1">
