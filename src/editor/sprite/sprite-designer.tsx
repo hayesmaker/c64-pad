@@ -4,15 +4,14 @@ import {
   ArrowLeft,
   ArrowRight,
   ArrowUp,
-  Download,
   Contrast,
   Eraser,
   FlipHorizontal2,
   FlipVertical2,
   Maximize2,
+  MonitorPlay,
   Move,
   PaintBucket,
-  Play,
   Pencil,
   Redo2,
   Trash2,
@@ -58,11 +57,10 @@ import { cn } from '@/lib/utils'
 import { ModelError } from '@/c64/errors'
 import { useAssetHistory } from '../asset-history'
 import { AnimationControls, useAnimationFrame } from './animation'
-import { ExportSpritesDialog } from './export-dialog'
+import { RunExportSpritesDialog } from './export-dialog'
 import { EmulatorOverlay } from '@/emulator/emulator-overlay'
 import { buildViewerPrg, spriteSetShowcase } from '@/emulator/sprite-viewer'
 import { safeFileName } from '@/platform/save-file'
-import { Button } from '@/components/ui/button'
 import { DEFAULT_VIEW, zoomAround } from '../view'
 import {
   BIT_HEADER_H,
@@ -251,28 +249,9 @@ export function SpriteDesigner({
           >
             <Maximize2 />
           </ToolButton>
-          <Button
-            onClick={() => {
-              const prg = buildViewerPrg(
-                spriteSetShowcase(set, {
-                  selectedId: selected.id,
-                  animationId: animation?.id ?? null,
-                  background: background ?? 6,
-                }),
-              )
-              setRunning({
-                prg,
-                title: `${set.name}${animation ? ` · ${animation.name}` : ` · sprite ${set.sprites.indexOf(selected)}`}`,
-              })
-            }}
-          >
-            <Play aria-hidden="true" />
-            Run
-          </Button>
-          <Button variant="outline" onClick={() => setExporting(true)}>
-            <Download aria-hidden="true" />
-            Export
-          </Button>
+          <ToolButton label="Run & export" onClick={() => setExporting(true)}>
+            <MonitorPlay />
+          </ToolButton>
           <ToolButton
             label="Undo"
             disabled={!history.canUndo}
@@ -616,11 +595,29 @@ export function SpriteDesigner({
         </div>
       </div>
       {exporting && (
-        <ExportSpritesDialog
+        <RunExportSpritesDialog
           project={project}
           set={set}
           currentIndex={set.sprites.indexOf(selected)}
           background={background}
+          runSummary={
+            animation
+              ? `Plays “${animation.name}” large in the middle, with the other sprites of ${set.name} along the bottom.`
+              : `Shows sprite ${set.sprites.indexOf(selected)} large in the middle${selected.overlayId ? ' with its overlay' : ''}, and the other sprites of ${set.name} along the bottom.`
+          }
+          onRun={() => {
+            const prg = buildViewerPrg(
+              spriteSetShowcase(set, {
+                selectedId: selected.id,
+                animationId: animation?.id ?? null,
+                background: background ?? 6,
+              }),
+            )
+            setRunning({
+              prg,
+              title: `${set.name}${animation ? ` · ${animation.name}` : ` · sprite ${set.sprites.indexOf(selected)}`}`,
+            })
+          }}
           onClose={() => setExporting(false)}
         />
       )}

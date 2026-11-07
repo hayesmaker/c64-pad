@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Download } from 'lucide-react'
+import { Download, Play } from 'lucide-react'
 import { PALETTE } from '@/c64/palette'
 import {
   exportSpritesBin,
@@ -29,6 +29,10 @@ import type { SpriteSet } from '@/c64/sprite-set'
 
 type Format = 'bin' | 'asm' | 'spd' | 'png'
 type RangeChoice = 'all' | 'current' | 'custom'
+type Tab = 'run' | 'export'
+
+/** The tab used last, kept while the app runs. */
+let lastTab: Tab = 'run'
 
 const FORMATS: ReadonlyArray<{ value: Format; label: string; about: string }> =
   [
@@ -57,11 +61,14 @@ const FORMATS: ReadonlyArray<{ value: Format; label: string; about: string }> =
     },
   ]
 
-export function ExportSpritesDialog({
+/** Run the sprites on the C64, or export them as files. */
+export function RunExportSpritesDialog({
   project,
   set,
   currentIndex,
   background,
+  runSummary,
+  onRun,
   onClose,
 }: {
   project: Project
@@ -69,8 +76,16 @@ export function ExportSpritesDialog({
   currentIndex: number
   /** Editor background: used for PNG/SPD background when not transparent. */
   background: C64Color | null
+  /** What Run will show, in a sentence. */
+  runSummary: string
+  onRun: () => void
   onClose: () => void
 }) {
+  const [tab, setTabState] = useState<Tab>(lastTab)
+  const setTab = (t: Tab) => {
+    lastTab = t
+    setTabState(t)
+  }
   const last = set.sprites.length - 1
   const [format, setFormat] = useState<Format>('bin')
   const [rangeChoice, setRangeChoice] = useState<RangeChoice>('all')
@@ -159,180 +174,225 @@ export function ExportSpritesDialog({
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
         <DialogHeader>
-          <DialogTitle>Export sprites</DialogTitle>
-          <DialogDescription>{about}</DialogDescription>
+          <DialogTitle>Run & export · {set.name}</DialogTitle>
+          <DialogDescription className="sr-only">
+            Run the sprites on the built-in C64, or export them as files.
+          </DialogDescription>
         </DialogHeader>
 
         <Segmented
-          label="Format"
-          value={format}
-          options={FORMATS.map(({ value, label }) => ({ value, label }))}
-          onChange={setFormat}
+          label="Run or export"
+          value={tab}
+          options={[
+            { value: 'run', label: 'Run on C64' },
+            { value: 'export', label: 'Export files' },
+          ]}
+          onChange={setTab}
         />
 
-        {format !== 'spd' && (
-          <div className="flex flex-col gap-2">
-            <span className="text-xs text-muted-foreground">Sprites</span>
-            <div className="flex items-center gap-3">
-              <div className="w-[300px]">
-                <Segmented
-                  label="Sprite range"
-                  size="sm"
-                  value={rangeChoice}
-                  options={[
-                    { value: 'all', label: `All (${set.sprites.length})` },
-                    { value: 'current', label: `Current (#${currentIndex})` },
-                    { value: 'custom', label: 'Range' },
-                  ]}
-                  onChange={setRangeChoice}
-                />
+        {tab === 'run' && (
+          <>
+            <div className="flex flex-col gap-2 text-sm">
+              <p>{runSummary}</p>
+              <p className="text-muted-foreground">
+                Runs in c64-ready, the C64 emulator built into C64-Pad. From
+                there you can save the .prg to load in VICE or on real hardware.
+              </p>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={onClose}>
+                Cancel
+              </Button>
+              <Button
+                onClick={() => {
+                  onClose()
+                  onRun()
+                }}
+              >
+                <Play aria-hidden="true" /> Run
+              </Button>
+            </DialogFooter>
+          </>
+        )}
+
+        {tab === 'export' && (
+          <>
+            <p className="text-sm text-muted-foreground">{about}</p>
+            <Segmented
+              label="Format"
+              value={format}
+              options={FORMATS.map(({ value, label }) => ({ value, label }))}
+              onChange={setFormat}
+            />
+
+            {format !== 'spd' && (
+              <div className="flex flex-col gap-2">
+                <span className="text-xs text-muted-foreground">Sprites</span>
+                <div className="flex items-center gap-3">
+                  <div className="w-[300px]">
+                    <Segmented
+                      label="Sprite range"
+                      size="sm"
+                      value={rangeChoice}
+                      options={[
+                        { value: 'all', label: `All (${set.sprites.length})` },
+                        {
+                          value: 'current',
+                          label: `Current (#${currentIndex})`,
+                        },
+                        { value: 'custom', label: 'Range' },
+                      ]}
+                      onChange={setRangeChoice}
+                    />
+                  </div>
+                  {rangeChoice === 'custom' && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <Input
+                        aria-label="First sprite"
+                        inputMode="numeric"
+                        className="w-16"
+                        value={from}
+                        onChange={(e) => setFrom(e.target.value)}
+                      />
+                      to
+                      <Input
+                        aria-label="Last sprite"
+                        inputMode="numeric"
+                        className="w-16"
+                        value={to}
+                        onChange={(e) => setTo(e.target.value)}
+                      />
+                    </div>
+                  )}
+                </div>
+                {!range && (
+                  <p className="text-sm text-destructive">
+                    Choose sprites between 0 and {last}.
+                  </p>
+                )}
               </div>
-              {rangeChoice === 'custom' && (
-                <div className="flex items-center gap-2 text-sm">
-                  <Input
-                    aria-label="First sprite"
-                    inputMode="numeric"
-                    className="w-16"
-                    value={from}
-                    onChange={(e) => setFrom(e.target.value)}
-                  />
-                  to
-                  <Input
-                    aria-label="Last sprite"
-                    inputMode="numeric"
-                    className="w-16"
-                    value={to}
-                    onChange={(e) => setTo(e.target.value)}
+            )}
+
+            {(format === 'bin' || format === 'asm') && (
+              <div className="flex flex-col gap-2">
+                <span className="text-xs text-muted-foreground">
+                  64th byte of each sprite
+                </span>
+                <div className="w-[300px]">
+                  <Segmented
+                    label="64th byte"
+                    size="sm"
+                    value={pad}
+                    options={[
+                      { value: 'zero', label: 'Zero pad' },
+                      { value: 'attributes', label: 'SpritePad attributes' },
+                    ]}
+                    onChange={setPad}
                   />
                 </div>
-              )}
-            </div>
-            {!range && (
-              <p className="text-sm text-destructive">
-                Choose sprites between 0 and {last}.
-              </p>
-            )}
-          </div>
-        )}
-
-        {(format === 'bin' || format === 'asm') && (
-          <div className="flex flex-col gap-2">
-            <span className="text-xs text-muted-foreground">
-              64th byte of each sprite
-            </span>
-            <div className="w-[300px]">
-              <Segmented
-                label="64th byte"
-                size="sm"
-                value={pad}
-                options={[
-                  { value: 'zero', label: 'Zero pad' },
-                  { value: 'attributes', label: 'SpritePad attributes' },
-                ]}
-                onChange={setPad}
-              />
-            </div>
-          </div>
-        )}
-
-        {format === 'asm' && asm && (
-          <pre className="max-h-48 overflow-auto rounded-lg border border-rule-soft bg-muted p-3 font-mono text-[11px] leading-snug">
-            {asm.split('\n').slice(0, 40).join('\n')}
-            {asm.split('\n').length > 40 ? '\n…' : ''}
-          </pre>
-        )}
-
-        {format === 'spd' && spd && (
-          <div className="flex flex-col gap-1 text-sm">
-            <p>
-              {set.sprites.length} sprites, {set.animations.length}{' '}
-              animation(s). Screen colour {PALETTE[screenColor].name} (the
-              editor background).
-            </p>
-            {spd.warnings.map((w) => (
-              <p key={w} className="text-destructive">
-                {w}
-              </p>
-            ))}
-          </div>
-        )}
-
-        {format === 'png' && sheet && (
-          <div className="flex gap-4">
-            <div className="flex flex-col gap-3">
-              <Field label={`Scale: ${scale}×`}>
-                <input
-                  type="range"
-                  min={1}
-                  max={8}
-                  value={scale}
-                  onChange={(e) => setScale(Number(e.target.value))}
-                  className="h-8 w-48 accent-primary"
-                />
-              </Field>
-              <Field label={`Columns: ${columns}`}>
-                <input
-                  type="range"
-                  min={1}
-                  max={Math.max(1, count)}
-                  value={columns}
-                  onChange={(e) => setColumns(Number(e.target.value))}
-                  className="h-8 w-48 accent-primary"
-                />
-              </Field>
-              <div className="w-48">
-                <Segmented
-                  label="PNG background"
-                  size="sm"
-                  value={pngBackground}
-                  options={[
-                    { value: 'transparent', label: 'Transparent' },
-                    { value: 'screen', label: PALETTE[screenColor].name },
-                  ]}
-                  onChange={setPngBackground}
-                />
               </div>
-            </div>
-            <div
-              className="flex max-h-48 min-w-0 flex-1 items-center justify-center overflow-auto rounded-lg border border-rule-soft p-2"
-              style={{
-                background:
-                  pngBackground === 'screen'
-                    ? PALETTE[screenColor].hex
-                    : 'repeating-conic-gradient(var(--checker-a) 0% 25%, var(--checker-b) 0% 50%) 0 0 / 12px 12px',
-              }}
-            >
-              <IndexedCanvas
-                image={sheet}
-                label="PNG preview"
-                style={{
-                  width: sheet.width * Math.min(scale, 4),
-                  maxWidth: '100%',
-                }}
-              />
-            </div>
-          </div>
+            )}
+
+            {format === 'asm' && asm && (
+              <pre className="max-h-48 overflow-auto rounded-lg border border-rule-soft bg-muted p-3 font-mono text-[11px] leading-snug">
+                {asm.split('\n').slice(0, 40).join('\n')}
+                {asm.split('\n').length > 40 ? '\n…' : ''}
+              </pre>
+            )}
+
+            {format === 'spd' && spd && (
+              <div className="flex flex-col gap-1 text-sm">
+                <p>
+                  {set.sprites.length} sprites, {set.animations.length}{' '}
+                  animation(s). Screen colour {PALETTE[screenColor].name} (the
+                  editor background).
+                </p>
+                {spd.warnings.map((w) => (
+                  <p key={w} className="text-destructive">
+                    {w}
+                  </p>
+                ))}
+              </div>
+            )}
+
+            {format === 'png' && sheet && (
+              <div className="flex gap-4">
+                <div className="flex flex-col gap-3">
+                  <Field label={`Scale: ${scale}×`}>
+                    <input
+                      type="range"
+                      min={1}
+                      max={8}
+                      value={scale}
+                      onChange={(e) => setScale(Number(e.target.value))}
+                      className="h-8 w-48 accent-primary"
+                    />
+                  </Field>
+                  <Field label={`Columns: ${columns}`}>
+                    <input
+                      type="range"
+                      min={1}
+                      max={Math.max(1, count)}
+                      value={columns}
+                      onChange={(e) => setColumns(Number(e.target.value))}
+                      className="h-8 w-48 accent-primary"
+                    />
+                  </Field>
+                  <div className="w-48">
+                    <Segmented
+                      label="PNG background"
+                      size="sm"
+                      value={pngBackground}
+                      options={[
+                        { value: 'transparent', label: 'Transparent' },
+                        { value: 'screen', label: PALETTE[screenColor].name },
+                      ]}
+                      onChange={setPngBackground}
+                    />
+                  </div>
+                </div>
+                <div
+                  className="flex max-h-48 min-w-0 flex-1 items-center justify-center overflow-auto rounded-lg border border-rule-soft p-2"
+                  style={{
+                    background:
+                      pngBackground === 'screen'
+                        ? PALETTE[screenColor].hex
+                        : 'repeating-conic-gradient(var(--checker-a) 0% 25%, var(--checker-b) 0% 50%) 0 0 / 12px 12px',
+                  }}
+                >
+                  <IndexedCanvas
+                    image={sheet}
+                    label="PNG preview"
+                    style={{
+                      width: sheet.width * Math.min(scale, 4),
+                      maxWidth: '100%',
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+
+            {error && <p className="text-sm text-destructive">{error}</p>}
+
+            <DialogFooter>
+              <span className="mr-auto self-center font-mono text-xs text-muted-foreground">
+                {format === 'spd'
+                  ? `${baseName}.spd · ${spd?.bytes.length ?? 0} bytes`
+                  : `${baseName}.${format} · ${count} sprite(s)${format === 'bin' ? ` · ${count * 64} bytes` : ''}`}
+              </span>
+              <Button variant="outline" onClick={onClose}>
+                Cancel
+              </Button>
+              <Button
+                disabled={saving || (format !== 'spd' && !range)}
+                onClick={() => void save()}
+              >
+                <Download aria-hidden="true" />
+                {saving ? 'Saving…' : 'Save'}
+              </Button>
+            </DialogFooter>
+          </>
         )}
-
-        {error && <p className="text-sm text-destructive">{error}</p>}
-
-        <DialogFooter>
-          <span className="mr-auto self-center font-mono text-xs text-muted-foreground">
-            {format === 'spd'
-              ? `${baseName}.spd · ${spd?.bytes.length ?? 0} bytes`
-              : `${baseName}.${format} · ${count} sprite(s)${format === 'bin' ? ` · ${count * 64} bytes` : ''}`}
-          </span>
-          <Button variant="outline" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button
-            disabled={saving || (format !== 'spd' && !range)}
-            onClick={() => void save()}
-          >
-            <Download aria-hidden="true" />
-            {saving ? 'Saving…' : 'Save'}
-          </Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   )
