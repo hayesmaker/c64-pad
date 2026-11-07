@@ -5,7 +5,7 @@ import type { Charset } from '@/c64/charset'
 
 const COLUMNS = 16
 const SCALE = 2
-const PITCH = 8 * SCALE + 2
+const PITCH = 8 * SCALE + 1
 const ACCENT = '#2e2c9b'
 
 const hexDigit = (n: number) => n.toString(16).toUpperCase()
@@ -69,7 +69,7 @@ export function CharsetSheet({
 
   return (
     <div className="flex flex-col">
-      <div aria-hidden="true" className="flex" style={{ marginLeft: 26 }}>
+      <div aria-hidden="true" className="flex" style={{ marginLeft: 24 }}>
         {Array.from({ length: COLUMNS }, (_, c) => (
           <div
             key={c}
@@ -81,7 +81,7 @@ export function CharsetSheet({
         ))}
       </div>
       <div className="flex">
-        <div aria-hidden="true" className="flex w-[26px] flex-col">
+        <div aria-hidden="true" className="flex w-[24px] flex-col">
           {Array.from({ length: rows }, (_, r) => (
             <div
               key={r}

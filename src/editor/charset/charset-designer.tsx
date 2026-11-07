@@ -68,6 +68,7 @@ import { DEFAULT_VIEW, zoomAround } from '../view'
 import {
   BIT_HEADER_H,
   BitHeader,
+  ROW_NUMBERS_W,
   RowNumbers,
   ToolButton,
   useCellSize,
@@ -102,9 +103,9 @@ let clipboard: { bytes: Uint8Array; color: number } | null = null
 /** Last selected char per charset. */
 const lastSelected = new Map<string, number>()
 
-const DATA_W = 76
+const DATA_W = 60
 /** Room under the grid for the memory note and .byte line. */
-const MEM_H = 56
+const MEM_H = 64
 const hex2 = (n: number) => '$' + n.toString(16).toUpperCase().padStart(2, '0')
 const hex4 = (n: number) => '$' + n.toString(16).toUpperCase().padStart(4, '0')
 
@@ -148,7 +149,7 @@ export function CharsetDesigner({
     min: 24,
     max: 56,
     reserveWidth: DATA_W + 12,
-    reserveHeight: MEM_H,
+    reserveHeight: BIT_HEADER_H + 2 + MEM_H,
   })
   const [view, setView] = useState<GridView>(DEFAULT_VIEW)
   useEffect(() => setView(DEFAULT_VIEW), [cell.size])
@@ -289,7 +290,10 @@ export function CharsetDesigner({
       actions={
         <>
           <SaveStatus status={status} error={error} />
-          <ToolButton label="Zen mode" onClick={() => setZen(true)}>
+          <ToolButton
+            label="Zen mode: just the grid"
+            onClick={() => setZen(true)}
+          >
             <Maximize2 />
           </ToolButton>
           <ToolButton
@@ -312,7 +316,7 @@ export function CharsetDesigner({
       className="flex gap-4 px-4 py-3"
     >
       {/* Left: char details, mode, pens, palette, preview */}
-      <div className="-mx-1 flex w-[240px] shrink-0 flex-col gap-2.5 overflow-y-auto px-1 py-0.5">
+      <div className="-mx-1 flex w-[232px] shrink-0 flex-col gap-2.5 overflow-y-auto px-1 py-0.5">
         <div className="flex gap-2">
           <CharNumberField count={count} value={selected} onChange={pick} />
           <Field label="Hex" className="w-20">
@@ -512,28 +516,14 @@ export function CharsetDesigner({
             </ToolButton>
           </div>
 
-          <div className="flex min-h-0 flex-col">
-            <div className="flex min-h-0 flex-1 gap-3">
-              <div className="flex min-h-0 flex-col">
+          <div ref={cell.slotRef} className="flex min-h-0 flex-col">
+            <div className="flex gap-3">
+              <div className="flex flex-col">
                 <BitHeader bytes={1} cell={cell.size} view={view} />
-                <div ref={cell.slotRef} className="flex min-h-0 flex-1 gap-1">
+                <div className="flex gap-1">
                   <RowNumbers rows={8} first={0} cell={cell.size} view={view} />
-                  <div className="flex flex-col">
-                    <div className="h-fit rounded-[2px] border-2 border-[#77756f]">
-                      {renderGrid(cell.size, view, setView)}
-                    </div>
-                    <div
-                      className="mt-2 flex flex-col gap-0.5"
-                      style={{ width: 8 * cell.size + 4, height: MEM_H - 8 }}
-                    >
-                      <span className="text-xs text-muted-foreground">
-                        Char {selected} = charset + {selected * 8} ·{' '}
-                        {hex4(0x2000 + selected * 8)} for a charset at $2000
-                      </span>
-                      <code className="font-mono text-xs select-all">
-                        .byte {[...bytes].map(hex2).join(',')}
-                      </code>
-                    </div>
+                  <div className="h-fit rounded-[2px] border-2 border-[#77756f]">
+                    {renderGrid(cell.size, view, setView)}
                   </div>
                 </div>
               </div>
@@ -568,7 +558,18 @@ export function CharsetDesigner({
                     </div>
                   ))}
                 </div>
-                <div className="mt-2">
+              </div>
+            </div>
+            <div
+              className="mt-2 flex flex-col gap-1"
+              style={{ marginLeft: ROW_NUMBERS_W, height: MEM_H - 8 }}
+            >
+              <div className="flex items-center gap-2">
+                <span className="min-w-0 flex-1 text-[11px] leading-tight text-muted-foreground">
+                  Offset +{selected * 8} · {hex4(0x2000 + selected * 8)} with
+                  the set at $2000
+                </span>
+                <div className="w-24 shrink-0">
                   <Segmented
                     label="Number format"
                     size="sm"
@@ -581,13 +582,16 @@ export function CharsetDesigner({
                   />
                 </div>
               </div>
+              <code className="font-mono text-xs whitespace-nowrap select-all">
+                .byte {[...bytes].map(hex2).join(',')}
+              </code>
             </div>
           </div>
         </div>
       </div>
 
       {/* Right: the whole charset */}
-      <div className="flex w-[330px] shrink-0 flex-col gap-2 overflow-y-auto border-l border-rule-soft pl-4">
+      <div className="flex w-[306px] shrink-0 flex-col gap-2 overflow-y-auto border-l border-rule-soft pl-3">
         <span className="text-xs text-muted-foreground">
           {users.length === 0
             ? 'Charset · not used by a map yet'

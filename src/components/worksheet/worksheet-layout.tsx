@@ -42,7 +42,7 @@ export function WorksheetLayout({
           !tabs && 'mr-3',
         )}
       >
-        <header className="grid h-14 shrink-0 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-4 border-b border-rule-soft px-5">
+        <header className="grid h-14 shrink-0 grid-cols-[minmax(0,1fr)_auto_minmax(max-content,1fr)] items-center gap-4 border-b border-rule-soft px-5">
           <div className="flex min-w-0 items-center gap-4">
             <div className="min-w-0 shrink">{breadcrumbs}</div>
             <DoubleRule />

@@ -246,7 +246,10 @@ export function SpriteDesigner({
       actions={
         <>
           <SaveStatus status={status} error={error} />
-          <ToolButton label="Zen mode" onClick={() => setZen(true)}>
+          <ToolButton
+            label="Zen mode: just the grid"
+            onClick={() => setZen(true)}
+          >
             <Maximize2 />
           </ToolButton>
           <Button
