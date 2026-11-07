@@ -1,6 +1,8 @@
 import { useEffect, useRef } from 'react'
 import { PALETTE } from '@/c64/palette'
 import { useGridGestures } from './gestures'
+import { drawTracing } from './tracing/placement'
+import type { GridTracing } from './tracing/placement'
 import { cssVar, useColorScheme } from '@/lib/theme'
 import { clampView, zoomAround } from './view'
 import type { GridView } from './view'
@@ -34,6 +36,7 @@ export function PixelGrid({
   view,
   onViewChange,
   label,
+  tracing,
   ...handlers
 }: {
   /** Size in hires pixels. */
@@ -50,6 +53,8 @@ export function PixelGrid({
   view: GridView
   onViewChange: (view: GridView) => void
   label: string
+  /** Reference image over the grid, or under its empty pixels. */
+  tracing?: GridTracing | null
 } & StrokeHandlers) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const scheme = useColorScheme()
@@ -77,8 +82,10 @@ export function PixelGrid({
       width,
       height,
       major: cssVar('--grid-major') || '#8f8d86',
+      tracing: tracing ?? null,
     })
   }, [
+    tracing,
     scheme,
     columns,
     rows,
@@ -145,6 +152,7 @@ function draw(
     width: number
     height: number
     major: string
+    tracing: GridTracing | null
   },
 ) {
   ctx.clearRect(0, 0, o.width, o.height)
@@ -155,6 +163,8 @@ function draw(
   const h = o.rows * cell
   ctx.fillStyle = o.background
   ctx.fillRect(0, 0, w, h)
+  if (o.tracing?.layer === 'under')
+    drawTracing(ctx, o.tracing, cell, { width: w, height: h })
 
   for (const layer of o.layers) {
     ctx.globalAlpha = layer.alpha ?? 1
@@ -169,6 +179,8 @@ function draw(
     }
   }
   ctx.globalAlpha = 1
+  if (o.tracing?.layer === 'over')
+    drawTracing(ctx, o.tracing, cell, { width: w, height: h })
 
   const minor = minorLineColor(o.background)
   const line = (

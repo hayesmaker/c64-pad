@@ -74,6 +74,9 @@ import {
 import type { GridView } from '../view'
 import { SpriteGrid } from './sprite-grid'
 import { ZenMode, ZenPens } from '../zen-mode'
+import { TracingPanel } from '../tracing/tracing-panel'
+import { TracingButtons } from '../tracing/tracing-buttons'
+import { useGridTracing } from '../tracing/use-tracing'
 import { projectColors } from '@/c64/project'
 import { DataColumn } from './data-column'
 import { PaletteGrid, PensPanel } from '../pens-panel'
@@ -89,6 +92,9 @@ import type { SpriteSet } from '@/c64/sprite-set'
 import type { ProjectSession, SaveStatus as Status } from '@/storage/session'
 
 type Tool = 'draw' | 'erase' | 'fill'
+
+/** Tracing paper covers the sprite: 24 × 21 C64 pixels. */
+const SPRITE_TARGET = { width: 24, height: 21 }
 
 /** Pixels copied with "Copy pixels", kept for the app session. */
 let clipboard: Pick<Sprite, 'data' | 'mode'> | null = null
@@ -150,6 +156,8 @@ export function SpriteDesigner({
   // A new cell size changes the frame; start again at 1×.
   useEffect(() => setView(DEFAULT_VIEW), [cell.size])
   const strokeId = useRef(0)
+  const [tracingOpen, setTracingOpen] = useState(false)
+  const trace = useGridTracing(selected?.id ?? '', SPRITE_TARGET)
   /** The sprite before the last stroke, to tell whether a tap changed it. */
   const beforeStroke = useRef<Sprite | null>(null)
 
@@ -215,6 +223,7 @@ export function SpriteDesigner({
       onStrokeMove={(x, y) => paint(x, y, false)}
       onStrokeEnd={history.endGroup}
       onStrokeCancel={history.cancelGroup}
+      tracing={trace.grid}
     />
   )
 
@@ -245,6 +254,12 @@ export function SpriteDesigner({
       actions={
         <>
           <SaveStatus status={status} error={error} />
+          <TracingButtons
+            open={tracingOpen}
+            onOpen={setTracingOpen}
+            tracing={trace.tracing}
+            onVisible={(visible) => trace.update((t) => ({ ...t, visible }))}
+          />
           <ToolButton
             label="Zen mode: just the grid"
             onClick={() => setZen(true)}
@@ -275,81 +290,101 @@ export function SpriteDesigner({
     >
       {/* Left: sprite details, pens, palette, preview */}
       <div className="-mx-1 flex w-[248px] shrink-0 flex-col gap-2 overflow-y-auto px-1 py-0.5">
-        <div className="flex gap-2">
-          <Field
-            label={
-              pairOverlay
-                ? `Sprite name · ${selected.id === pairOverlay.id ? 'front' : 'back'} layer`
-                : 'Sprite name'
-            }
-            className="flex-1"
-          >
-            <Input
-              value={sprite.name}
-              onChange={(e) =>
-                changeSprite(
-                  (s) => ({ ...s, name: e.target.value }),
-                  `name-${sprite.id}`,
+        {tracingOpen ? (
+          <TracingPanel
+            tracing={trace.tracing}
+            error={trace.error}
+            target={SPRITE_TARGET}
+            targetLabel={'sprite: 24 × 21 px'}
+            onLoad={(file) => void trace.load(file)}
+            onRemove={() => void trace.remove()}
+            onChange={trace.update}
+            onDone={() => setTracingOpen(false)}
+          />
+        ) : (
+          <>
+            <div className="flex gap-2">
+              <Field
+                label={
+                  pairOverlay
+                    ? `Sprite name · ${selected.id === pairOverlay.id ? 'front' : 'back'} layer`
+                    : 'Sprite name'
+                }
+                className="flex-1"
+              >
+                <Input
+                  value={sprite.name}
+                  onChange={(e) =>
+                    changeSprite(
+                      (s) => ({ ...s, name: e.target.value }),
+                      `name-${sprite.id}`,
+                    )
+                  }
+                  onBlur={history.endGroup}
+                />
+              </Field>
+              <Field label="Number" className="w-16">
+                <Input
+                  value={String(set.sprites.indexOf(sprite))}
+                  readOnly
+                  className="font-mono"
+                />
+              </Field>
+            </div>
+            <Segmented
+              label="Sprite mode"
+              value={sprite.mode}
+              options={[
+                { value: 'hires', label: 'Single colour' },
+                { value: 'multicolor', label: 'Multi-colour' },
+              ]}
+              onChange={(mode) => changeSprite((s) => setSpriteMode(s, mode))}
+            />
+            <PensPanel
+              pens={pens}
+              pen={pen}
+              onPen={(v) => {
+                setPenByMode((p) => ({ ...p, [sprite.mode]: v }))
+                if (tool === 'erase') setTool('draw')
+              }}
+            />
+            <PaletteGrid
+              selected={penDef.color}
+              disabled={!penDef.slot}
+              penName={penDef.name.split(' · ')[0].toLowerCase()}
+              onPick={setPenColor}
+            />
+            <SpritePreview
+              set={set}
+              sprite={
+                (frameId && findSprite(set, frameId)) || pairBase || selected
+              }
+              background={background}
+              onBackground={setBackground}
+              onToggleExpand={(axis) =>
+                history.change((s) =>
+                  updateSprite(s, selected.id, (x) => ({
+                    ...x,
+                    [axis]: !x[axis],
+                  })),
                 )
               }
-              onBlur={history.endGroup}
             />
-          </Field>
-          <Field label="Number" className="w-16">
-            <Input
-              value={String(set.sprites.indexOf(sprite))}
-              readOnly
-              className="font-mono"
-            />
-          </Field>
-        </div>
-        <Segmented
-          label="Sprite mode"
-          value={sprite.mode}
-          options={[
-            { value: 'hires', label: 'Single colour' },
-            { value: 'multicolor', label: 'Multi-colour' },
-          ]}
-          onChange={(mode) => changeSprite((s) => setSpriteMode(s, mode))}
-        />
-        <PensPanel
-          pens={pens}
-          pen={pen}
-          onPen={(v) => {
-            setPenByMode((p) => ({ ...p, [sprite.mode]: v }))
-            if (tool === 'erase') setTool('draw')
-          }}
-        />
-        <PaletteGrid
-          selected={penDef.color}
-          disabled={!penDef.slot}
-          penName={penDef.name.split(' · ')[0].toLowerCase()}
-          onPick={setPenColor}
-        />
-        <SpritePreview
-          set={set}
-          sprite={(frameId && findSprite(set, frameId)) || pairBase || selected}
-          background={background}
-          onBackground={setBackground}
-          onToggleExpand={(axis) =>
-            history.change((s) =>
-              updateSprite(s, selected.id, (x) => ({ ...x, [axis]: !x[axis] })),
-            )
-          }
-        />
-        <Field label="Notes" className="min-h-[56px] flex-1">
-          <Textarea
-            value={sprite.notes}
-            onChange={(e) =>
-              changeSprite(
-                (s) => ({ ...s, notes: e.target.value }),
-                `notes-${sprite.id}`,
-              )
-            }
-            onBlur={history.endGroup}
-            className="min-h-0 flex-1 resize-none bg-paper text-sm"
-          />
-        </Field>
+            <Field label="Notes" className="min-h-[56px] flex-1">
+              <Textarea
+                value={sprite.notes}
+                onChange={(e) =>
+                  changeSprite(
+                    (s) => ({ ...s, notes: e.target.value }),
+                    `notes-${sprite.id}`,
+                  )
+                }
+                onBlur={history.endGroup}
+                className="min-h-0 flex-1 resize-none bg-paper text-sm"
+              />
+            </Field>
+          </>
+        )}
       </div>
 
       {/* Main: tool rail + grid + data bytes, sprites strip below */}

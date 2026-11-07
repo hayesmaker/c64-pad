@@ -45,6 +45,10 @@ body {
   --color-data-box: var(--data-box);
   --color-data-zero: var(--data-zero);
   --color-tab-inactive-hover: var(--tab-inactive-hover);
+  --color-ok: var(--ok);
+  --color-ok-foreground: var(--ok-foreground);
+  --color-warn: var(--warn);
+  --color-warn-foreground: var(--warn-foreground);
   --color-c64-screen: var(--c64-screen);
   --color-c64-border: var(--c64-border);
   --color-sidebar-ring: var(--sidebar-ring);
@@ -108,6 +112,11 @@ body {
   --checker-a: #d9d7cf;
   --checker-b: #fdfcf8;
   --shadow: rgba(43, 43, 40, 0.12);
+  /* Status notes (e.g. tracing paper size check) */
+  --ok: #e3f3df;
+  --ok-foreground: #24561c;
+  --warn: #fbf0d9;
+  --warn-foreground: #6b4a07;
   --c64-screen: #2e2c9b;
   --c64-border: #706deb;
 
@@ -168,6 +177,10 @@ body {
     --checker-a: #34332f;
     --checker-b: #45443f;
     --shadow: rgba(0, 0, 0, 0.45);
+    --ok: #203a26;
+    --ok-foreground: #a9ff9f;
+    --warn: #3a2f16;
+    --warn-foreground: #f2c46b;
 
     --foreground: #e8e6df;
     --card-foreground: #e8e6df;

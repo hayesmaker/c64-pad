@@ -5,6 +5,7 @@ import { SPRITE_RENDER_WIDTH, renderSprite } from '@/c64/sprite-set'
 import { PixelGrid } from '../pixel-grid'
 import { cssVar, useColorScheme } from '@/lib/theme'
 import type { GridLayer, StrokeHandlers } from '../pixel-grid'
+import type { GridTracing } from '../tracing/placement'
 import type { GridView } from '../view'
 import type { C64Color } from '@/c64/palette'
 import type { Sprite } from '@/c64/sprite'
@@ -33,6 +34,7 @@ export function SpriteGrid({
   background: C64Color | null
   view: GridView
   onViewChange: (view: GridView) => void
+  tracing?: GridTracing | null
 } & StrokeHandlers) {
   const { base, overlay } = layers
   const scheme = useColorScheme()

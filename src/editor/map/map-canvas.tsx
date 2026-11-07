@@ -4,6 +4,8 @@ import { renderChar } from '@/c64/charset'
 import { PALETTE } from '@/c64/palette'
 import { useGridGestures } from '../gestures'
 import { clampViewTo, zoomAroundIn } from '../view'
+import { drawTracing } from '../tracing/placement'
+import type { GridTracing } from '../tracing/placement'
 import type { StrokeHandlers } from '../gestures'
 import type { GridView, ViewBounds } from '../view'
 import type { Charmap } from '@/c64/charmap'
@@ -93,6 +95,7 @@ export function MapCanvas({
   showGrid,
   hover,
   selection,
+  tracing,
   ...handlers
 }: {
   map: Charmap
@@ -107,6 +110,8 @@ export function MapCanvas({
   /** Highlighted cells under the pointer (the brush footprint). */
   hover: CellRect | null
   selection: CellRect | null
+  /** Reference image over the map, or under its blank cells. */
+  tracing?: GridTracing | null
 } & StrokeHandlers) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const bounds = mapBounds(map, cell, frame)
@@ -130,12 +135,34 @@ export function MapCanvas({
     const y0 = Math.max(0, Math.floor(-view.y / size))
     const x1 = Math.min(map.width, Math.ceil((frameW - view.x) / size))
     const y1 = Math.min(map.height, Math.ceil((frameH - view.y) / size))
+    const traceAt = (t: GridTracing) => {
+      ctx.save()
+      ctx.translate(view.x, view.y)
+      drawTracing(ctx, t, size / 8, {
+        width: map.width * size,
+        height: map.height * size,
+      })
+      ctx.restore()
+    }
+    const under = tracing?.layer === 'under' ? tracing : null
+    if (under) {
+      // Background, the image, then every cell that isn't blank on top.
+      ctx.fillStyle = PALETTE[charset.background].hex
+      ctx.fillRect(
+        px(x0, view.x),
+        px(y0, view.y),
+        px(x1, view.x) - px(x0, view.x),
+        px(y1, view.y) - px(y0, view.y),
+      )
+      traceAt(under)
+    }
     for (let y = y0; y < y1; y++) {
       const top = px(y, view.y)
       const h = px(y + 1, view.y) - top
       for (let x = x0; x < x1; x++) {
         const left = px(x, view.x)
         const code = map.cells[y * map.width + x]
+        if (under && code === map.blank) continue
         ctx.drawImage(
           atlas,
           code * 8,
@@ -149,6 +176,8 @@ export function MapCanvas({
         )
       }
     }
+
+    if (tracing?.layer === 'over') traceAt(tracing)
 
     const right = px(x1, view.x)
     const bottom = px(y1, view.y)
@@ -213,7 +242,19 @@ export function MapCanvas({
       ctx.strokeRect(x + 1, y + 1, w - 2, h - 2)
       ctx.setLineDash([])
     }
-  }, [map, atlas, cell, view, frameW, frameH, showGrid, hover, selection])
+  }, [
+    map,
+    atlas,
+    cell,
+    view,
+    frameW,
+    frameH,
+    showGrid,
+    hover,
+    selection,
+    tracing,
+    charset.background,
+  ])
 
   useGridGestures(canvasRef, {
     handlers,

@@ -61,6 +61,17 @@ tokens, never hex, in components.
   because there the bytes will be editable cells: click a byte and type a
   value to change the pixels. Keep the tap-to-switch behaviour for touch.
 
+## Tracing paper
+
+A reference image over a Sprite or Screen worksheet grid, opened from the
+header (Tracing paper button; the eye button shows / hides it). Its settings
+replace the left panel until Done. The image is cropped, sized (1:1, fit
+width / height / all, stretch, custom %), anchored (3 × 3) and nudged in C64
+pixels (8 = a char), drawn nearest-neighbour at an opacity, either over
+everything or only under empty cells (transparent sprite pixels, map cells
+holding the Blank Char). Stored per sprite / map in its own IndexedDB
+database (`c64-pad-tracings`), never in projects or `.c64pad` files.
+
 ## Components (`src/components/worksheet/`)
 
 - `WorksheetLayout`: desk, sheet, header (breadcrumbs, title, actions), optional tabs

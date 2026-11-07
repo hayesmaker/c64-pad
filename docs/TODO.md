@@ -116,4 +116,4 @@ See `PLAN.md` → _Decisions_ for the reasoning behind these.
 - [ ] Publish to deployed backend (auth, server functions, sharing)
 - [ ] Remote KickAssembler build service (containerised, CORS PRG URLs); "Build on server" option for custom asm templates; enables "Open in c64-ready" from app builds
 - [ ] Spike: JS/wasm 6502 assembler for on-device template assembly (only if editing asm on the tablet is wanted)
-- [ ] PNG tracing paper. Import a background .png file which can be used a guide layer for tracing over in a worksheet. Warn if sizes mismatch, add option to stretch or shrink to fit.
+- [x] PNG tracing paper (Sprite and Screen worksheets): load a reference image per sprite or map; crop, 1:1 / fit / stretch / custom size, 9-point anchor, nudge, opacity, over all or under empty cells, show/hide. Kept on the device (not in project files)

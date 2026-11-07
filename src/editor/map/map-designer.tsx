@@ -58,6 +58,9 @@ import { useAssetHistory } from '../asset-history'
 import { ToolButton, useUndoShortcuts, zoomLabel } from '../grid-parts'
 import { DEFAULT_VIEW, clampViewTo, zoomAroundIn } from '../view'
 import { ZenMode } from '../zen-mode'
+import { TracingPanel } from '../tracing/tracing-panel'
+import { TracingButtons } from '../tracing/tracing-buttons'
+import { useGridTracing } from '../tracing/use-tracing'
 import { RunExportDialog } from '../run-export-dialog'
 import { MapExportPanel } from '../chars-export'
 import { EmulatorOverlay } from '@/emulator/emulator-overlay'
@@ -129,6 +132,9 @@ export function MapDesigner({
     joystick: boolean
   } | null>(null)
   const [blankOpen, setBlankOpen] = useState(false)
+  const [tracingOpen, setTracingOpen] = useState(false)
+  const mapTarget = { width: map.width * 8, height: map.height * 8 }
+  const trace = useGridTracing(map.id, mapTarget)
   // Undo, redo or a resize can shrink the map under the cursor or selection.
   const cursor =
     cursorState && cursorState[0] < map.width && cursorState[1] < map.height
@@ -283,6 +289,7 @@ export function MapDesigner({
       showGrid={showGrid}
       hover={footprint}
       selection={selection}
+      tracing={trace.grid}
       onStrokeStart={startStroke}
       onStrokeMove={moveStroke}
       onStrokeEnd={() => {
@@ -389,6 +396,12 @@ export function MapDesigner({
       actions={
         <>
           <SaveStatus status={status} error={error} />
+          <TracingButtons
+            open={tracingOpen}
+            onOpen={setTracingOpen}
+            tracing={trace.tracing}
+            onVisible={(visible) => trace.update((t) => ({ ...t, visible }))}
+          />
           <ToolButton
             label="Zen mode: just the map"
             onClick={() => setZen(true)}
@@ -419,113 +432,135 @@ export function MapDesigner({
     >
       {/* Left: map settings, brush, characters */}
       <div className="-mx-1 flex w-[240px] shrink-0 flex-col gap-2.5 overflow-y-auto px-1 py-0.5">
-        <div className="flex gap-2">
-          <Field label="Map size" className="w-[104px]">
-            <Button
-              variant="outline"
-              className="justify-between px-2.5 font-mono"
-              onClick={() => setResizing(true)}
-              aria-label={`Resize map, now ${map.width} by ${map.height} chars`}
-            >
-              {map.width}×{map.height}
-              <Expand aria-hidden="true" className="text-muted-foreground" />
-            </Button>
-          </Field>
-          <Field label="Charset" className="min-w-0 flex-1">
-            <Select
-              value={map.charsetId}
-              onValueChange={(id) =>
-                history.change((m) => ({ ...m, charsetId: id }))
-              }
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {project.charsets.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {c.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </Field>
-        </div>
-        <div className="flex flex-col gap-1">
-          <span className="text-xs text-muted-foreground">
-            {describeScreens(map.width, map.height)} · add a screen
-          </span>
-          <div className="grid grid-cols-2 gap-1.5">
-            <Button
-              variant="outline"
-              disabled={map.width + 40 > MAX_MAP_SIZE}
-              onClick={() =>
-                history.change((m) => resizeCharmap(m, m.width + 40, m.height))
-              }
-              title="Add a screen to the right (+40 columns)"
-            >
-              <Plus aria-hidden="true" /> Right →
-            </Button>
-            <Button
-              variant="outline"
-              disabled={map.height + 25 > MAX_MAP_SIZE}
-              onClick={() =>
-                history.change((m) => resizeCharmap(m, m.width, m.height + 25))
-              }
-              title="Add a screen below (+25 rows)"
-            >
-              <Plus aria-hidden="true" /> Below ↓
-            </Button>
-          </div>
-        </div>
-
-        {brushPicker}
-        {selection && !stroke.current && tool === 'select' && (
-          <div className="flex flex-col gap-1">
-            <span className="text-xs text-muted-foreground">
-              Selection · {selection.width}×{selection.height} at x{' '}
-              {selection.x}, y {selection.y}
-            </span>
-            <div className="grid grid-cols-2 gap-1.5">
-              <Button
-                variant="outline"
-                className="border-primary bg-accent text-primary hover:bg-accent"
-                onClick={() => {
-                  setBrush(
-                    copyRegion(
-                      map,
-                      selection.x,
-                      selection.y,
-                      selection.width,
-                      selection.height,
-                    ),
-                  )
-                  setSelection(null)
-                  setTool('paint')
-                }}
-              >
-                Use as brush
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  history.change((m) =>
-                    fillRect(
-                      m,
-                      selection.x,
-                      selection.y,
-                      selection.width,
-                      selection.height,
-                      m.blank,
-                    ),
-                  )
-                  setSelection(null)
-                }}
-              >
-                Clear area
-              </Button>
+        {tracingOpen ? (
+          <TracingPanel
+            tracing={trace.tracing}
+            error={trace.error}
+            target={mapTarget}
+            targetLabel={`map: ${mapTarget.width} × ${mapTarget.height} px (${map.width} × ${map.height} chars)`}
+            onLoad={(file) => void trace.load(file)}
+            onRemove={() => void trace.remove()}
+            onChange={trace.update}
+            onDone={() => setTracingOpen(false)}
+          />
+        ) : (
+          <>
+            <div className="flex gap-2">
+              <Field label="Map size" className="w-[104px]">
+                <Button
+                  variant="outline"
+                  className="justify-between px-2.5 font-mono"
+                  onClick={() => setResizing(true)}
+                  aria-label={`Resize map, now ${map.width} by ${map.height} chars`}
+                >
+                  {map.width}×{map.height}
+                  <Expand
+                    aria-hidden="true"
+                    className="text-muted-foreground"
+                  />
+                </Button>
+              </Field>
+              <Field label="Charset" className="min-w-0 flex-1">
+                <Select
+                  value={map.charsetId}
+                  onValueChange={(id) =>
+                    history.change((m) => ({ ...m, charsetId: id }))
+                  }
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {project.charsets.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </Field>
             </div>
-          </div>
+            <div className="flex flex-col gap-1">
+              <span className="text-xs text-muted-foreground">
+                {describeScreens(map.width, map.height)} · add a screen
+              </span>
+              <div className="grid grid-cols-2 gap-1.5">
+                <Button
+                  variant="outline"
+                  disabled={map.width + 40 > MAX_MAP_SIZE}
+                  onClick={() =>
+                    history.change((m) =>
+                      resizeCharmap(m, m.width + 40, m.height),
+                    )
+                  }
+                  title="Add a screen to the right (+40 columns)"
+                >
+                  <Plus aria-hidden="true" /> Right →
+                </Button>
+                <Button
+                  variant="outline"
+                  disabled={map.height + 25 > MAX_MAP_SIZE}
+                  onClick={() =>
+                    history.change((m) =>
+                      resizeCharmap(m, m.width, m.height + 25),
+                    )
+                  }
+                  title="Add a screen below (+25 rows)"
+                >
+                  <Plus aria-hidden="true" /> Below ↓
+                </Button>
+              </div>
+            </div>
+
+            {brushPicker}
+            {selection && !stroke.current && tool === 'select' && (
+              <div className="flex flex-col gap-1">
+                <span className="text-xs text-muted-foreground">
+                  Selection · {selection.width}×{selection.height} at x{' '}
+                  {selection.x}, y {selection.y}
+                </span>
+                <div className="grid grid-cols-2 gap-1.5">
+                  <Button
+                    variant="outline"
+                    className="border-primary bg-accent text-primary hover:bg-accent"
+                    onClick={() => {
+                      setBrush(
+                        copyRegion(
+                          map,
+                          selection.x,
+                          selection.y,
+                          selection.width,
+                          selection.height,
+                        ),
+                      )
+                      setSelection(null)
+                      setTool('paint')
+                    }}
+                  >
+                    Use as brush
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      history.change((m) =>
+                        fillRect(
+                          m,
+                          selection.x,
+                          selection.y,
+                          selection.width,
+                          selection.height,
+                          m.blank,
+                        ),
+                      )
+                      setSelection(null)
+                    }}
+                  >
+                    Clear area
+                  </Button>
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
 
