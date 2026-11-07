@@ -19,8 +19,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
   DropdownMenuSeparator,
   DropdownMenuSub,
   DropdownMenuSubContent,
@@ -49,6 +47,10 @@ export interface StripActions {
   remove: (() => void) | null
   /** Draw `overlayId` on top of the selected sprite (null = none). */
   setOverlay: (overlayId: string | null) => void
+  /** Add a new hi-res sprite drawn over the selected one. */
+  addOverlay: () => void
+  /** Separate the selected overlay pair (both sprites are kept). */
+  unlinkOverlay: (() => void) | null
 }
 
 function Thumb({ set, sprite }: { set: SpriteSet; sprite: Sprite }) {
@@ -82,10 +84,17 @@ export function SpriteStrip({
   const index = set.sprites.findIndex((s) => s.id === selectedId)
   const selected = set.sprites.at(index)
   // Overlay rules (see setOverlay): one level only, never itself.
-  const isOverlay = set.sprites.some((s) => s.overlayId === selectedId)
+  const baseOf = (id: string) => set.sprites.find((s) => s.overlayId === id)
+  const isOverlay = !!baseOf(selectedId)
+  const hasOverlay = !!selected?.overlayId
   const overlayChoices = set.sprites
     .map((sprite, i) => ({ sprite, i }))
-    .filter(({ sprite }) => sprite.id !== selectedId)
+    .filter(
+      ({ sprite }) =>
+        sprite.id !== selectedId &&
+        sprite.overlayId === null &&
+        !baseOf(sprite.id),
+    )
 
   return (
     <div className="flex items-center gap-2">
@@ -137,6 +146,14 @@ export function SpriteStrip({
               <span className="absolute bottom-0 left-1 font-mono text-[10px] text-white">
                 {i}
               </span>
+              {baseOf(sprite.id) && (
+                <span
+                  className="absolute top-0.5 right-0.5 rounded-[3px] bg-black/70 px-1 font-mono text-[9px] leading-[13px] text-white"
+                  title={`Front layer, drawn over sprite ${set.sprites.indexOf(baseOf(sprite.id)!)}`}
+                >
+                  on {set.sprites.indexOf(baseOf(sprite.id)!)}
+                </span>
+              )}
             </button>
           </li>
         ))}
@@ -173,29 +190,36 @@ export function SpriteStrip({
           >
             <ClipboardPaste aria-hidden="true" /> Paste pixels
           </DropdownMenuItem>
-          <DropdownMenuSub>
-            <DropdownMenuSubTrigger disabled={isOverlay}>
-              <Layers aria-hidden="true" />
-              {isOverlay ? 'Used as an overlay' : 'Overlay sprite'}
-            </DropdownMenuSubTrigger>
-            <DropdownMenuSubContent>
-              <DropdownMenuRadioGroup
-                value={selected?.overlayId ?? ''}
-                onValueChange={(v) => actions.setOverlay(v || null)}
-              >
-                <DropdownMenuRadioItem value="">None</DropdownMenuRadioItem>
-                {overlayChoices.map(({ sprite, i }) => (
-                  <DropdownMenuRadioItem
-                    key={sprite.id}
-                    value={sprite.id}
-                    disabled={sprite.overlayId !== null}
-                  >
-                    {i} · {sprite.name}
-                  </DropdownMenuRadioItem>
-                ))}
-              </DropdownMenuRadioGroup>
-            </DropdownMenuSubContent>
-          </DropdownMenuSub>
+          <DropdownMenuSeparator />
+          {isOverlay || hasOverlay ? (
+            <DropdownMenuItem
+              disabled={!actions.unlinkOverlay}
+              onSelect={() => actions.unlinkOverlay?.()}
+            >
+              <Layers aria-hidden="true" /> Separate overlay (keeps both)
+            </DropdownMenuItem>
+          ) : (
+            <>
+              <DropdownMenuItem onSelect={actions.addOverlay}>
+                <Layers aria-hidden="true" /> Add hi-res overlay
+              </DropdownMenuItem>
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger disabled={overlayChoices.length === 0}>
+                  <Layers aria-hidden="true" /> Overlay with sprite…
+                </DropdownMenuSubTrigger>
+                <DropdownMenuSubContent>
+                  {overlayChoices.map(({ sprite, i }) => (
+                    <DropdownMenuItem
+                      key={sprite.id}
+                      onSelect={() => actions.setOverlay(sprite.id)}
+                    >
+                      {i} · {sprite.name}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
+            </>
+          )}
           <DropdownMenuSeparator />
           <DropdownMenuItem
             disabled={index <= 0}

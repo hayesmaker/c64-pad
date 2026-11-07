@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { ModelError } from './errors'
 import { createSprite, setSpritePixel } from './sprite'
 import {
+  addOverlaySprite,
   addAnimation,
   addSprite,
   animationSequence,
@@ -151,5 +152,25 @@ describe('colours and rendering', () => {
     expect(
       Array.from(renderSprite(set, linked, { withOverlay: false }).slice(0, 3)),
     ).toEqual([2, 2, -1])
+  })
+})
+
+describe('addOverlaySprite', () => {
+  it('adds a black hi-res sprite after the base and links it', () => {
+    let set = createSpriteSet()
+    const base = set.sprites[0]
+    set = addSprite(set, createSprite({ name: 'Other' }))
+    const { set: next, overlayId } = addOverlaySprite(set, base.id)
+    expect(next.sprites.map((s) => s.name)).toEqual([
+      base.name,
+      `${base.name} overlay`,
+      'Other',
+    ])
+    const overlay = next.sprites[1]
+    expect(overlay.id).toBe(overlayId)
+    expect([overlay.mode, overlay.color]).toEqual(['hires', 0])
+    expect(next.sprites[0].overlayId).toBe(overlayId)
+    expect(() => addOverlaySprite(next, base.id)).toThrow()
+    expect(() => addOverlaySprite(next, overlayId)).toThrow()
   })
 })

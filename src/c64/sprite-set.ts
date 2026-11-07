@@ -167,6 +167,32 @@ export function setOverlay(
   return updateSprite(set, baseId, (s) => ({ ...s, overlayId }))
 }
 
+/**
+ * The usual C64 overlay: a new hi-res sprite (black, for outlines and detail)
+ * drawn over `baseId`, placed right after it, as SpritePad expects. Returns
+ * the set and the new sprite's id.
+ */
+export function addOverlaySprite(
+  set: SpriteSet,
+  baseId: string,
+): { set: SpriteSet; overlayId: string } {
+  const base = requireSprite(set, baseId)
+  if (base.overlayId !== null) {
+    throw new ModelError('This sprite already has an overlay')
+  }
+  if (set.sprites.some((s) => s.overlayId === baseId)) {
+    throw new ModelError('An overlay sprite cannot have its own overlay')
+  }
+  const overlay = createSprite({
+    name: `${base.name} overlay`,
+    mode: 'hires',
+    color: 0,
+  })
+  const index = set.sprites.indexOf(base) + 1
+  const next = setOverlay(addSprite(set, overlay, index), baseId, overlay.id)
+  return { set: next, overlayId: overlay.id }
+}
+
 function checkAnimation(set: SpriteSet, anim: SpriteAnimation) {
   if (!Number.isInteger(anim.speed) || anim.speed < 1 || anim.speed > 255) {
     throw new RangeError(`Animation speed ${anim.speed} outside 1-255`)

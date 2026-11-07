@@ -36,6 +36,7 @@ import {
   findSprite,
   removeSprite,
   setMulticolors,
+  addOverlaySprite,
   setOverlay,
   updateSprite,
 } from '@/c64/sprite-set'
@@ -53,7 +54,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { cn } from '@/lib/utils'
 import { ModelError } from '@/c64/errors'
 import { useAssetHistory } from '../asset-history'
 import { AnimationControls, useAnimationFrame } from './animation'
@@ -114,12 +114,20 @@ export function SpriteDesigner({
   )
   const selected =
     set.sprites.find((s) => s.id === selectedId) ?? set.sprites.at(0)
-  const [layer, setLayer] = useState<'base' | 'overlay'>('base')
-  const overlay = selected?.overlayId
-    ? (findSprite(set, selected.overlayId) ?? null)
+  /**
+   * When the selected sprite is half of an overlay pair: the back sprite (the
+   * base) and the front one (its overlay, drawn on top). The selected sprite
+   * is always the one being edited; the other is shown faded.
+   */
+  const pairBase = selected
+    ? selected.overlayId
+      ? selected
+      : (set.sprites.find((s) => s.overlayId === selected.id) ?? null)
     : null
-  /** The sprite being edited: the selected one, or its overlay layer. */
-  const sprite = layer === 'overlay' && overlay ? overlay : selected
+  const pairOverlay = pairBase?.overlayId
+    ? (findSprite(set, pairBase.overlayId) ?? null)
+    : null
+  const sprite = selected
   const [animationId, setAnimationId] = useState<string | null>(null)
   const [playing, setPlaying] = useState(false)
   const [exporting, setExporting] = useState(false)
@@ -149,10 +157,7 @@ export function SpriteDesigner({
     if (selected) lastSelected.set(set.id, selected.id)
   }, [set.id, selected])
 
-  const select = (id: string) => {
-    setSelectedId(id)
-    setLayer('base')
-  }
+  const select = (id: string) => setSelectedId(id)
 
   /** Apply a change to the selected sprite. */
   const changeSprite = useCallback(
@@ -165,7 +170,7 @@ export function SpriteDesigner({
 
   useUndoShortcuts(history)
 
-  if (!sprite || !selected) {
+  if (!sprite) {
     return null // a set always has at least one sprite; see removeSprite guard below
   }
 
@@ -191,7 +196,7 @@ export function SpriteDesigner({
     <SpriteGrid
       set={set}
       sprite={sprite}
-      layers={{ base: selected, overlay }}
+      layers={{ base: pairBase ?? selected, overlay: pairOverlay }}
       cell={size}
       background={background}
       view={v}
@@ -274,7 +279,14 @@ export function SpriteDesigner({
       {/* Left: sprite details, pens, palette, preview */}
       <div className="-mx-1 flex w-[248px] shrink-0 flex-col gap-2 overflow-y-auto px-1 py-0.5">
         <div className="flex gap-2">
-          <Field label="Sprite name" className="flex-1">
+          <Field
+            label={
+              pairOverlay
+                ? `Sprite name · ${selected.id === pairOverlay.id ? 'front' : 'back'} layer`
+                : 'Sprite name'
+            }
+            className="flex-1"
+          >
             <Input
               value={sprite.name}
               onChange={(e) =>
@@ -319,7 +331,7 @@ export function SpriteDesigner({
         />
         <SpritePreview
           set={set}
-          sprite={(frameId && findSprite(set, frameId)) || selected}
+          sprite={(frameId && findSprite(set, frameId)) || pairBase || selected}
           background={background}
           onBackground={setBackground}
           onToggleExpand={(axis) =>
@@ -552,19 +564,32 @@ export function SpriteDesigner({
               setOverlay: (overlayId) => {
                 try {
                   history.change((s) => setOverlay(s, selected.id, overlayId))
-                  setLayer(overlayId ? 'overlay' : 'base')
+                  if (overlayId) select(overlayId)
                 } catch (e) {
                   if (!(e instanceof ModelError)) throw e
                 }
               },
+              addOverlay: () => {
+                let created = ''
+                history.change((s) => {
+                  const r = addOverlaySprite(s, selected.id)
+                  created = r.overlayId
+                  return r.set
+                })
+                if (created) select(created)
+              },
+              unlinkOverlay: pairBase
+                ? () => history.change((s) => setOverlay(s, pairBase.id, null))
+                : null,
             }}
           >
-            {overlay && (
+            {pairBase && pairOverlay && (
               <LayerToggle
-                layer={layer}
-                onLayer={setLayer}
-                overlayNumber={set.sprites.indexOf(overlay)}
-                baseNumber={set.sprites.indexOf(selected)}
+                set={set}
+                back={pairBase}
+                front={pairOverlay}
+                editing={selected.id === pairOverlay.id ? 'front' : 'back'}
+                onPick={select}
               />
             )}
             <AnimationControls
@@ -603,19 +628,19 @@ export function SpriteDesigner({
           runSummary={
             animation
               ? `Plays “${animation.name}” large in the middle, with the other sprites of ${set.name} along the bottom.`
-              : `Shows sprite ${set.sprites.indexOf(selected)} large in the middle${selected.overlayId ? ' with its overlay' : ''}, and the other sprites of ${set.name} along the bottom.`
+              : `Shows sprite ${set.sprites.indexOf(pairBase ?? selected)} large in the middle${pairOverlay ? ` with sprite ${set.sprites.indexOf(pairOverlay)} over it` : ''}, and the other sprites of ${set.name} along the bottom.`
           }
           onRun={() => {
             const prg = buildViewerPrg(
               spriteSetShowcase(set, {
-                selectedId: selected.id,
+                selectedId: (pairBase ?? selected).id,
                 animationId: animation?.id ?? null,
                 background: background ?? 6,
               }),
             )
             setRunning({
               prg,
-              title: `${set.name}${animation ? ` · ${animation.name}` : ` · sprite ${set.sprites.indexOf(selected)}`}`,
+              title: `${set.name}${animation ? ` · ${animation.name}` : ` · sprite ${set.sprites.indexOf(pairBase ?? selected)}`}`,
             })
           }}
           onClose={() => setExporting(false)}
@@ -671,44 +696,42 @@ export function SpriteDesigner({
   )
 }
 
-/** Choose which layer of an overlaid sprite the grid edits. */
+/** Front / back of an overlay pair: pick which one to edit. */
 function LayerToggle({
-  layer,
-  onLayer,
-  overlayNumber,
-  baseNumber,
+  set,
+  back,
+  front,
+  editing,
+  onPick,
 }: {
-  layer: 'base' | 'overlay'
-  onLayer: (layer: 'base' | 'overlay') => void
-  overlayNumber: number
-  baseNumber: number
+  set: SpriteSet
+  back: Sprite
+  front: Sprite
+  editing: 'front' | 'back'
+  onPick: (id: string) => void
 }) {
-  const wrongOrder = overlayNumber > baseNumber
+  const mode = (s: Sprite) => (s.mode === 'multicolor' ? 'MC' : 'Hi-res')
   return (
     <div className="flex shrink-0 flex-col gap-0.5">
-      <span
-        className={cn(
-          'text-[11px]',
-          wrongOrder ? 'text-destructive' : 'text-muted-foreground',
-        )}
-        title={
-          wrongOrder
-            ? 'On the C64 a lower-numbered sprite is drawn on top, so move the overlay before its base.'
-            : undefined
-        }
-      >
-        {wrongOrder ? `Overlay #${overlayNumber} is behind!` : `Editing layer`}
+      <span className="text-[11px] text-muted-foreground">
+        Editing layer · front is drawn over back
       </span>
-      <div className="w-[150px]">
+      <div className="w-[236px]">
         <Segmented
           label="Layer to edit"
           size="sm"
-          value={layer}
+          value={editing}
           options={[
-            { value: 'base', label: `Base #${baseNumber}` },
-            { value: 'overlay', label: `Over #${overlayNumber}` },
+            {
+              value: 'front',
+              label: `Front #${set.sprites.indexOf(front)} · ${mode(front)}`,
+            },
+            {
+              value: 'back',
+              label: `Back #${set.sprites.indexOf(back)} · ${mode(back)}`,
+            },
           ]}
-          onChange={onLayer}
+          onChange={(v) => onPick(v === 'front' ? front.id : back.id)}
         />
       </div>
     </div>
