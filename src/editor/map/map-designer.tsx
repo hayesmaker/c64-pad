@@ -1026,8 +1026,8 @@ function BlankCharDialog({
           <DialogTitle>Blank Char</DialogTitle>
           <DialogDescription>
             The character that means “empty” on this map: Erase writes it, and
-            new cells get it when the map grows. Usually $00; with a PETSCII
-            set, $20 is the space.
+            new cells get it when the map grows. Usually $00 for custom maps, or
+            $20 in PETSCII.
           </DialogDescription>
         </DialogHeader>
         <div className="flex items-start gap-4">
