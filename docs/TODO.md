@@ -82,15 +82,16 @@ See `PLAN.md` → _Decisions_ for the reasoning behind these.
 - [x] Tools: flip, rotate, shift, invert, clear
 - [x] Layout per the approved mock-up (Character Worksheet artboard)
 - [x] Double-tap a pixel to clear it, with the draw tool; same undo step as the first tap (shared grid input, so the sprite designer gets it too)
-- [x] Zen mode on every worksheet (sprites, chars; screen with M7): full-screen grid with pinch zoom/pan, minimal tools (draw/erase/fill, undo/redo), pens, recolour a pen from the project's colours, prev/next asset, exit back to the worksheet
+- [x] Zen mode on every worksheet (sprites, chars, screen): full-screen grid with pinch zoom/pan, minimal tools (draw/erase/fill, undo/redo), pens, recolour a pen from the project's colours, prev/next asset, exit back to the worksheet
 
 ### M7: Charmap editor
 
-- [ ] New map: choose W×H and which project charset it uses; resize; change charset
-- [ ] Map canvas rendering chars with per-char colours; 40×25 viewport overlay; position/address readout (1024 + x + 40·y style)
-- [ ] Palette-pick placement, rectangle select/copy/paste, fill
-- [ ] Zoom/pan for large maps (virtualised rendering)
-- [ ] Live charset edits reflected in map
+- [x] New map: choose W×H and which project charset it uses; resize; change charset
+- [x] Map canvas rendering chars with per-char colours; 40×25 viewport overlay; position/address readout (1024 + x + 40·y style)
+- [x] Palette-pick placement, rectangle select/copy/paste, fill
+- [x] Zoom/pan for large maps (virtualised rendering)
+- [x] Live charset edits reflected in map
+- [x] Blank (eraser) char per map, $00 by default; block brushes from a selection (CharPad-style stamping)
 
 ### M8: Exporters (chars/maps)
 

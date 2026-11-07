@@ -3,6 +3,7 @@ import {
   BoxSelect,
   Eraser,
   Grid3x3,
+  Maximize2,
   PaintBucket,
   Pencil,
   Pipette,
@@ -52,6 +53,7 @@ import { cn } from '@/lib/utils'
 import { useAssetHistory } from '../asset-history'
 import { ToolButton, useUndoShortcuts, zoomLabel } from '../grid-parts'
 import { DEFAULT_VIEW, clampViewTo, zoomAroundIn } from '../view'
+import { ZenMode } from '../zen-mode'
 import { CharsetSheet } from '../charset/charset-sheet'
 import { ecmBackgroundColors } from '../charset/char-pens'
 import { MapCanvas, mapBounds } from './map-canvas'
@@ -110,6 +112,7 @@ export function MapDesigner({
   const [hovering, setHovering] = useState(false)
   const [selection, setSelection] = useState<CellRect | null>(null)
   const [resizing, setResizing] = useState(false)
+  const [zen, setZen] = useState(false)
   const stroke = useRef<{
     anchor: [number, number]
     last: string
@@ -277,6 +280,67 @@ export function MapDesigner({
     />
   )
 
+  const brushPicker = (
+    <>
+      <BrushBox map={map} charset={charset} brush={brush} />
+
+      {ecm && (
+        <div className="flex flex-col gap-1">
+          <span className="text-xs text-muted-foreground">
+            ECM background · screen code bits 7–6
+          </span>
+          <div className="grid grid-cols-4 gap-1">
+            {ecmBackgroundColors(charset).map((c, k) => (
+              <button
+                key={k}
+                type="button"
+                aria-pressed={ecmBg === k}
+                aria-label={`Paint on ECM background ${k}, ${PALETTE[c].name}`}
+                onClick={() => {
+                  setEcmBg(k)
+                  if (brushIsSingle)
+                    setBrush(single(encodeEcm(decodeEcm(brushCode).char, k)))
+                }}
+                className={cn(
+                  'flex h-9 items-center gap-1.5 rounded-lg border px-1.5 font-mono text-[11px]',
+                  ecmBg === k
+                    ? 'border-primary bg-accent ring-1 ring-primary ring-inset'
+                    : 'border-rule-soft hover:bg-muted',
+                )}
+              >
+                <span
+                  aria-hidden="true"
+                  className="size-4 shrink-0 rounded-[4px] border border-rule"
+                  style={{ background: PALETTE[c].hex }}
+                />
+                B{k}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="flex flex-col gap-1">
+        <span className="text-xs text-muted-foreground">
+          Characters · tap to paint
+        </span>
+        <CharsetSheet
+          charset={charset}
+          selected={sheetSelected}
+          pitch={13}
+          background={ecm ? ecmBg : 0}
+          onPick={(i) => {
+            setBrush(single(ecm ? encodeEcm(i, ecmBg) : i))
+            if (tool !== 'paint' && tool !== 'fill') setTool('paint')
+          }}
+        />
+      </div>
+    </>
+  )
+
+  const zenCols = Math.min(40, map.width)
+  const zenRows = Math.min(25, map.height)
+
   return (
     <WorksheetLayout
       fitScreen
@@ -299,6 +363,12 @@ export function MapDesigner({
       actions={
         <>
           <SaveStatus status={status} error={error} />
+          <ToolButton
+            label="Zen mode: just the map"
+            onClick={() => setZen(true)}
+          >
+            <Maximize2 />
+          </ToolButton>
           <ToolButton
             label="Undo"
             disabled={!history.canUndo}
@@ -351,60 +421,7 @@ export function MapDesigner({
           </Field>
         </div>
 
-        <BrushBox map={map} charset={charset} brush={brush} />
-
-        {ecm && (
-          <div className="flex flex-col gap-1">
-            <span className="text-xs text-muted-foreground">
-              ECM background · screen code bits 7–6
-            </span>
-            <div className="grid grid-cols-4 gap-1">
-              {ecmBackgroundColors(charset).map((c, k) => (
-                <button
-                  key={k}
-                  type="button"
-                  aria-pressed={ecmBg === k}
-                  aria-label={`Paint on ECM background ${k}, ${PALETTE[c].name}`}
-                  onClick={() => {
-                    setEcmBg(k)
-                    if (brushIsSingle)
-                      setBrush(single(encodeEcm(decodeEcm(brushCode).char, k)))
-                  }}
-                  className={cn(
-                    'flex h-9 items-center gap-1.5 rounded-lg border px-1.5 font-mono text-[11px]',
-                    ecmBg === k
-                      ? 'border-primary bg-accent ring-1 ring-primary ring-inset'
-                      : 'border-rule-soft hover:bg-muted',
-                  )}
-                >
-                  <span
-                    aria-hidden="true"
-                    className="size-4 shrink-0 rounded-[4px] border border-rule"
-                    style={{ background: PALETTE[c].hex }}
-                  />
-                  B{k}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        <div className="flex flex-col gap-1">
-          <span className="text-xs text-muted-foreground">
-            Characters · tap to paint
-          </span>
-          <CharsetSheet
-            charset={charset}
-            selected={sheetSelected}
-            pitch={13}
-            background={ecm ? ecmBg : 0}
-            onPick={(i) => {
-              setBrush(single(ecm ? encodeEcm(i, ecmBg) : i))
-              if (tool !== 'paint' && tool !== 'fill') setTool('paint')
-            }}
-          />
-        </div>
-
+        {brushPicker}
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <span className="flex-1">
             Eraser writes{' '}
@@ -575,6 +592,49 @@ export function MapDesigner({
         <Readout map={map} charset={charset} cell={cursor} />
       </div>
 
+      {zen && (
+        <ZenMode
+          title={map.name}
+          columns={zenCols}
+          rows={zenRows}
+          renderGrid={(c, v, onV) =>
+            renderCanvas(
+              clampViewTo(
+                v,
+                mapBounds(map, c, { width: zenCols * c, height: zenRows * c }),
+              ),
+              onV,
+              c,
+              {
+                width: zenCols * c,
+                height: zenRows * c,
+              },
+            )
+          }
+          tool={tool === 'erase' || tool === 'fill' ? tool : 'draw'}
+          onTool={(t) => setTool(t === 'draw' ? 'paint' : t)}
+          toolLabels={{ draw: 'Paint with the brush' }}
+          side={
+            <div className="flex w-[240px] flex-col gap-2.5">{brushPicker}</div>
+          }
+          sideWidth={272}
+          zoom={(v, factor, at, f) =>
+            zoomAroundIn(
+              v,
+              v.zoom * factor,
+              at,
+              mapBounds(map, f.width / zenCols, f),
+            )
+          }
+          minZoom={Math.min(1, zenCols / map.width, zenRows / map.height)}
+          hint="Pinch to zoom · two fingers to pan · double-tap to undo a stamp"
+          onUndo={history.undo}
+          onRedo={history.redo}
+          canUndo={history.canUndo}
+          canRedo={history.canRedo}
+          onExit={() => setZen(false)}
+        />
+      )}
       {resizing && (
         <ResizeDialog
           map={map}
@@ -610,11 +670,16 @@ function ColumnHeader({
     <div
       aria-hidden="true"
       className="relative shrink-0 overflow-hidden"
-      style={{ height: COL_HEADER_H, marginLeft: ROW_LABELS_W + 2, width }}
+      // 16 px either side so the end labels aren't cut off.
+      style={{
+        height: COL_HEADER_H,
+        marginLeft: ROW_LABELS_W + 2 - 16,
+        width: width + 32,
+      }}
     >
       {cols.map((c) => {
-        const left = offset + c * size + size / 2
-        if (left < -20 || left > width + 20) return null
+        const left = offset + c * size + size / 2 + 16
+        if (left < 0 || left > width + 32) return null
         return (
           <div
             key={c}

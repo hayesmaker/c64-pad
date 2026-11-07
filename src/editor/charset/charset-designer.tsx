@@ -86,7 +86,7 @@ import {
   slotColor,
 } from './char-pens'
 import { CharsetSheet } from './charset-sheet'
-import { ZenMode } from '../zen-mode'
+import { ZenMode, ZenPens } from '../zen-mode'
 import type { CharSlot } from './char-pens'
 import type { GridView } from '../view'
 
@@ -688,24 +688,30 @@ export function CharsetDesigner({
           renderGrid={renderGrid}
           tool={tool}
           onTool={setTool}
-          pens={pens}
-          pen={pen}
-          onPen={(v) => {
-            setPenByMode((p) => ({ ...p, [pixelMode]: v }))
-            setEcmTarget(null)
-            if (tool === 'erase') setTool('draw')
-          }}
-          colors={projectColors(project)}
-          penColor={
-            penDef.slot ? slotColor(charset, selected, penDef.slot) : null
+          side={
+            <ZenPens
+              pens={pens}
+              pen={pen}
+              onPen={(v) => {
+                setPenByMode((p) => ({ ...p, [pixelMode]: v }))
+                setEcmTarget(null)
+                if (tool === 'erase') setTool('draw')
+              }}
+              colors={projectColors(project)}
+              penColor={
+                penDef.slot ? slotColor(charset, selected, penDef.slot) : null
+              }
+              isAllowed={(c) =>
+                !(penDef.slot === 'char' && charset.mode === 'multicolor') ||
+                c < 8
+              }
+              onRecolor={(color) => {
+                const slot = penDef.slot
+                if (slot)
+                  change((cs) => setSlotColor(cs, selected, slot, color))
+              }}
+            />
           }
-          isAllowed={(c) =>
-            !(penDef.slot === 'char' && charset.mode === 'multicolor') || c < 8
-          }
-          onRecolor={(color) => {
-            const slot = penDef.slot
-            if (slot) change((cs) => setSlotColor(cs, selected, slot, color))
-          }}
           onUndo={history.undo}
           onRedo={history.redo}
           canUndo={history.canUndo}

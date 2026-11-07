@@ -23,7 +23,6 @@ import type { C64Color } from '@/c64/palette'
 export type ZenTool = 'draw' | 'erase' | 'fill'
 
 /** Room left for the floating panels around the grid. */
-const SIDE = 168
 const TOP = 72
 
 const TRANSPARENT_SWATCH =
@@ -41,13 +40,19 @@ export function ZenMode({
   renderGrid,
   tool,
   onTool,
-  pens,
-  pen,
-  onPen,
-  colors,
-  penColor,
-  isAllowed = () => true,
-  onRecolor,
+  side,
+  sideWidth = 168,
+  zoom = (v, factor, at, frame) =>
+    zoomAround(
+      v,
+      Math.min(MAX_ZOOM, v.zoom * factor),
+      at,
+      frame.width,
+      frame.height,
+    ),
+  minZoom = 1,
+  hint = 'Pinch to zoom · two fingers to pan · double-tap a pixel to clear it',
+  toolLabels = {},
   onUndo,
   onRedo,
   canUndo,
@@ -68,21 +73,27 @@ export function ZenMode({
   ) => ReactNode
   tool: ZenTool
   onTool: (tool: ZenTool) => void
-  pens: ReadonlyArray<PenDef>
-  pen: number
-  onPen: (value: number) => void
-  /** The project's colours. */
-  colors: ReadonlyArray<C64Color>
-  /** The chosen pen's colour; null when it can't be recoloured. */
-  penColor: C64Color | null
-  isAllowed?: (color: C64Color) => boolean
-  onRecolor: (color: C64Color) => void
+  /** The right-hand panel: pens (ZenPens) or a brush picker. */
+  side: ReactNode
+  /** Room kept for each side panel, in px. */
+  sideWidth?: number
+  /** Zoom by `factor` around `at` (the +/- buttons). */
+  zoom?: (
+    view: GridView,
+    factor: number,
+    at: { x: number; y: number },
+    frame: { width: number; height: number },
+  ) => GridView
+  minZoom?: number
+  hint?: string
+  toolLabels?: Partial<Record<ZenTool, string>>
   onUndo: () => void
   onRedo: () => void
   canUndo: boolean
   canRedo: boolean
-  onPrev: () => void
-  onNext: () => void
+  /** Previous / next asset; the arrows are hidden without them. */
+  onPrev?: () => void
+  onNext?: () => void
   onExit: () => void
 }) {
   const [box, setBox] = useState({ width: 0, height: 0 })
@@ -100,7 +111,10 @@ export function ZenMode({
   const cell = Math.max(
     4,
     Math.floor(
-      Math.min((box.width - 2 * SIDE) / columns, (box.height - 2 * TOP) / rows),
+      Math.min(
+        (box.width - 2 * sideWidth) / columns,
+        (box.height - 2 * TOP) / rows,
+      ),
     ),
   )
   const [view, setView] = useState<GridView>(DEFAULT_VIEW)
@@ -118,15 +132,8 @@ export function ZenMode({
   const h = rows * cell
   const zoomBy = (factor: number) =>
     setView((v) =>
-      zoomAround(
-        v,
-        Math.min(MAX_ZOOM, v.zoom * factor),
-        { x: w / 2, y: h / 2 },
-        w,
-        h,
-      ),
+      zoom(v, factor, { x: w / 2, y: h / 2 }, { width: w, height: h }),
     )
-  const chosen = pens.find((p) => p.value === pen)
 
   return (
     <div
@@ -149,15 +156,19 @@ export function ZenMode({
         <IconButton label="Leave Zen mode (Esc)" onClick={onExit}>
           <Minimize2 />
         </IconButton>
-        <IconButton label="Previous" onClick={onPrev} className="w-9">
-          <ChevronLeft />
-        </IconButton>
-        <span className="min-w-[96px] text-center font-mono text-sm">
+        {onPrev && (
+          <IconButton label="Previous" onClick={onPrev} className="w-9">
+            <ChevronLeft />
+          </IconButton>
+        )}
+        <span className="min-w-[96px] px-2 text-center font-mono text-sm">
           {title}
         </span>
-        <IconButton label="Next" onClick={onNext} className="w-9">
-          <ChevronRight />
-        </IconButton>
+        {onNext && (
+          <IconButton label="Next" onClick={onNext} className="w-9">
+            <ChevronRight />
+          </IconButton>
+        )}
       </Panel>
 
       {/* Top right: zoom */}
@@ -165,7 +176,7 @@ export function ZenMode({
         <IconButton
           label="Zoom out"
           onClick={() => zoomBy(1 / 1.5)}
-          disabled={view.zoom <= 1}
+          disabled={view.zoom <= minZoom + 1e-6}
         >
           <Minus />
         </IconButton>
@@ -199,7 +210,7 @@ export function ZenMode({
             ).map(([value, label, Icon]) => (
               <IconButton
                 key={value}
-                label={label}
+                label={toolLabels[value] ?? label}
                 pressed={tool === value}
                 onClick={() => onTool(value)}
                 size="lg"
@@ -218,70 +229,13 @@ export function ZenMode({
         </IconButton>
       </Panel>
 
-      {/* Right: pens, then the project's colours */}
-      <Panel className="top-1/2 right-4 flex w-[128px] -translate-y-1/2 flex-col gap-2.5 p-2.5">
-        <div className="text-[11px] text-muted-foreground">Pens</div>
-        <div className="grid grid-cols-2 gap-2">
-          {pens.map((p) => (
-            <button
-              key={p.value}
-              type="button"
-              aria-pressed={p.value === pen}
-              aria-label={`Pen ${p.code}: ${p.name}`}
-              title={p.name}
-              onClick={() => onPen(p.value)}
-              className={cn(
-                'flex h-16 flex-col items-center justify-center gap-1 rounded-[10px]',
-                p.value === pen
-                  ? 'bg-accent ring-2 ring-primary ring-inset'
-                  : 'hover:bg-muted',
-              )}
-            >
-              <span
-                aria-hidden="true"
-                className="size-8 rounded-full border border-rule"
-                style={{
-                  background:
-                    p.swatch ??
-                    (p.color === null
-                      ? TRANSPARENT_SWATCH
-                      : PALETTE[p.color].hex),
-                }}
-              />
-              <span className="font-mono text-[11px] text-[#55534d]">
-                {p.code}
-              </span>
-            </button>
-          ))}
-        </div>
-        <div aria-hidden="true" className="h-px bg-rule-soft" />
-        <div className="text-[11px] leading-tight text-muted-foreground">
-          {penColor === null
-            ? 'Project colours · pick a coloured pen'
-            : `Project colours · recolour ${chosen?.name.split(' · ')[0].toLowerCase() ?? 'pen'}`}
-        </div>
-        <div className="grid grid-cols-3 gap-1.5">
-          {colors.map((c) => (
-            <button
-              key={c}
-              type="button"
-              aria-label={`Set pen colour to ${PALETTE[c].name}`}
-              title={`${PALETTE[c].name} (${c})`}
-              disabled={penColor === null || !isAllowed(c)}
-              onClick={() => onRecolor(c)}
-              className={cn(
-                'h-7 rounded-md border border-rule disabled:opacity-30',
-                penColor === c &&
-                  'ring-2 ring-primary ring-offset-2 ring-offset-paper',
-              )}
-              style={{ background: PALETTE[c].hex }}
-            />
-          ))}
-        </div>
+      {/* Right: pens or brushes */}
+      <Panel className="top-1/2 right-4 flex max-h-[calc(100%-160px)] -translate-y-1/2 flex-col gap-2.5 overflow-y-auto p-2.5">
+        {side}
       </Panel>
 
       <div className="pointer-events-none absolute bottom-[max(14px,env(safe-area-inset-bottom))] left-1/2 -translate-x-1/2 rounded-full bg-paper/90 px-3 py-1.5 text-xs whitespace-nowrap text-muted-foreground">
-        Pinch to zoom · two fingers to pan · double-tap a pixel to clear it
+        {hint}
       </div>
     </div>
   )
@@ -340,5 +294,90 @@ function IconButton({
     >
       {children}
     </button>
+  )
+}
+
+/** Zen mode's pens, then the project's colours to recolour the chosen pen. */
+export function ZenPens({
+  pens,
+  pen,
+  onPen,
+  colors,
+  penColor,
+  isAllowed = () => true,
+  onRecolor,
+}: {
+  pens: ReadonlyArray<PenDef>
+  pen: number
+  onPen: (value: number) => void
+  /** The project's colours. */
+  colors: ReadonlyArray<C64Color>
+  /** The chosen pen's colour; null when it can't be recoloured. */
+  penColor: C64Color | null
+  isAllowed?: (color: C64Color) => boolean
+  onRecolor: (color: C64Color) => void
+}) {
+  const chosen = pens.find((p) => p.value === pen)
+  return (
+    <div className="flex w-[108px] flex-col gap-2.5">
+      <div className="text-[11px] text-muted-foreground">Pens</div>
+      <div className="grid grid-cols-2 gap-2">
+        {pens.map((p) => (
+          <button
+            key={p.value}
+            type="button"
+            aria-pressed={p.value === pen}
+            aria-label={`Pen ${p.code}: ${p.name}`}
+            title={p.name}
+            onClick={() => onPen(p.value)}
+            className={cn(
+              'flex h-16 flex-col items-center justify-center gap-1 rounded-[10px]',
+              p.value === pen
+                ? 'bg-accent ring-2 ring-primary ring-inset'
+                : 'hover:bg-muted',
+            )}
+          >
+            <span
+              aria-hidden="true"
+              className="size-8 rounded-full border border-rule"
+              style={{
+                background:
+                  p.swatch ??
+                  (p.color === null
+                    ? TRANSPARENT_SWATCH
+                    : PALETTE[p.color].hex),
+              }}
+            />
+            <span className="font-mono text-[11px] text-[#55534d]">
+              {p.code}
+            </span>
+          </button>
+        ))}
+      </div>
+      <div aria-hidden="true" className="h-px bg-rule-soft" />
+      <div className="text-[11px] leading-tight text-muted-foreground">
+        {penColor === null
+          ? 'Project colours · pick a coloured pen'
+          : `Project colours · recolour ${chosen?.name.split(' · ')[0].toLowerCase() ?? 'pen'}`}
+      </div>
+      <div className="grid grid-cols-3 gap-1.5">
+        {colors.map((c) => (
+          <button
+            key={c}
+            type="button"
+            aria-label={`Set pen colour to ${PALETTE[c].name}`}
+            title={`${PALETTE[c].name} (${c})`}
+            disabled={penColor === null || !isAllowed(c)}
+            onClick={() => onRecolor(c)}
+            className={cn(
+              'h-7 rounded-md border border-rule disabled:opacity-30',
+              penColor === c &&
+                'ring-2 ring-primary ring-offset-2 ring-offset-paper',
+            )}
+            style={{ background: PALETTE[c].hex }}
+          />
+        ))}
+      </div>
+    </div>
   )
 }

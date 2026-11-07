@@ -75,7 +75,7 @@ import {
 } from '../grid-parts'
 import type { GridView } from '../view'
 import { SpriteGrid } from './sprite-grid'
-import { ZenMode } from '../zen-mode'
+import { ZenMode, ZenPens } from '../zen-mode'
 import { projectColors } from '@/c64/project'
 import { DataColumn } from './data-column'
 import { PaletteGrid, PensPanel } from '../pens-panel'
@@ -633,15 +633,19 @@ export function SpriteDesigner({
           renderGrid={renderGrid}
           tool={tool}
           onTool={setTool}
-          pens={pens}
-          pen={pen}
-          onPen={(v) => {
-            setPenByMode((p) => ({ ...p, [sprite.mode]: v }))
-            if (tool === 'erase') setTool('draw')
-          }}
-          colors={projectColors(project)}
-          penColor={penDef.slot ? penDef.color : null}
-          onRecolor={setPenColor}
+          side={
+            <ZenPens
+              pens={pens}
+              pen={pen}
+              onPen={(v) => {
+                setPenByMode((p) => ({ ...p, [sprite.mode]: v }))
+                if (tool === 'erase') setTool('draw')
+              }}
+              colors={projectColors(project)}
+              penColor={penDef.slot ? penDef.color : null}
+              onRecolor={setPenColor}
+            />
+          }
           onUndo={history.undo}
           onRedo={history.redo}
           canUndo={history.canUndo}

@@ -20,10 +20,9 @@ export interface ViewBounds {
 }
 
 function clampAxis(offset: number, frame: number, content: number) {
-  // Larger content may not leave a gap at either edge; smaller content stays inside.
-  return content >= frame
-    ? Math.min(0, Math.max(frame - content, offset))
-    : Math.max(0, Math.min(frame - content, offset))
+  // Larger content may not leave a gap at either edge; smaller content sits
+  // at the start, under the column and row labels.
+  return content >= frame ? Math.min(0, Math.max(frame - content, offset)) : 0
 }
 
 /** Keep zoom in range and the content in the frame. */

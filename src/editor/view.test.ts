@@ -43,11 +43,11 @@ describe('content larger or smaller than the frame', () => {
     minZoom: 0.5,
     maxZoom: 8,
   }
-  it('pans across larger content without gaps, keeps smaller content inside', () => {
+  it('pans across larger content without gaps, pins smaller content to the start', () => {
     expect(clampViewTo({ zoom: 1, x: -500, y: 80 }, b)).toEqual({
       zoom: 1,
       x: -200,
-      y: 50,
+      y: 0,
     })
     expect(clampViewTo({ zoom: 1, x: 20, y: -10 }, b)).toEqual({
       zoom: 1,

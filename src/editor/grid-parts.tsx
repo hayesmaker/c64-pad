@@ -127,7 +127,7 @@ export function RowNumbers({
 }
 
 export function zoomLabel(zoom: number) {
-  return zoom < 1.05 ? '1×' : `${zoom.toFixed(1)}×`
+  return Math.abs(zoom - 1) < 0.05 ? '1×' : `${zoom.toFixed(zoom < 1 ? 2 : 1)}×`
 }
 
 /**
