@@ -21,8 +21,11 @@ export interface StrokeHandlers {
    * the second starts no stroke.
    */
   onDoubleTap?: (x: number, y: number) => void
-  /** A mouse or stylus hovers over a cell (null = left the grid). */
-  onHover?: (cell: [number, number] | null) => void
+  /**
+   * The cell under the pointer changed (null = left the grid): a hovering
+   * mouse or stylus, or a touch while drawing.
+   */
+  onHover?: (cell: [number, number] | null, pointerType: string) => void
 }
 
 export interface GestureConfig {
@@ -84,11 +87,11 @@ export function useGridGestures(
     }
     const toCell = (e: PointerEvent) => live.current.toCell(local(e))
 
-    const hover = (at: [number, number] | null) => {
+    const hover = (at: [number, number] | null, pointerType: string) => {
       const key = at ? at.join() : null
       if (key === hovered) return
       hovered = key
-      live.current.handlers.onHover?.(at)
+      live.current.handlers.onHover?.(at, pointerType)
     }
 
     const pinchState = () => {
@@ -119,7 +122,7 @@ export function useGridGestures(
       if (pointers.size > 1 || gestureLock) return
       const at = toCell(e)
       if (!at) return
-      hover(at)
+      hover(at, e.pointerType)
       const { onDoubleTap } = live.current.handlers
       const isDouble =
         !!onDoubleTap &&
@@ -144,7 +147,7 @@ export function useGridGestures(
       if (e.pointerType === 'pen') penSeenAt = e.timeStamp
       if (!pointers.has(e.pointerId)) {
         // Hovering mouse or stylus.
-        if (e.pointerType !== 'touch') hover(toCell(e))
+        if (e.pointerType !== 'touch') hover(toCell(e), e.pointerType)
         return
       }
       pointers.set(e.pointerId, local(e))
@@ -180,7 +183,7 @@ export function useGridGestures(
         if (!at || (at[0] === stroke.last[0] && at[1] === stroke.last[1]))
           continue
         stroke.moved = true
-        hover(at)
+        hover(at, e.pointerType)
         for (const [x, y] of lineCells(...stroke.last, ...at).slice(1)) {
           live.current.handlers.onStrokeMove(x, y)
         }
@@ -204,7 +207,8 @@ export function useGridGestures(
     }
 
     const leave = (e: PointerEvent) => {
-      if (e.pointerType !== 'touch' && !pointers.has(e.pointerId)) hover(null)
+      if (e.pointerType !== 'touch' && !pointers.has(e.pointerId))
+        hover(null, e.pointerType)
     }
 
     /** Desktop: the wheel zooms around the cursor. */

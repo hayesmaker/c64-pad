@@ -5,6 +5,7 @@ import {
   canUndo,
   closeGroup,
   createHistory,
+  discardGroup,
   record,
   redo,
   undo,
@@ -84,9 +85,16 @@ export function useAssetHistory<TKind extends AssetKind>(
 
   const h = histories.get(id) as History<AssetOf<TKind>> | undefined
   const inSync = h?.present === current
+  /** Throw away the open group's change (a stroke cancelled by a pinch). */
+  const cancelGroup = useCallback(() => {
+    const open = histories.get(id) as History<AssetOf<TKind>> | undefined
+    if (open && open.group !== null) apply(discardGroup(open))
+  }, [id, apply])
+
   return {
     change,
     endGroup,
+    cancelGroup,
     undo: useCallback(() => apply(undo(get())), [apply, get]),
     redo: useCallback(() => apply(redo(get())), [apply, get]),
     canUndo: inSync && canUndo(h),

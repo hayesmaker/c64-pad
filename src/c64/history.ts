@@ -72,3 +72,17 @@ export function redo<T>(history: History<T>): History<T> {
     group: null,
   }
 }
+
+/**
+ * Drop the open group's change as if it never happened (a cancelled stroke):
+ * it leaves no undo or redo step. Without an open group nothing changes.
+ */
+export function discardGroup<T>(history: History<T>): History<T> {
+  if (history.group === null || !canUndo(history)) return history
+  return {
+    past: history.past.slice(0, -1),
+    present: history.past[history.past.length - 1],
+    future: [],
+    group: null,
+  }
+}
