@@ -51,6 +51,7 @@ import {
 } from '@/components/ui/select'
 import { Segmented } from '@/editor/segmented'
 import { useCurrentProject } from '@/storage/use-current-project'
+import { ScreenPresets } from '@/editor/map/map-size'
 import {
   PROJECT_FILE_EXTENSION,
   exportProjectFile,
@@ -533,6 +534,14 @@ function NewMapDialog({
           <Field label="Name">
             <Input value={name} onChange={(e) => setName(e.target.value)} />
           </Field>
+          <ScreenPresets
+            width={Number(width)}
+            height={Number(height)}
+            onPick={(pw, ph) => {
+              setWidth(String(pw))
+              setHeight(String(ph))
+            }}
+          />
           <div className="flex gap-3">
             <Field label="Width (chars)" className="flex-1">
               <Input

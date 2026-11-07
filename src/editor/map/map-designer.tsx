@@ -2,11 +2,13 @@ import { useLayoutEffect, useMemo, useRef, useState } from 'react'
 import {
   BoxSelect,
   Eraser,
+  Expand,
   Grid3x3,
   Maximize2,
   PaintBucket,
   Pencil,
   Pipette,
+  Plus,
   Redo2,
   Undo2,
 } from 'lucide-react'
@@ -50,6 +52,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { cn } from '@/lib/utils'
+import { ScreenPresets, describeScreens } from './map-size'
 import { useAssetHistory } from '../asset-history'
 import { ToolButton, useUndoShortcuts, zoomLabel } from '../grid-parts'
 import { DEFAULT_VIEW, clampViewTo, zoomAroundIn } from '../view'
@@ -391,13 +394,15 @@ export function MapDesigner({
       {/* Left: map settings, brush, characters */}
       <div className="-mx-1 flex w-[240px] shrink-0 flex-col gap-2.5 overflow-y-auto px-1 py-0.5">
         <div className="flex gap-2">
-          <Field label="Size (chars)" className="w-[92px]">
+          <Field label="Map size" className="w-[104px]">
             <Button
               variant="outline"
-              className="justify-between font-mono"
+              className="justify-between px-2.5 font-mono"
               onClick={() => setResizing(true)}
+              aria-label={`Resize map, now ${map.width} by ${map.height} chars`}
             >
               {map.width}×{map.height}
+              <Expand aria-hidden="true" className="text-muted-foreground" />
             </Button>
           </Field>
           <Field label="Charset" className="min-w-0 flex-1">
@@ -419,6 +424,33 @@ export function MapDesigner({
               </SelectContent>
             </Select>
           </Field>
+        </div>
+        <div className="flex flex-col gap-1">
+          <span className="text-xs text-muted-foreground">
+            {describeScreens(map.width, map.height)} · add a screen
+          </span>
+          <div className="grid grid-cols-2 gap-1.5">
+            <Button
+              variant="outline"
+              disabled={map.width + 40 > MAX_MAP_SIZE}
+              onClick={() =>
+                history.change((m) => resizeCharmap(m, m.width + 40, m.height))
+              }
+              title="Add a screen to the right (+40 columns)"
+            >
+              <Plus aria-hidden="true" /> Right →
+            </Button>
+            <Button
+              variant="outline"
+              disabled={map.height + 25 > MAX_MAP_SIZE}
+              onClick={() =>
+                history.change((m) => resizeCharmap(m, m.width, m.height + 25))
+              }
+              title="Add a screen below (+25 rows)"
+            >
+              <Plus aria-hidden="true" /> Below ↓
+            </Button>
+          </div>
         </div>
 
         {brushPicker}
@@ -886,11 +918,19 @@ function ResizeDialog({
           <DialogHeader>
             <DialogTitle>Resize map</DialogTitle>
             <DialogDescription>
-              One screen is 40×25; maps can be up to {MAX_MAP_SIZE}×
-              {MAX_MAP_SIZE}. New cells get the eraser’s char ({hex(map.blank)}
-              ).
+              Make the map bigger than one screen to draw scrolling levels.
+              Content stays at the top left; new cells get the eraser’s char (
+              {hex(map.blank)}). Up to {MAX_MAP_SIZE}×{MAX_MAP_SIZE} chars.
             </DialogDescription>
           </DialogHeader>
+          <ScreenPresets
+            width={Number(width)}
+            height={Number(height)}
+            onPick={(pw, ph) => {
+              setWidth(String(pw))
+              setHeight(String(ph))
+            }}
+          />
           <div className="flex gap-3">
             <Field label="Width (chars)" className="flex-1">
               <Input
