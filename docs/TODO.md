@@ -103,6 +103,7 @@ See `PLAN.md` → _Decisions_ for the reasoning behind these.
 
 ### M9: Desktop + later
 
+- [ ] Desktop: Dec | Hex switch on the DATA columns and type-to-edit data cells (touch keeps tap-to-switch; see DESIGN.md "Platform differences")
 - [ ] Electron (or Tauri) shell for Linux/Windows with native file dialogs
 - [ ] Homepage polish (worksheet-styled entry tiles: Sprites / Characters / Screens)
 - [ ] Portrait layouts: tablet portrait, then phone

@@ -53,6 +53,14 @@ previews and sheets never change. Canvases read tokens with `cssVar()` and
 redraw on a scheme change (`useColorScheme()` in `src/lib/theme.ts`); use
 tokens, never hex, in components.
 
+## Platform differences (planned)
+
+- **DATA bytes, decimal / hex.** On touch devices (tablet, phone) tapping the
+  DATA column switches decimal and hex; there is no separate switch. On the
+  desktop (Electron) app the column should get a visible Dec | Hex switch,
+  because there the bytes will be editable cells: click a byte and type a
+  value to change the pixels. Keep the tap-to-switch behaviour for touch.
+
 ## Components (`src/components/worksheet/`)
 
 - `WorksheetLayout`: desk, sheet, header (breadcrumbs, title, actions), optional tabs

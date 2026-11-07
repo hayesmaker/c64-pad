@@ -528,17 +528,23 @@ export function CharsetDesigner({
               </div>
 
               {/* DATA: one byte per row */}
-              <div className="flex shrink-0 flex-col" style={{ width: DATA_W }}>
+              {/* Tap anywhere on the bytes to switch decimal / hex (see
+                  docs/DESIGN.md: desktop may get a switch and typed edits). */}
+              <button
+                type="button"
+                onClick={() => setAsHex((h) => !h)}
+                aria-label={`Character data bytes in ${asHex ? 'hex' : 'decimal'}; tap to show ${asHex ? 'decimal' : 'hex'}`}
+                title="Tap to switch decimal / hex"
+                className="flex shrink-0 cursor-pointer flex-col self-start rounded-md"
+                style={{ width: DATA_W }}
+              >
                 <div
-                  className="flex items-end justify-center text-[11px] leading-[14px] tracking-[0.08em] text-muted-foreground"
+                  className="flex w-full items-end justify-center text-[11px] leading-[14px] tracking-[0.08em] text-muted-foreground"
                   style={{ height: BIT_HEADER_H }}
                 >
                   DATA
                 </div>
-                <div
-                  className="flex flex-col pt-[2px]"
-                  aria-label="Character data bytes"
-                >
+                <div className="flex w-full flex-col pt-[2px]">
                   {[...bytes].map((b, row) => (
                     <div
                       key={row}
@@ -557,7 +563,7 @@ export function CharsetDesigner({
                     </div>
                   ))}
                 </div>
-              </div>
+              </button>
             </div>
             <div
               className="mt-2 flex flex-col gap-1"
@@ -568,18 +574,6 @@ export function CharsetDesigner({
                   Offset +{selected * 8} · {hex4(0x2000 + selected * 8)} with
                   the set at $2000
                 </span>
-                <div className="w-24 shrink-0">
-                  <Segmented
-                    label="Number format"
-                    size="sm"
-                    value={asHex ? 'hex' : 'dec'}
-                    options={[
-                      { value: 'dec', label: 'Dec' },
-                      { value: 'hex', label: 'Hex' },
-                    ]}
-                    onChange={(v) => setAsHex(v === 'hex')}
-                  />
-                </div>
               </div>
               <code className="font-mono text-xs whitespace-nowrap select-all">
                 .byte {[...bytes].map(hex2).join(',')}
