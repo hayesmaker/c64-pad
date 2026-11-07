@@ -108,8 +108,9 @@ See `PLAN.md` → _Decisions_ for the reasoning behind these.
 - [ ] Homepage polish (worksheet-styled entry tiles: Sprites / Characters / Screens)
 - [ ] Portrait layouts: tablet portrait, then phone
 - [ ] Printable blank worksheets (sprite, character, screen): print stylesheet and/or PDF export rendered from the editor components
-- [ ] Dark mode
+- [x] Dark mode (follows the device setting; an in-app switch is later)
 - [ ] Optional: CharPad tiles/blocks layer
+- [ ] New worksheet: **Multi-Sprites**, a compositor for entities bigger than one sprite (e.g. a 2×2 boss). Arrange sprites from a set on a shared canvas with positions/offsets; supports overlays and animations (frames advance together); its own edge tab; Run shows it in the viewer; export positions with the sprite data
 - [ ] Publish to deployed backend (auth, server functions, sharing)
 - [ ] Remote KickAssembler build service (containerised, CORS PRG URLs); "Build on server" option for custom asm templates; enables "Open in c64-ready" from app builds
 - [ ] Spike: JS/wasm 6502 assembler for on-device template assembly (only if editing asm on the tablet is wanted)
