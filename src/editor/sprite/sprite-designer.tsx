@@ -6,8 +6,8 @@ import {
   ArrowUp,
   Contrast,
   Eraser,
-  FlipHorizontal2,
-  FlipVertical2,
+  TrianglesCenterlineDashedHorizontal,
+  TrianglesCenterlineDashedVertical,
   Maximize2,
   MonitorPlay,
   Move,
@@ -428,13 +428,13 @@ export function SpriteDesigner({
                   label="Flip horizontally"
                   onClick={() => changeSprite(flipSpriteHorizontal)}
                 >
-                  <FlipHorizontal2 />
+                  <TrianglesCenterlineDashedVertical />
                 </ToolButton>
                 <ToolButton
                   label="Flip vertically"
                   onClick={() => changeSprite(flipSpriteVertical)}
                 >
-                  <FlipVertical2 />
+                  <TrianglesCenterlineDashedHorizontal />
                 </ToolButton>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>

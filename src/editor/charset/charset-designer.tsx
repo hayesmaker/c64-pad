@@ -10,8 +10,8 @@ import {
   Copy,
   Ellipsis,
   Eraser,
-  FlipHorizontal2,
-  FlipVertical2,
+  TrianglesCenterlineDashedHorizontal,
+  TrianglesCenterlineDashedVertical,
   Move,
   PaintBucket,
   Maximize2,
@@ -448,13 +448,13 @@ export function CharsetDesigner({
               label="Flip horizontally"
               onClick={() => change((cs) => flipCharHorizontal(cs, selected))}
             >
-              <FlipHorizontal2 />
+              <TrianglesCenterlineDashedVertical />
             </ToolButton>
             <ToolButton
               label="Flip vertically"
               onClick={() => change((cs) => flipCharVertical(cs, selected))}
             >
-              <FlipVertical2 />
+              <TrianglesCenterlineDashedHorizontal />
             </ToolButton>
             <ToolButton
               label={mcChar ? 'Rotate (hires chars only)' : 'Rotate clockwise'}
