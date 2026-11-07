@@ -72,6 +72,20 @@ everything or only under empty cells (transparent sprite pixels, map cells
 holding the Blank Char). Stored per sprite / map in its own IndexedDB
 database (`c64-pad-tracings`), never in projects or `.c64pad` files.
 
+## Getting around a big map
+
+When a map doesn't fit the frame, a **Navigator** sits in the bottom-right
+corner of the map (worksheet and Zen mode): the whole map in miniature, with
+the tracing image, and the visible part boxed in yellow. Tap to jump there;
+drag the box to move it. It folds away to a button. It grows with the frame
+(up to 240 × 360 px) so tall or wide maps get a usable strip.
+
+On the desktop the wheel zooms around the cursor, Shift + wheel pans sideways
+and Alt + wheel pans up and down (all grids, not only maps). Touch: pinch to
+zoom, two fingers to pan. The **Hand** tool (map tool rail and map Zen mode)
+makes one finger or the mouse drag the map instead of drawing; a second
+finger still pinches.
+
 ## Components (`src/components/worksheet/`)
 
 - `WorksheetLayout`: desk, sheet, header (breadcrumbs, title, actions), optional tabs

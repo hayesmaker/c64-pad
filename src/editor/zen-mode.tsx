@@ -3,6 +3,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Eraser,
+  Hand,
   Minimize2,
   Minus,
   PaintBucket,
@@ -20,7 +21,7 @@ import type { GridView } from './view'
 import type { PenDef } from './pens-panel'
 import type { C64Color } from '@/c64/palette'
 
-export type ZenTool = 'draw' | 'erase' | 'fill'
+export type ZenTool = 'draw' | 'erase' | 'fill' | 'pan'
 
 /** Room left for the floating panels around the grid. */
 const TOP = 72
@@ -55,6 +56,7 @@ export function ZenMode({
   minZoom = 1,
   hint = 'Pinch to zoom · two fingers to pan · double-tap a pixel to clear it',
   toolLabels = {},
+  canPan = false,
   onUndo,
   onRedo,
   canUndo,
@@ -89,6 +91,8 @@ export function ZenMode({
   minZoom?: number
   hint?: string
   toolLabels?: Partial<Record<ZenTool, string>>
+  /** Offer the Hand tool (one finger drags the view). */
+  canPan?: boolean
   onUndo: () => void
   onRedo: () => void
   canUndo: boolean
@@ -211,6 +215,9 @@ export function ZenMode({
                 ['draw', 'Draw (double-tap a pixel to clear it)', Pencil],
                 ['erase', 'Erase', Eraser],
                 ['fill', 'Fill', PaintBucket],
+                ...(canPan
+                  ? ([['pan', 'Hand: drag to move around', Hand]] as const)
+                  : []),
               ] as const
             ).map(([value, label, Icon]) => (
               <IconButton

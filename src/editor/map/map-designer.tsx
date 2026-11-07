@@ -4,6 +4,7 @@ import {
   Eraser,
   Expand,
   Grid3x3,
+  Hand,
   Maximize2,
   MonitorPlay,
   PaintBucket,
@@ -59,6 +60,7 @@ import { ToolButton, useUndoShortcuts, zoomLabel } from '../grid-parts'
 import { DEFAULT_VIEW, clampViewTo, zoomAroundIn } from '../view'
 import { ZenMode } from '../zen-mode'
 import { TracingPanel } from '../tracing/tracing-panel'
+import { MapNavigator } from './map-navigator'
 import { TracingButtons } from '../tracing/tracing-buttons'
 import { useGridTracing } from '../tracing/use-tracing'
 import { RunExportDialog } from '../run-export-dialog'
@@ -76,7 +78,7 @@ import type { Charset } from '@/c64/charset'
 import type { Project } from '@/c64/project'
 import type { ProjectSession, SaveStatus as Status } from '@/storage/session'
 
-type Tool = 'paint' | 'erase' | 'fill' | 'pick' | 'select'
+type Tool = 'paint' | 'erase' | 'fill' | 'pick' | 'select' | 'pan'
 
 const COL_HEADER_H = 26
 const ROW_LABELS_W = 24
@@ -264,7 +266,10 @@ export function MapDesigner({
   }
 
   const footprint: CellRect | null =
-    cursor && (hovering || stroke.current) && tool !== 'select'
+    cursor &&
+    (hovering || stroke.current) &&
+    tool !== 'select' &&
+    tool !== 'pan'
       ? {
           x: cursor[0],
           y: cursor[1],
@@ -279,39 +284,50 @@ export function MapDesigner({
     canvasCell: number,
     canvasFrame: { width: number; height: number },
   ) => (
-    <MapCanvas
-      map={map}
-      charset={charset}
-      cell={canvasCell}
-      frame={canvasFrame}
-      view={v}
-      onViewChange={onV}
-      showGrid={showGrid}
-      hover={footprint}
-      selection={selection}
-      tracing={trace.grid}
-      onStrokeStart={startStroke}
-      onStrokeMove={moveStroke}
-      onStrokeEnd={() => {
-        stroke.current = null
-        history.endGroup()
-      }}
-      onStrokeCancel={() => {
-        stroke.current = null
-        history.cancelGroup()
-      }}
-      onDoubleTap={(x, y) => {
-        if (tool !== 'paint') return
-        // Undo what the first tap added; a single char clears to blank.
-        if (beforeStroke.current !== map) history.undo()
-        if (brushIsSingle) history.change((m) => setCell(m, x, y, m.blank))
-      }}
-      onHover={(at, pointerType) => {
-        // A finger has no hover: show the brush outline only for mouse / stylus.
-        setHovering(!!at && pointerType !== 'touch')
-        if (at) setCursor(at)
-      }}
-    />
+    <div className="relative">
+      <MapCanvas
+        map={map}
+        charset={charset}
+        cell={canvasCell}
+        frame={canvasFrame}
+        view={v}
+        onViewChange={onV}
+        showGrid={showGrid}
+        hover={footprint}
+        selection={selection}
+        tracing={trace.grid}
+        pan={tool === 'pan'}
+        onStrokeStart={startStroke}
+        onStrokeMove={moveStroke}
+        onStrokeEnd={() => {
+          stroke.current = null
+          history.endGroup()
+        }}
+        onStrokeCancel={() => {
+          stroke.current = null
+          history.cancelGroup()
+        }}
+        onDoubleTap={(x, y) => {
+          if (tool !== 'paint') return
+          // Undo what the first tap added; a single char clears to blank.
+          if (beforeStroke.current !== map) history.undo()
+          if (brushIsSingle) history.change((m) => setCell(m, x, y, m.blank))
+        }}
+        onHover={(at, pointerType) => {
+          // A finger has no hover: show the brush outline only for mouse / stylus.
+          setHovering(!!at && pointerType !== 'touch')
+          if (at) setCursor(at)
+        }}
+      />
+      <MapNavigator
+        map={map}
+        charset={charset}
+        view={v}
+        bounds={mapBounds(map, canvasCell, canvasFrame)}
+        onViewChange={onV}
+        tracing={trace.grid}
+      />
+    </div>
   )
 
   const brushPicker = (
@@ -583,6 +599,7 @@ export function MapDesigner({
             ['fill', 'Fill with the brush char', PaintBucket],
             ['pick', 'Pick a char from the map', Pipette],
             ['select', 'Select an area', BoxSelect],
+            ['pan', 'Hand: drag to move around the map', Hand],
           ] as const
         ).map(([value, label, Icon]) => (
           <ToolButton
@@ -724,8 +741,13 @@ export function MapDesigner({
               },
             )
           }
-          tool={tool === 'erase' || tool === 'fill' ? tool : 'draw'}
+          tool={
+            tool === 'erase' || tool === 'fill' || tool === 'pan'
+              ? tool
+              : 'draw'
+          }
           onTool={(t) => setTool(t === 'draw' ? 'paint' : t)}
+          canPan
           toolLabels={{ draw: 'Paint with the brush' }}
           side={
             <div className="flex w-[240px] flex-col gap-2.5">{brushPicker}</div>
@@ -740,7 +762,7 @@ export function MapDesigner({
             )
           }
           minZoom={Math.min(1, zenCols / map.width, zenRows / map.height)}
-          hint="Pinch to zoom · two fingers to pan · double-tap to undo a stamp"
+          hint="Pinch to zoom · two fingers (or the Hand) to pan · double-tap to undo a stamp"
           onUndo={history.undo}
           onRedo={history.redo}
           canUndo={history.canUndo}

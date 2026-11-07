@@ -724,7 +724,8 @@ export function CharsetDesigner({
           rows={8}
           renderGrid={renderGrid}
           tool={tool}
-          onTool={setTool}
+          // No Hand tool here (canPan is off).
+          onTool={(t) => t !== 'pan' && setTool(t)}
           side={
             <ZenPens
               pens={pens}

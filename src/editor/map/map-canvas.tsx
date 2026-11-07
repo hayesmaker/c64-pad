@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef } from 'react'
 import { decodeEcm } from '@/c64/charmap'
 import { renderChar } from '@/c64/charset'
 import { PALETTE } from '@/c64/palette'
+import { cn } from '@/lib/utils'
 import { useGridGestures } from '../gestures'
 import { clampViewTo, zoomAroundIn } from '../view'
 import { drawTracing } from '../tracing/placement'
@@ -48,7 +49,7 @@ export function mapBounds(
  * Every screen code drawn once into an 8 px tall strip (2048 × 8), so the map
  * is drawn with one drawImage per visible cell.
  */
-function charAtlas(charset: Charset): HTMLCanvasElement {
+export function charAtlas(charset: Charset): HTMLCanvasElement {
   const canvas = document.createElement('canvas')
   canvas.width = 256 * 8
   canvas.height = 8
@@ -96,6 +97,7 @@ export function MapCanvas({
   hover,
   selection,
   tracing,
+  pan = false,
   ...handlers
 }: {
   map: Charmap
@@ -112,6 +114,8 @@ export function MapCanvas({
   selection: CellRect | null
   /** Reference image over the map, or under its blank cells. */
   tracing?: GridTracing | null
+  /** Hand tool: one finger or the mouse drags the map. */
+  pan?: boolean
 } & StrokeHandlers) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const bounds = mapBounds(map, cell, frame)
@@ -260,6 +264,7 @@ export function MapCanvas({
     handlers,
     view,
     onViewChange,
+    pan,
     toCell: (p) => {
       const size = cell * view.zoom
       const x = Math.floor((p.x - view.x) / size)
@@ -277,7 +282,10 @@ export function MapCanvas({
       ref={canvasRef}
       role="img"
       aria-label={`Map ${map.name}, ${map.width} by ${map.height} characters`}
-      className="touch-surface block cursor-crosshair"
+      className={cn(
+        'touch-surface block',
+        pan ? 'cursor-grab active:cursor-grabbing' : 'cursor-crosshair',
+      )}
       style={{ width: frameW, height: frameH }}
     />
   )

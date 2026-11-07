@@ -8,6 +8,13 @@ const DOUBLE_TAP_MS = 350
 /** A press longer than this is not a tap. */
 const TAP_MS = 300
 
+/** Px per wheel delta unit: some mice report lines or pages, not pixels. */
+function wheelLinePx(e: WheelEvent) {
+  if (e.deltaMode === WheelEvent.DOM_DELTA_LINE) return 32
+  if (e.deltaMode === WheelEvent.DOM_DELTA_PAGE) return 400
+  return 1
+}
+
 export interface StrokeHandlers {
   /** A stroke starts at cell (x, y). */
   onStrokeStart: (x: number, y: number) => void
@@ -42,11 +49,14 @@ export interface GestureConfig {
   ) => GridView
   /** The view moved by (dx, dy), clamped. */
   panBy: (view: GridView, dx: number, dy: number) => GridView
+  /** Hand tool: one pointer drags the view instead of drawing. */
+  pan?: boolean
 }
 
 /**
- * Pointer input for an editable grid element. One pointer draws strokes; two
- * touch pointers pinch-zoom and pan; the wheel zooms. Touches are ignored
+ * Pointer input for an editable grid element. One pointer draws strokes (or,
+ * with `pan`, drags the view); two touch pointers pinch-zoom and pan; the
+ * wheel zooms. Touches are ignored
  * while a stylus is in use (palm rejection).
  */
 export function useGridGestures(
@@ -78,6 +88,11 @@ export function useGridGestures(
     } | null = null
     /** After a gesture, wait for every finger to lift before drawing again. */
     let gestureLock = false
+    /**
+     * Hand tool drag: the pointer, where it was last, and the view it has
+     * set (moves can arrive faster than React re-renders the live view).
+     */
+    let drag: { id: number; x: number; y: number; view: GridView } | null = null
     let penSeenAt = -Infinity
     let hovered: string | null = null
 
@@ -114,12 +129,17 @@ export function useGridGestures(
       if (pointers.size === 2 && e.pointerType === 'touch') {
         if (stroke && !stroke.silent) live.current.handlers.onStrokeCancel()
         stroke = null
+        drag = null
         lastTap = null
         gesture = { ...pinchState(), view: live.current.view }
         gestureLock = true
         return
       }
       if (pointers.size > 1 || gestureLock) return
+      if (live.current.pan) {
+        drag = { id: e.pointerId, ...local(e), view: live.current.view }
+        return
+      }
       const at = toCell(e)
       if (!at) return
       hover(at, e.pointerType)
@@ -147,10 +167,22 @@ export function useGridGestures(
       if (e.pointerType === 'pen') penSeenAt = e.timeStamp
       if (!pointers.has(e.pointerId)) {
         // Hovering mouse or stylus.
-        if (e.pointerType !== 'touch') hover(toCell(e), e.pointerType)
+        if (e.pointerType !== 'touch' && !live.current.pan)
+          hover(toCell(e), e.pointerType)
         return
       }
       pointers.set(e.pointerId, local(e))
+
+      if (drag && e.pointerId === drag.id) {
+        const p = local(e)
+        const v = drag.view
+        const next = live.current.panBy(v, p.x - drag.x, p.y - drag.y)
+        drag.x = p.x
+        drag.y = p.y
+        drag.view = next
+        if (next.x !== v.x || next.y !== v.y) live.current.onViewChange(next)
+        return
+      }
 
       if (gesture && pointers.size === 2) {
         const now = pinchState()
@@ -195,6 +227,7 @@ export function useGridGestures(
       pointers.delete(e.pointerId)
       if (pointers.size < 2) gesture = null
       if (pointers.size === 0) gestureLock = false
+      if (drag && e.pointerId === drag.id) drag = null
       if (stroke && e.pointerId === stroke.id) {
         const s = stroke
         stroke = null
@@ -211,10 +244,20 @@ export function useGridGestures(
         hover(null, e.pointerType)
     }
 
-    /** Desktop: the wheel zooms around the cursor. */
+    /**
+     * Desktop: the wheel zooms around the cursor; Shift + wheel pans
+     * sideways, Alt + wheel pans up and down.
+     */
     const wheel = (e: WheelEvent) => {
       e.preventDefault()
-      const { view: v, zoomAt } = live.current
+      const { view: v, zoomAt, panBy } = live.current
+      if (e.shiftKey || e.altKey) {
+        // Some browsers turn Shift + wheel into deltaX already.
+        const delta = (e.deltaX || e.deltaY) * wheelLinePx(e)
+        const next = e.shiftKey ? panBy(v, -delta, 0) : panBy(v, 0, -delta)
+        if (next.x !== v.x || next.y !== v.y) live.current.onViewChange(next)
+        return
+      }
       live.current.onViewChange(
         zoomAt(v, v.zoom * Math.exp(-e.deltaY * 0.0025), local(e)),
       )
