@@ -522,7 +522,7 @@ export function CharsetDesigner({
                 <BitHeader bytes={1} cell={cell.size} view={view} />
                 <div className="flex gap-1">
                   <RowNumbers rows={8} first={0} cell={cell.size} view={view} />
-                  <div className="h-fit rounded-[2px] border-2 border-[#77756f]">
+                  <div className="h-fit rounded-[2px] border-2 border-grid-frame">
                     {renderGrid(cell.size, view, setView)}
                   </div>
                 </div>
@@ -548,8 +548,8 @@ export function CharsetDesigner({
                     >
                       <div
                         className={cn(
-                          'flex w-full items-center justify-center rounded-md border border-[#b4b2aa] font-mono text-sm',
-                          b === 0 ? 'text-[#8a887f]' : 'text-foreground',
+                          'flex w-full items-center justify-center rounded-md border border-data-box font-mono text-sm',
+                          b === 0 ? 'text-data-zero' : 'text-foreground',
                         )}
                         style={{ height: Math.min(cell.size - 8, 34) }}
                       >

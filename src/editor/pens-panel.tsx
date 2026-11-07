@@ -18,7 +18,7 @@ export interface PenDef<TSlot extends string = string> {
 }
 
 const TRANSPARENT_SWATCH =
-  'repeating-conic-gradient(#d9d7cf 0% 25%, #fdfcf8 0% 50%) 0 0 / 8px 8px'
+  'repeating-conic-gradient(var(--checker-a) 0% 25%, var(--checker-b) 0% 50%) 0 0 / 8px 8px'
 
 export function PensPanel({
   pens,
@@ -58,7 +58,7 @@ export function PensPanel({
             <span className="truncate text-[13px] font-medium">{p.name}</span>
             <span className="text-[11px] text-muted-foreground">{p.sub}</span>
           </span>
-          <span className="font-mono text-[13px] text-[#55534d]">{p.code}</span>
+          <span className="font-mono text-[13px] text-ink-soft">{p.code}</span>
         </button>
       ))}
     </div>

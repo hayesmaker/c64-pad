@@ -28,7 +28,7 @@ const TOP = 72
 const LEFT = 96
 
 const TRANSPARENT_SWATCH =
-  'repeating-conic-gradient(#d9d7cf 0% 25%, #fdfcf8 0% 50%) 0 0 / 8px 8px'
+  'repeating-conic-gradient(var(--checker-a) 0% 25%, var(--checker-b) 0% 50%) 0 0 / 8px 8px'
 
 /**
  * Zen mode: the grid alone, filling the screen, with pinch zoom and only the
@@ -150,7 +150,7 @@ export function ZenMode({
         style={{ left: LEFT, right: sideWidth }}
       >
         {box.width > 0 && (
-          <div className="rounded-[2px] border-2 border-[#77756f] shadow-[0_6px_24px_rgba(43,43,40,0.12)]">
+          <div className="rounded-[2px] border-2 border-grid-frame shadow-[0_6px_24px_var(--shadow)]">
             {renderGrid(cell, view, setView)}
           </div>
         )}
@@ -353,7 +353,7 @@ export function ZenPens({
                     : PALETTE[p.color].hex),
               }}
             />
-            <span className="font-mono text-[11px] text-[#55534d]">
+            <span className="font-mono text-[11px] text-ink-soft">
               {p.code}
             </span>
           </button>

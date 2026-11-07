@@ -299,7 +299,7 @@ export function ExportSpritesDialog({
                 background:
                   pngBackground === 'screen'
                     ? PALETTE[screenColor].hex
-                    : 'repeating-conic-gradient(#d9d7cf 0% 25%, #fdfcf8 0% 50%) 0 0 / 12px 12px',
+                    : 'repeating-conic-gradient(var(--checker-a) 0% 25%, var(--checker-b) 0% 50%) 0 0 / 12px 12px',
               }}
             >
               <IndexedCanvas

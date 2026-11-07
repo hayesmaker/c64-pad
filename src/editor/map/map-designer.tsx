@@ -596,7 +596,7 @@ export function MapDesigner({
                   height={bounds.frameH}
                   active={cursor?.[1] ?? null}
                 />
-                <div className="h-fit rounded-[2px] border-2 border-[#77756f]">
+                <div className="h-fit rounded-[2px] border-2 border-grid-frame">
                   {renderCanvas(view, setView, cell, frame)}
                 </div>
               </div>

@@ -1,11 +1,11 @@
 import { useEffect, useRef } from 'react'
 import { charCount, renderChar } from '@/c64/charset'
 import { PALETTE } from '@/c64/palette'
+import { cssVar, useColorScheme } from '@/lib/theme'
 import type { Charset } from '@/c64/charset'
 
 const COLUMNS = 16
 const LABEL_W = 24
-const ACCENT = '#2e2c9b'
 
 const hexDigit = (n: number) => n.toString(16).toUpperCase()
 
@@ -35,6 +35,7 @@ export function CharsetSheet({
   const SCALE = (pitch - 1) / 8
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const count = charCount(charset.mode)
+  const scheme = useColorScheme()
   const rows = Math.ceil(count / COLUMNS)
   const width = COLUMNS * PITCH
   const height = rows * PITCH
@@ -62,10 +63,20 @@ export function CharsetSheet({
     if (selected < 0) return
     const sx = (selected % COLUMNS) * PITCH
     const sy = Math.floor(selected / COLUMNS) * PITCH
-    ctx.strokeStyle = ACCENT
+    ctx.strokeStyle = cssVar('--primary') || '#2e2c9b'
     ctx.lineWidth = 2
     ctx.strokeRect(sx, sy, PITCH, PITCH)
-  }, [charset, count, selected, width, height, PITCH, SCALE, background])
+  }, [
+    charset,
+    count,
+    selected,
+    width,
+    height,
+    PITCH,
+    SCALE,
+    background,
+    scheme,
+  ])
 
   const pick = (e: React.PointerEvent<HTMLCanvasElement>) => {
     const rect = e.currentTarget.getBoundingClientRect()
@@ -126,7 +137,7 @@ export function CharsetSheet({
           style={{
             width,
             height,
-            outline: swapping ? '1px dashed #8f8d86' : undefined,
+            outline: swapping ? '1px dashed var(--rule)' : undefined,
             outlineOffset: 2,
           }}
         />

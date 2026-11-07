@@ -24,7 +24,7 @@ export function EdgeTabs({ tabs }: { tabs: Array<EdgeTab> }) {
             'flex h-[120px] rotate-180 items-center justify-center rounded-l-lg text-[13px] font-semibold tracking-[0.14em] [writing-mode:vertical-rl]',
             tab.current
               ? 'bg-tab text-tab-foreground'
-              : 'bg-tab-inactive text-tab-inactive-foreground hover:bg-[#c6c4bb]',
+              : 'bg-tab-inactive text-tab-inactive-foreground hover:bg-tab-inactive-hover',
           )}
         >
           {tab.label}

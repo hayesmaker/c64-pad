@@ -1,13 +1,13 @@
 import { useEffect, useRef } from 'react'
 import { PALETTE } from '@/c64/palette'
 import { useGridGestures } from './gestures'
+import { cssVar, useColorScheme } from '@/lib/theme'
 import { clampView, zoomAround } from './view'
 import type { GridView } from './view'
 import type { StrokeHandlers } from './gestures'
 
 export type { StrokeHandlers } from './gestures'
 
-const MAJOR = '#8f8d86'
 export interface GridLayer {
   /** C64 colour per hires pixel, row-major; -1 = transparent. */
   pixels: Int8Array
@@ -52,6 +52,7 @@ export function PixelGrid({
   label: string
 } & StrokeHandlers) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const scheme = useColorScheme()
   const width = columns * cell
   const height = rows * cell
 
@@ -75,8 +76,10 @@ export function PixelGrid({
       view,
       width,
       height,
+      major: cssVar('--grid-major') || '#8f8d86',
     })
   }, [
+    scheme,
     columns,
     rows,
     step,
@@ -141,6 +144,7 @@ function draw(
     view: GridView
     width: number
     height: number
+    major: string
   },
 ) {
   ctx.clearRect(0, 0, o.width, o.height)
@@ -175,7 +179,7 @@ function draw(
     color: string,
   ) => {
     ctx.strokeStyle = color
-    ctx.lineWidth = color === MAJOR ? 1.5 : 1
+    ctx.lineWidth = color === o.major ? 1.5 : 1
     ctx.beginPath()
     ctx.moveTo(x0, y0)
     ctx.lineTo(x1, y1)
@@ -188,8 +192,8 @@ function draw(
     if (y % o.majorY !== 0) line(0, y * cell + 0.5, w, y * cell + 0.5, minor)
   }
   for (let x = o.majorX; x < o.columns; x += o.majorX)
-    line(x * cell, 0, x * cell, h, MAJOR)
+    line(x * cell, 0, x * cell, h, o.major)
   for (let y = o.majorY; y < o.rows; y += o.majorY)
-    line(0, y * cell, w, y * cell, MAJOR)
+    line(0, y * cell, w, y * cell, o.major)
   ctx.restore()
 }

@@ -502,7 +502,7 @@ export function SpriteDesigner({
                     cell={cell.size}
                     view={view}
                   />
-                  <div className="h-fit rounded-[2px] border-2 border-[#77756f]">
+                  <div className="h-fit rounded-[2px] border-2 border-grid-frame">
                     {renderGrid(cell.size, view, setView)}
                   </div>
                 </div>

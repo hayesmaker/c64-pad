@@ -33,8 +33,8 @@ export function DataColumn({
               <div
                 key={i}
                 className={cn(
-                  'flex flex-1 items-center justify-center rounded-[5px] border border-[#b4b2aa] font-mono text-xs',
-                  value === 0 ? 'text-[#8a887f]' : 'text-foreground',
+                  'flex flex-1 items-center justify-center rounded-[5px] border border-data-box font-mono text-xs',
+                  value === 0 ? 'text-data-zero' : 'text-foreground',
                 )}
                 style={{ height: Math.max(cell - 5, 12) }}
               >

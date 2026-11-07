@@ -28,7 +28,7 @@ export function Breadcrumbs({ items }: { items: Array<Crumb> }) {
           {item.link ? (
             <Link
               {...item.link}
-              className="max-w-[160px] truncate text-[#55534d] hover:text-foreground"
+              className="max-w-[160px] truncate text-ink-soft hover:text-foreground"
             >
               {item.label}
             </Link>

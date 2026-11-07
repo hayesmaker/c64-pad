@@ -42,6 +42,17 @@ Type: **IBM Plex Sans** (UI; 300 for sheet titles) and **IBM Plex Mono**
 (numbers, bytes, bit headers), bundled via `@fontsource` so the Android
 app works offline. Radius 8px for controls, 10px for the sheet.
 
+## Dark mode
+
+Follows the device's light/dark setting (`prefers-color-scheme`); no in-app
+switch for MVP. Tokens are redefined in `src/styles.css`: "the worksheet on a
+desk at night": desk `#121210`, paper `#1f1e1b`, rules `#7b7972` /
+`#3b3a36`, text `#e8e6df`, and C64 light blue `#8b88f2` as the accent
+(C64 blue is too dark to read on charcoal). C64 colours inside grids,
+previews and sheets never change. Canvases read tokens with `cssVar()` and
+redraw on a scheme change (`useColorScheme()` in `src/lib/theme.ts`); use
+tokens, never hex, in components.
+
 ## Components (`src/components/worksheet/`)
 
 - `WorksheetLayout`: desk, sheet, header (breadcrumbs, title, actions), optional tabs
@@ -55,4 +66,4 @@ app works offline. Radius 8px for controls, 10px for the sheet.
   editor page with empty grids, for designing on paper. Render from the
   same components so print and screen stay in step.
 - Portrait tablet and phone layouts.
-- Dark mode (not designed yet).
+- An in-app theme switch (MVP follows the device setting).

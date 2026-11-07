@@ -8,7 +8,8 @@
 @import '@fontsource/ibm-plex-mono/400.css';
 @import '@fontsource/ibm-plex-mono/500.css';
 
-@custom-variant dark (&:is(.dark *));
+/* Dark mode follows the device setting (no in-app switch for MVP). */
+@custom-variant dark (@media (prefers-color-scheme: dark));
 
 * {
   box-sizing: border-box;
@@ -39,6 +40,11 @@ body {
   --color-tab-foreground: var(--tab-foreground);
   --color-tab-inactive: var(--tab-inactive);
   --color-tab-inactive-foreground: var(--tab-inactive-foreground);
+  --color-grid-frame: var(--grid-frame);
+  --color-ink-soft: var(--ink-soft);
+  --color-data-box: var(--data-box);
+  --color-data-zero: var(--data-zero);
+  --color-tab-inactive-hover: var(--tab-inactive-hover);
   --color-c64-screen: var(--c64-screen);
   --color-c64-border: var(--c64-border);
   --color-sidebar-ring: var(--sidebar-ring);
@@ -93,6 +99,15 @@ body {
   --tab-foreground: #ffffff;
   --tab-inactive: #d3d1c9;
   --tab-inactive-foreground: #3d3c38;
+  --tab-inactive-hover: #c6c4bb;
+  --grid-frame: #77756f;
+  --ink-soft: #55534d;
+  --data-box: #b4b2aa;
+  --data-zero: #8a887f;
+  /* Transparent-pixel checkerboard */
+  --checker-a: #d9d7cf;
+  --checker-b: #fdfcf8;
+  --shadow: rgba(43, 43, 40, 0.12);
   --c64-screen: #2e2c9b;
   --c64-border: #706deb;
 
@@ -130,7 +145,52 @@ body {
   --sidebar-ring: #2e2c9b;
 }
 
-/* Dark mode: not designed yet (post-MVP). */
+/* Dark: the worksheet on a desk at night. Charcoal paper, pale pencil rules,
+   C64 light blue as the accent (C64 blue is too dark to read on charcoal). */
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --desk: #121210;
+    --paper: #1f1e1b;
+    --rule: #7b7972;
+    --rule-soft: #3b3a36;
+    --grid-minor: #34332f;
+    --grid-major: #8f8d86;
+    --tab: #d3d1c9;
+    --tab-foreground: #1f1e1b;
+    --tab-inactive: #34332f;
+    --tab-inactive-foreground: #c9c7bf;
+    --tab-inactive-hover: #403f3a;
+    --grid-frame: #8f8d86;
+    --ink-soft: #b8b6ae;
+    --data-box: #4a4944;
+    --data-zero: #7b7972;
+    --checker-a: #34332f;
+    --checker-b: #45443f;
+    --shadow: rgba(0, 0, 0, 0.45);
+
+    --foreground: #e8e6df;
+    --card-foreground: #e8e6df;
+    --popover-foreground: #e8e6df;
+    --primary: #8b88f2;
+    --primary-foreground: #15143a;
+    --secondary: #2a2925;
+    --secondary-foreground: #e8e6df;
+    --muted: #2a2925;
+    --muted-foreground: #a8a69e;
+    --accent: #2b2a52;
+    --accent-foreground: #c9c7ff;
+    --destructive: #f2827a;
+    --ring: #8b88f2;
+    --chart-1: #8b88f2;
+    --sidebar-foreground: #e8e6df;
+    --sidebar-primary: #8b88f2;
+    --sidebar-primary-foreground: #15143a;
+    --sidebar-accent: #2b2a52;
+    --sidebar-accent-foreground: #c9c7ff;
+    --sidebar-ring: #8b88f2;
+  }
+}
 
 @layer base {
   * {
