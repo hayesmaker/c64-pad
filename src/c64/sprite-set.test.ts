@@ -3,6 +3,8 @@ import { ModelError } from './errors'
 import { createSprite, setSpritePixel } from './sprite'
 import {
   addOverlaySprite,
+  frameSprites,
+  overlayBase,
   addAnimation,
   addSprite,
   animationSequence,
@@ -172,5 +174,17 @@ describe('addOverlaySprite', () => {
     expect(next.sprites[0].overlayId).toBe(overlayId)
     expect(() => addOverlaySprite(next, base.id)).toThrow()
     expect(() => addOverlaySprite(next, overlayId)).toThrow()
+  })
+})
+
+describe('frames and overlays', () => {
+  it('leaves overlay sprites out of animation frames', () => {
+    let set = createSpriteSet()
+    const base = set.sprites[0]
+    set = addSprite(set, createSprite({ name: 'Walk 2' }))
+    const { set: next, overlayId } = addOverlaySprite(set, base.id)
+    expect(overlayBase(next, overlayId)?.id).toBe(base.id)
+    expect(overlayBase(next, base.id)).toBeUndefined()
+    expect(frameSprites(next).map((s) => s.name)).toEqual([base.name, 'Walk 2'])
   })
 })

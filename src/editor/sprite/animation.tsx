@@ -16,6 +16,8 @@ import {
   animationSequence,
   findSprite,
   removeAnimation,
+  frameSprites,
+  overlayBase,
   renderSprite,
   updateAnimation,
 } from '@/c64/sprite-set'
@@ -124,7 +126,10 @@ export function AnimationControls({
       addAnimation(s, {
         id,
         name: `Animation ${s.animations.length + 1}`,
-        frames: s.sprites.slice(0, 2).map((x) => x.id),
+        // Overlays play with their base sprite, so they aren't frames.
+        frames: frameSprites(s)
+          .slice(0, 2)
+          .map((x) => x.id),
       }),
     )
     onAnimationId(id)
@@ -319,8 +324,20 @@ function AnimationDialog({
                     id === frameId ? 'border-primary' : 'border-transparent',
                   )}
                 >
-                  <div className="flex h-9 w-14 items-center justify-center rounded bg-c64-screen">
+                  <div
+                    className="relative flex h-9 w-14 items-center justify-center rounded bg-c64-screen"
+                    title={
+                      overlayBase(set, id)
+                        ? 'An overlay on its own: remove it and add its base sprite instead'
+                        : undefined
+                    }
+                  >
                     <SpriteThumb set={set} sprite={sprite} className="w-8" />
+                    {overlayBase(set, id) && (
+                      <span className="absolute top-0 right-0.5 font-mono text-[9px] text-amber-300">
+                        front only
+                      </span>
+                    )}
                   </div>
                   <div className="flex">
                     <IconButton
@@ -353,23 +370,40 @@ function AnimationDialog({
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <span className="text-xs text-muted-foreground">Add a frame</span>
+          <span className="text-xs text-muted-foreground">
+            Add a frame · overlays play with their sprite
+          </span>
           <ul className="flex flex-wrap gap-1.5">
-            {set.sprites.map((sprite, i) => (
-              <li key={sprite.id}>
-                <button
-                  type="button"
-                  aria-label={`Add sprite ${i} as a frame`}
-                  onClick={() => setFrames([...anim.frames, sprite.id])}
-                  className="relative flex h-11 w-14 items-center justify-center rounded-md border border-rule bg-c64-screen hover:ring-2 hover:ring-primary"
-                >
-                  <SpriteThumb set={set} sprite={sprite} className="w-8" />
-                  <span className="absolute bottom-0 left-0.5 font-mono text-[9px] text-white">
-                    {i}
-                  </span>
-                </button>
-              </li>
-            ))}
+            {frameSprites(set).map((sprite) => {
+              const i = set.sprites.indexOf(sprite)
+              return (
+                <li key={sprite.id}>
+                  <button
+                    type="button"
+                    aria-label={`Add sprite ${i} as a frame`}
+                    onClick={() => setFrames([...anim.frames, sprite.id])}
+                    className="relative flex h-11 w-14 items-center justify-center rounded-md border border-rule bg-c64-screen hover:ring-2 hover:ring-primary"
+                  >
+                    <SpriteThumb set={set} sprite={sprite} className="w-8" />
+                    <span className="absolute bottom-0 left-0.5 font-mono text-[9px] text-white">
+                      {i}
+                    </span>
+                    {sprite.overlayId && (
+                      <span
+                        aria-hidden="true"
+                        className="absolute top-0 right-0.5 font-mono text-[9px] text-white"
+                        title="Has an overlay"
+                      >
+                        +
+                        {set.sprites.findIndex(
+                          (s) => s.id === sprite.overlayId,
+                        )}
+                      </span>
+                    )}
+                  </button>
+                </li>
+              )
+            })}
           </ul>
         </div>
 

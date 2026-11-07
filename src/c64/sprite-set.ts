@@ -167,6 +167,19 @@ export function setOverlay(
   return updateSprite(set, baseId, (s) => ({ ...s, overlayId }))
 }
 
+/** The sprite this one is the overlay (front layer) of, if any. */
+export function overlayBase(set: SpriteSet, id: string): Sprite | undefined {
+  return set.sprites.find((s) => s.overlayId === id)
+}
+
+/**
+ * Sprites that can be animation frames: everything except overlays, which
+ * are drawn with their base sprite's frame.
+ */
+export function frameSprites(set: SpriteSet): Array<Sprite> {
+  return set.sprites.filter((s) => !overlayBase(set, s.id))
+}
+
 /**
  * The usual C64 overlay: a new hi-res sprite (black, for outlines and detail)
  * drawn over `baseId`, placed right after it, as SpritePad expects. Returns
