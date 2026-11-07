@@ -91,12 +91,23 @@ describe('multicolour mode', () => {
       Uint8Array.of(1, 2, 3, 4, 5, 6, 7, 8),
     )
     const toMc = setCharsetMode(hires, 'multicolor')
-    expect(toMc.colors[0]).toBe(6)
+    // Light blue & 7 is blue, the background: white keeps it visible.
+    expect(toMc.colors[0]).toBe(1)
     expect(isCharMulticolor(toMc, 0)).toBe(false)
     expect(toMc.data).toEqual(hires.data)
     const back = setCharsetMode(setCharMulticolor(toMc, 0, true), 'hires')
-    expect(back.colors[0]).toBe(6)
+    expect(back.colors[0]).toBe(1)
     expect(setCharsetMode(hires, 'ecm').colors[0]).toBe(14)
+  })
+
+  it('keeps reduced colours that differ from the background', () => {
+    const cs = createCharset({ colors: new Uint8Array(256).fill(10) })
+    expect(setCharsetMode(cs, 'multicolor').colors[0]).toBe(2)
+    const onWhite = createCharset({
+      background: 1,
+      colors: new Uint8Array(256).fill(9),
+    })
+    expect(setCharsetMode(onWhite, 'multicolor').colors[0]).toBe(0)
   })
 
   it('maps pixel values to background, MC1, MC2 and char colour', () => {

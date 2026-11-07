@@ -149,14 +149,21 @@ export function setCharMulticolor(
 /**
  * Change mode, keeping pixel data. Colours are reduced to 0-7 when entering or
  * leaving multicolour mode, so every char starts (or ends up) as a hires char.
+ * A colour that would then match the background (light blue on blue, the C64
+ * default) becomes white, or black on a white background, so chars stay visible.
  */
 export function setCharsetMode(cs: Charset, mode: CharsetMode): Charset {
   if (cs.mode === mode) return cs
   const touchesMc = mode === 'multicolor' || cs.mode === 'multicolor'
+  const visible = (c: number) => {
+    const low = c & 7
+    if (low !== cs.background) return low
+    return cs.background === 1 ? 0 : 1
+  }
   return {
     ...cs,
     mode,
-    colors: touchesMc ? cs.colors.map((c) => c & 7) : cs.colors,
+    colors: touchesMc ? cs.colors.map(visible) : cs.colors,
   }
 }
 
