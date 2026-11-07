@@ -18,8 +18,8 @@ https://claude.ai/artifact/NrarDz6ngDzkTNvasy95WU
   `.touch-surface` class (no browser gestures, no selection).
 - **Landscape first.** MVP targets tablets in landscape. Portrait tablet and
   phone layouts come after MVP. Reference device: RedMagic Astra 2, a
-  **1200×752 CSS px** viewport in landscape (2400×1504 @2x), or **1066×668**
-  with a larger display size (DPR 2.25); layouts must fit both. The mock-up is
+  **1066×668 CSS px** viewport in landscape (2400×1504 screen at 360 dpi,
+  DPR 2.25). The mock-up is
   1280×800, so editor layouts must also fit the smaller size.
 
 ## Tokens (`src/styles.css`)
