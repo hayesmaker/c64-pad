@@ -270,7 +270,7 @@ export function SpriteDesigner({
       className="flex gap-4 px-4 py-3"
     >
       {/* Left: sprite details, pens, palette, preview */}
-      <div className="flex w-[240px] shrink-0 flex-col gap-2.5 overflow-y-auto">
+      <div className="-mx-1 flex w-[248px] shrink-0 flex-col gap-2.5 overflow-y-auto px-1 py-0.5">
         <div className="flex gap-2">
           <Field label="Sprite name" className="flex-1">
             <Input
