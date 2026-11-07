@@ -3,6 +3,7 @@ import { createCharmap } from './charmap'
 import { createCharset } from './charset'
 import { ModelError } from './errors'
 import {
+  projectColors,
   addAsset,
   createProject,
   duplicateAsset,
@@ -79,5 +80,14 @@ describe('project', () => {
     expect(touchProject(p, new Date('2026-12-01T00:00:00Z')).updatedAt).toBe(
       '2026-12-01T00:00:00.000Z',
     )
+  })
+})
+
+describe('projectColors', () => {
+  it('lists the colours in use, in palette order', () => {
+    const project = createProject({ name: 'P' })
+    const colors = projectColors(project)
+    // Defaults: sprites MC 11/1 + sprite colour 10; charset bg 6, chars 14.
+    expect(colors).toEqual([1, 6, 10, 11, 14])
   })
 })

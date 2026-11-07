@@ -14,6 +14,7 @@ import {
   FlipVertical2,
   Move,
   PaintBucket,
+  Maximize2,
   Pencil,
   Redo2,
   RotateCw,
@@ -43,7 +44,7 @@ import {
 } from '@/c64/charset'
 import { CHAR_SHAPE, floodFill } from '@/c64/bitmap'
 import { PALETTE } from '@/c64/palette'
-import { mapsUsingCharset } from '@/c64/project'
+import { mapsUsingCharset, projectColors } from '@/c64/project'
 import { WorksheetLayout } from '@/components/worksheet/worksheet-layout'
 import { Breadcrumbs } from '@/components/worksheet/breadcrumbs'
 import { EdgeTabs } from '@/components/worksheet/edge-tabs'
@@ -84,6 +85,7 @@ import {
   slotColor,
 } from './char-pens'
 import { CharsetSheet } from './charset-sheet'
+import { ZenMode } from '../zen-mode'
 import type { CharSlot } from './char-pens'
 import type { GridView } from '../view'
 
@@ -135,6 +137,7 @@ export function CharsetDesigner({
   const [ecmTarget, setEcmTarget] = useState<number | null>(null)
   const [asHex, setAsHex] = useState(true)
   const [swapping, setSwapping] = useState(false)
+  const [zen, setZen] = useState(false)
   const [, setClipboardVersion] = useState(0)
   const [confirm, setConfirm] = useState<
     { kind: 'petscii'; set: PetsciiSet } | { kind: 'clear' } | null
@@ -222,6 +225,46 @@ export function CharsetDesigner({
     [charset, selected],
   )
   const bgHex = PALETTE[charset.background].hex
+  const renderGrid = (
+    size: number,
+    v: GridView,
+    onV: (next: GridView) => void,
+  ) => (
+    <PixelGrid
+      width={8}
+      height={8}
+      step={pixelMode === 'multicolor' ? 2 : 1}
+      majorX={4}
+      majorY={4}
+      layers={gridLayers}
+      background={bgHex}
+      cell={size}
+      view={v}
+      onViewChange={onV}
+      label={`Character ${selected} pixel grid, ${mcChar ? '4' : '8'} by 8`}
+      onStrokeStart={(x, y) => {
+        strokeId.current++
+        beforeStroke.current = charset
+        paint(x, y, true)
+      }}
+      onStrokeMove={(x, y) => paint(x, y, false)}
+      onStrokeEnd={history.endGroup}
+      onStrokeCancel={() => {
+        history.endGroup()
+        history.undo()
+      }}
+      onDoubleTap={(x, y) => {
+        if (tool !== 'draw') return
+        // Clear the pixel, as one undo step with the first tap.
+        if (beforeStroke.current !== charset) history.undo()
+        change((cs) =>
+          getCharPixel(cs, selected, x, y) === 0
+            ? cs
+            : setCharPixel(cs, selected, x, y, 0),
+        )
+      }}
+    />
+  )
   const users = mapsUsingCharset(project, charset.id)
 
   return (
@@ -246,6 +289,9 @@ export function CharsetDesigner({
       actions={
         <>
           <SaveStatus status={status} error={error} />
+          <ToolButton label="Zen mode" onClick={() => setZen(true)}>
+            <Maximize2 />
+          </ToolButton>
           <ToolButton
             label="Undo"
             disabled={!history.canUndo}
@@ -474,40 +520,7 @@ export function CharsetDesigner({
                   <RowNumbers rows={8} first={0} cell={cell.size} view={view} />
                   <div className="flex flex-col">
                     <div className="h-fit rounded-[2px] border-2 border-[#77756f]">
-                      <PixelGrid
-                        width={8}
-                        height={8}
-                        step={pixelMode === 'multicolor' ? 2 : 1}
-                        majorX={4}
-                        majorY={4}
-                        layers={gridLayers}
-                        background={bgHex}
-                        cell={cell.size}
-                        view={view}
-                        onViewChange={setView}
-                        label={`Character ${selected} pixel grid, ${mcChar ? '4' : '8'} by 8`}
-                        onStrokeStart={(x, y) => {
-                          strokeId.current++
-                          beforeStroke.current = charset
-                          paint(x, y, true)
-                        }}
-                        onStrokeMove={(x, y) => paint(x, y, false)}
-                        onStrokeEnd={history.endGroup}
-                        onStrokeCancel={() => {
-                          history.endGroup()
-                          history.undo()
-                        }}
-                        onDoubleTap={(x, y) => {
-                          if (tool !== 'draw') return
-                          // Clear the pixel, as one undo step with the first tap.
-                          if (beforeStroke.current !== charset) history.undo()
-                          change((cs) =>
-                            getCharPixel(cs, selected, x, y) === 0
-                              ? cs
-                              : setCharPixel(cs, selected, x, y, 0),
-                          )
-                        }}
-                      />
+                      {renderGrid(cell.size, view, setView)}
                     </div>
                     <div
                       className="mt-2 flex flex-col gap-0.5"
@@ -663,6 +676,41 @@ export function CharsetDesigner({
         </p>
       </div>
 
+      {zen && (
+        <ZenMode
+          title={`Char ${hex2(selected)}`}
+          columns={8}
+          rows={8}
+          renderGrid={renderGrid}
+          tool={tool}
+          onTool={setTool}
+          pens={pens}
+          pen={pen}
+          onPen={(v) => {
+            setPenByMode((p) => ({ ...p, [pixelMode]: v }))
+            setEcmTarget(null)
+            if (tool === 'erase') setTool('draw')
+          }}
+          colors={projectColors(project)}
+          penColor={
+            penDef.slot ? slotColor(charset, selected, penDef.slot) : null
+          }
+          isAllowed={(c) =>
+            !(penDef.slot === 'char' && charset.mode === 'multicolor') || c < 8
+          }
+          onRecolor={(color) => {
+            const slot = penDef.slot
+            if (slot) change((cs) => setSlotColor(cs, selected, slot, color))
+          }}
+          onUndo={history.undo}
+          onRedo={history.redo}
+          canUndo={history.canUndo}
+          canRedo={history.canRedo}
+          onPrev={() => setSelected((selected + count - 1) % count)}
+          onNext={() => setSelected((selected + 1) % count)}
+          onExit={() => setZen(false)}
+        />
+      )}
       <ConfirmDialog
         open={confirm !== null}
         onOpenChange={(open) => !open && setConfirm(null)}

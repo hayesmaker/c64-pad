@@ -1,10 +1,11 @@
 import { createCharmap } from './charmap'
-import { createCharset } from './charset'
+import { charColor, charCount, createCharset } from './charset'
 import { ModelError } from './errors'
 import { newId } from './ids'
 import { createSpriteSet } from './sprite-set'
 import type { Charmap } from './charmap'
 import type { Charset } from './charset'
+import type { C64Color } from './palette'
 import type { SpriteSet } from './sprite-set'
 
 /** Bump when the stored shape changes; persistence migrates older versions. */
@@ -238,4 +239,23 @@ export function duplicateAsset(
   const updated = replaceList(project, kind, list)
   checkIntegrity(updated)
   return updated
+}
+
+/**
+ * Colours the project already uses (screen and shared registers, sprite and
+ * char colours), in palette order: Zen mode's quick picks.
+ */
+export function projectColors(project: Project): Array<C64Color> {
+  const used = new Set<number>()
+  for (const set of project.spriteSets) {
+    used.add(set.multicolor1).add(set.multicolor2)
+    for (const s of set.sprites) used.add(s.color)
+  }
+  for (const cs of project.charsets) {
+    used.add(cs.background)
+    if (cs.mode === 'multicolor') used.add(cs.multicolor1).add(cs.multicolor2)
+    if (cs.mode === 'ecm') cs.ecmBackgrounds.forEach((c) => used.add(c))
+    for (let i = 0; i < charCount(cs.mode); i++) used.add(charColor(cs, i))
+  }
+  return [...used].sort((a, b) => a - b)
 }

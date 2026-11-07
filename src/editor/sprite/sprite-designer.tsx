@@ -9,6 +9,7 @@ import {
   Eraser,
   FlipHorizontal2,
   FlipVertical2,
+  Maximize2,
   Move,
   PaintBucket,
   Play,
@@ -74,6 +75,8 @@ import {
 } from '../grid-parts'
 import type { GridView } from '../view'
 import { SpriteGrid } from './sprite-grid'
+import { ZenMode } from '../zen-mode'
+import { projectColors } from '@/c64/project'
 import { DataColumn } from './data-column'
 import { PaletteGrid, PensPanel } from '../pens-panel'
 import { spritePens } from './sprite-pens'
@@ -122,6 +125,7 @@ export function SpriteDesigner({
   const [animationId, setAnimationId] = useState<string | null>(null)
   const [playing, setPlaying] = useState(false)
   const [exporting, setExporting] = useState(false)
+  const [zen, setZen] = useState(false)
   const [running, setRunning] = useState<{
     prg: Uint8Array
     title: string
@@ -181,6 +185,39 @@ export function SpriteDesigner({
     changeSprite((s) => setSpritePixel(s, x, y, value), group)
   }
 
+  const renderGrid = (
+    size: number,
+    v: GridView,
+    onV: (next: GridView) => void,
+  ) => (
+    <SpriteGrid
+      set={set}
+      sprite={sprite}
+      layers={{ base: selected, overlay }}
+      cell={size}
+      background={background}
+      view={v}
+      onViewChange={onV}
+      onStrokeStart={(x, y) => {
+        strokeId.current++
+        beforeStroke.current = sprite
+        paint(x, y, true)
+      }}
+      onDoubleTap={(x, y) => {
+        if (tool !== 'draw') return
+        // Clear the pixel, as one undo step with the first tap.
+        if (beforeStroke.current !== sprite) history.undo()
+        changeSprite((s) => setSpritePixel(s, x, y, 0))
+      }}
+      onStrokeMove={(x, y) => paint(x, y, false)}
+      onStrokeEnd={history.endGroup}
+      onStrokeCancel={() => {
+        history.endGroup()
+        history.undo()
+      }}
+    />
+  )
+
   const setPenColor = (color: number) => {
     if (!penDef.slot) return
     if (penDef.slot === 'color') changeSprite((s) => setSpriteColor(s, color))
@@ -209,6 +246,9 @@ export function SpriteDesigner({
       actions={
         <>
           <SaveStatus status={status} error={error} />
+          <ToolButton label="Zen mode" onClick={() => setZen(true)}>
+            <Maximize2 />
+          </ToolButton>
           <Button
             onClick={() => {
               const prg = buildViewerPrg(
@@ -460,32 +500,7 @@ export function SpriteDesigner({
                     view={view}
                   />
                   <div className="h-fit rounded-[2px] border-2 border-[#77756f]">
-                    <SpriteGrid
-                      set={set}
-                      sprite={sprite}
-                      layers={{ base: selected, overlay }}
-                      cell={cell.size}
-                      background={background}
-                      view={view}
-                      onViewChange={setView}
-                      onStrokeStart={(x, y) => {
-                        strokeId.current++
-                        beforeStroke.current = sprite
-                        paint(x, y, true)
-                      }}
-                      onDoubleTap={(x, y) => {
-                        if (tool !== 'draw') return
-                        // Clear the pixel, as one undo step with the first tap.
-                        if (beforeStroke.current !== sprite) history.undo()
-                        changeSprite((s) => setSpritePixel(s, x, y, 0))
-                      }}
-                      onStrokeMove={(x, y) => paint(x, y, false)}
-                      onStrokeEnd={history.endGroup}
-                      onStrokeCancel={() => {
-                        history.endGroup()
-                        history.undo()
-                      }}
-                    />
+                    {renderGrid(cell.size, view, setView)}
                   </div>
                 </div>
               </div>
@@ -605,6 +620,40 @@ export function SpriteDesigner({
           currentIndex={set.sprites.indexOf(selected)}
           background={background}
           onClose={() => setExporting(false)}
+        />
+      )}
+      {zen && (
+        <ZenMode
+          title={`Sprite ${set.sprites.indexOf(sprite)}`}
+          columns={24}
+          rows={21}
+          renderGrid={renderGrid}
+          tool={tool}
+          onTool={setTool}
+          pens={pens}
+          pen={pen}
+          onPen={(v) => {
+            setPenByMode((p) => ({ ...p, [sprite.mode]: v }))
+            if (tool === 'erase') setTool('draw')
+          }}
+          colors={projectColors(project)}
+          penColor={penDef.slot ? penDef.color : null}
+          onRecolor={setPenColor}
+          onUndo={history.undo}
+          onRedo={history.redo}
+          canUndo={history.canUndo}
+          canRedo={history.canRedo}
+          onPrev={() => {
+            const i = set.sprites.indexOf(selected)
+            select(
+              set.sprites[(i + set.sprites.length - 1) % set.sprites.length].id,
+            )
+          }}
+          onNext={() => {
+            const i = set.sprites.indexOf(selected)
+            select(set.sprites[(i + 1) % set.sprites.length].id)
+          }}
+          onExit={() => setZen(false)}
         />
       )}
       {running && (
