@@ -135,14 +135,7 @@ function ProjectPage() {
   return (
     <WorksheetLayout
       title="Project Worksheet"
-      breadcrumbs={
-        <Breadcrumbs
-          items={[
-            { label: 'My Projects', link: { to: '/projects' } },
-            { label: project.name },
-          ]}
-        />
-      }
+      breadcrumbs={<Breadcrumbs items={[{ label: project.name }]} />}
       actions={
         <div className="flex items-center gap-3">
           <SaveStatus status={status} error={error} />

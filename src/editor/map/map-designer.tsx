@@ -352,7 +352,6 @@ export function MapDesigner({
       breadcrumbs={
         <Breadcrumbs
           items={[
-            { label: 'My Projects', link: { to: '/projects' } },
             {
               label: project.name,
               link: {

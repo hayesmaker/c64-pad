@@ -16,6 +16,7 @@ export function Breadcrumbs({ items }: { items: Array<Crumb> }) {
     >
       <Link
         to="/"
+        title="My Projects"
         className="shrink-0 font-semibold tracking-[-0.01em] whitespace-nowrap text-foreground"
       >
         C64-Pad

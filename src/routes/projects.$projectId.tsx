@@ -21,15 +21,11 @@ function ProjectMissing() {
   return (
     <WorksheetLayout
       title="Not found"
-      breadcrumbs={
-        <Breadcrumbs
-          items={[{ label: 'My Projects', link: { to: '/projects' } }]}
-        />
-      }
+      breadcrumbs={<Breadcrumbs items={[]} />}
       className="p-6"
     >
       <p>This project doesn’t exist on this device.</p>
-      <Link to="/projects" className="mt-4 inline-block text-primary underline">
+      <Link to="/" className="mt-4 inline-block text-primary underline">
         Back to My Projects
       </Link>
     </WorksheetLayout>

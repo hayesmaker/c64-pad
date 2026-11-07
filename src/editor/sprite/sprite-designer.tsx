@@ -231,7 +231,6 @@ export function SpriteDesigner({
       breadcrumbs={
         <Breadcrumbs
           items={[
-            { label: 'My Projects', link: { to: '/projects' } },
             {
               label: project.name,
               link: {
