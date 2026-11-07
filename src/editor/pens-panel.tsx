@@ -39,7 +39,7 @@ export function PensPanel({
           aria-pressed={p.value === pen}
           onClick={() => onPen(p.value)}
           className={cn(
-            'flex h-8 items-center gap-2.5 rounded-lg border px-2.5 text-left',
+            'flex h-[30px] items-center gap-2.5 rounded-lg border px-2.5 text-left',
             p.value === pen
               ? 'border-primary bg-accent ring-1 ring-inset ring-primary'
               : 'border-rule-soft hover:bg-muted',
