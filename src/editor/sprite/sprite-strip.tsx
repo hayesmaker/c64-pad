@@ -118,7 +118,7 @@ export function SpriteStrip({
           </SelectContent>
         </Select>
       </div>
-      <ul className="flex min-w-0 gap-1.5 overflow-x-auto py-0.5">
+      <ul className="flex min-w-0 gap-1.5 overflow-x-auto p-[3px]">
         {set.sprites.map((sprite, i) => (
           <li key={sprite.id} className="shrink-0">
             <button
