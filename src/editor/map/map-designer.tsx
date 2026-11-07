@@ -5,6 +5,7 @@ import {
   Expand,
   Grid3x3,
   Maximize2,
+  MonitorPlay,
   PaintBucket,
   Pencil,
   Pipette,
@@ -57,6 +58,11 @@ import { useAssetHistory } from '../asset-history'
 import { ToolButton, useUndoShortcuts, zoomLabel } from '../grid-parts'
 import { DEFAULT_VIEW, clampViewTo, zoomAroundIn } from '../view'
 import { ZenMode } from '../zen-mode'
+import { RunExportDialog } from '../run-export-dialog'
+import { MapExportPanel } from '../chars-export'
+import { EmulatorOverlay } from '@/emulator/emulator-overlay'
+import { mapViewerPrg } from '@/emulator/charmap-viewer'
+import { safeFileName } from '@/platform/save-file'
 import { CharsetSheet } from '../charset/charset-sheet'
 import { ecmBackgroundColors } from '../charset/char-pens'
 import { MapCanvas, mapBounds } from './map-canvas'
@@ -116,6 +122,12 @@ export function MapDesigner({
   const [selectionState, setSelection] = useState<CellRect | null>(null)
   const [resizing, setResizing] = useState(false)
   const [zen, setZen] = useState(false)
+  const [runExport, setRunExport] = useState(false)
+  const [running, setRunning] = useState<{
+    prg: Uint8Array
+    title: string
+    joystick: boolean
+  } | null>(null)
   const [blankOpen, setBlankOpen] = useState(false)
   // Undo, redo or a resize can shrink the map under the cursor or selection.
   const cursor =
@@ -383,6 +395,9 @@ export function MapDesigner({
           >
             <Maximize2 />
           </ToolButton>
+          <ToolButton label="Run & export" onClick={() => setRunExport(true)}>
+            <MonitorPlay />
+          </ToolButton>
           <ToolButton
             label="Undo"
             disabled={!history.canUndo}
@@ -616,6 +631,45 @@ export function MapDesigner({
         <Readout map={map} charset={charset} cell={cursor} />
       </div>
 
+      {runExport && (
+        <RunExportDialog
+          title={map.name}
+          runSummary={
+            map.width <= 40 && map.height <= 25
+              ? `Shows “${map.name}” on the C64 screen.`
+              : `Shows the top-left screen of “${map.name}” (${map.width} × ${map.height}); scroll with the arrow keys or the on-screen arrows (joystick port 2).`
+          }
+          onRun={() => {
+            const { prg, rows } = mapViewerPrg(map, charset)
+            setRunning({
+              prg,
+              title:
+                rows < map.height
+                  ? `${map.name} · first ${rows} rows (C64 memory)`
+                  : map.name,
+              joystick: map.width > 40 || rows > 25,
+            })
+          }}
+          exportPanel={
+            <MapExportPanel
+              project={project}
+              map={map}
+              charset={charset}
+              onClose={() => setRunExport(false)}
+            />
+          }
+          onClose={() => setRunExport(false)}
+        />
+      )}
+      {running && (
+        <EmulatorOverlay
+          prg={running.prg}
+          title={running.title}
+          joystick={running.joystick}
+          fileName={`${safeFileName(project.name)}-${safeFileName(map.name)}.prg`}
+          onClose={() => setRunning(null)}
+        />
+      )}
       {zen && (
         <ZenMode
           title={map.name}

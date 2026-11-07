@@ -70,7 +70,7 @@ See `PLAN.md` → _Decisions_ for the reasoning behind these.
 - [x] "Run" button → embedded overlay; "Save .prg" in the overlay
 - [x] Verify Run (incl. animation) on the tablet
 - [ ] (Web only) "Open in c64-ready" link via `?game=<url>`, configurable base URL
-- [ ] KickAss charset/map-viewer stub (after M7): charset, map window, colour RAM, bg/MC/ECM colours
+- [x] KickAss charset/map-viewer stub (`stubs/charmap-viewer.asm`): charset, map window, colour RAM, bg/MC/ECM colours
 
 ### M6: Charset editor
 
@@ -95,11 +95,13 @@ See `PLAN.md` → _Decisions_ for the reasoning behind these.
 
 ### M8: Exporters (chars/maps)
 
-- [ ] Raw `.bin`: charset, map, attributes/colours
-- [ ] KickAssembler source
-- [ ] CharPad `.ctm` (research spec; user verifies in CharPad)
-- [ ] PNG of map
-- [ ] KickAss example loader (copy map to screen RAM, colours to $D800)
+- [x] Raw `.bin`: charset, map, attributes/colours
+- [x] KickAssembler source
+- [x] CharPad `.ctm` V7 writer (spec: batchpad docs/charpad.md)
+- [ ] User verifies a `.ctm` export opens correctly in CharPad
+- [x] PNG of map
+- [x] KickAss example loaders, verified in c64-ready (`docs/kickass-chars.md`)
+- [x] Run & export dialog for charsets and maps; Run on C64 with a charset/map viewer stub (maps scroll with joystick port 2 / on-screen arrows)
 
 ### M9: Desktop + later
 

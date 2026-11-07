@@ -1,5 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
-import { Download, RotateCcw, X } from 'lucide-react'
+import type { ReactNode } from 'react'
+import {
+  ArrowDown,
+  ArrowLeft,
+  ArrowRight,
+  ArrowUp,
+  Download,
+  RotateCcw,
+  X,
+} from 'lucide-react'
 import { C64Player, CanvasRenderer } from 'c64-ready'
 import { Button } from '@/components/ui/button'
 import { saveFile } from '@/platform/save-file'
@@ -19,15 +28,22 @@ export function EmulatorOverlay({
   prg,
   title,
   fileName,
+  joystick = false,
   onClose,
 }: {
   prg: Uint8Array
   title: string
   /** For "Save .prg". */
   fileName: string
+  /**
+   * The program reads joystick port 2: arrow keys drive it, and on-screen
+   * arrows are shown for touch screens.
+   */
+  joystick?: boolean
   onClose: () => void
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const playerRef = useRef<C64Player | null>(null)
   const [run, setRun] = useState(0)
   const [error, setError] = useState<string | null>(null)
 
@@ -61,7 +77,8 @@ export function EmulatorOverlay({
         try {
           await player.start()
           if (stopped()) return
-          player.setInputMode('keyboard')
+          playerRef.current = player
+          player.setInputMode(joystick ? 'mixed' : 'keyboard')
           player.audio.setMuted(true)
         } catch (e) {
           if (stopped()) return
@@ -72,11 +89,12 @@ export function EmulatorOverlay({
     }, 0)
     return () => {
       run$.cancelled = true
+      playerRef.current = null
       clearTimeout(timer)
       const p = player
       if (p) teardown = teardown.then(() => p.destroy()).catch(() => undefined)
     }
-  }, [prg, title, run])
+  }, [prg, title, run, joystick])
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -120,6 +138,70 @@ export function EmulatorOverlay({
           className="[image-rendering:pixelated]"
           style={{ width: '100%', height: '100%', objectFit: 'contain' }}
         />
+      </div>
+      {joystick && (
+        <JoystickPad
+          onChange={(state) => playerRef.current?.setVirtualGamepadState(state)}
+        />
+      )}
+    </div>
+  )
+}
+
+type Direction = 'up' | 'down' | 'left' | 'right'
+
+/** On-screen arrows that hold joystick port 2 directions while pressed. */
+function JoystickPad({
+  onChange,
+}: {
+  onChange: (state: Partial<Record<Direction, boolean>>) => void
+}) {
+  const held = useRef(new Set<Direction>())
+  const update = () =>
+    onChange({
+      up: held.current.has('up'),
+      down: held.current.has('down'),
+      left: held.current.has('left'),
+      right: held.current.has('right'),
+    })
+  const button = (dir: Direction, icon: ReactNode, area: string) => (
+    <button
+      type="button"
+      aria-label={`Joystick ${dir}`}
+      className="flex size-13 touch-none items-center justify-center rounded-xl border border-white/30 bg-white/10 text-white select-none active:bg-white/30 [&_svg]:size-6"
+      style={{ gridArea: area }}
+      onPointerDown={(e) => {
+        e.currentTarget.setPointerCapture(e.pointerId)
+        held.current.add(dir)
+        update()
+      }}
+      onPointerUp={() => {
+        held.current.delete(dir)
+        update()
+      }}
+      onPointerCancel={() => {
+        held.current.delete(dir)
+        update()
+      }}
+    >
+      {icon}
+    </button>
+  )
+  return (
+    <div className="absolute right-4 bottom-[max(1rem,env(safe-area-inset-bottom))]">
+      <div
+        role="group"
+        aria-label="Joystick (or the arrow keys)"
+        className="grid gap-1 opacity-80"
+        style={{
+          gridTemplateAreas: "'. u .' 'l . r' '. d .'",
+          gridTemplateColumns: 'repeat(3, 3.25rem)',
+        }}
+      >
+        {button('up', <ArrowUp />, 'u')}
+        {button('left', <ArrowLeft />, 'l')}
+        {button('right', <ArrowRight />, 'r')}
+        {button('down', <ArrowDown />, 'd')}
       </div>
     </div>
   )

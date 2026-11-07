@@ -15,6 +15,7 @@ import {
   Move,
   PaintBucket,
   Maximize2,
+  MonitorPlay,
   Pencil,
   Redo2,
   RotateCw,
@@ -87,6 +88,11 @@ import {
 } from './char-pens'
 import { CharsetSheet } from './charset-sheet'
 import { ZenMode, ZenPens } from '../zen-mode'
+import { RunExportDialog } from '../run-export-dialog'
+import { CharsetExportPanel } from '../chars-export'
+import { EmulatorOverlay } from '@/emulator/emulator-overlay'
+import { charsetViewerPrg } from '@/emulator/charmap-viewer'
+import { safeFileName } from '@/platform/save-file'
 import type { CharSlot } from './char-pens'
 import type { GridView } from '../view'
 
@@ -139,6 +145,12 @@ export function CharsetDesigner({
   const [asHex, setAsHex] = useState(true)
   const [swapping, setSwapping] = useState(false)
   const [zen, setZen] = useState(false)
+  const [runExport, setRunExport] = useState(false)
+  const [running, setRunning] = useState<{
+    prg: Uint8Array
+    title: string
+    joystick: boolean
+  } | null>(null)
   const [, setClipboardVersion] = useState(0)
   const [confirm, setConfirm] = useState<
     { kind: 'petscii'; set: PetsciiSet } | { kind: 'clear' } | null
@@ -293,6 +305,9 @@ export function CharsetDesigner({
             onClick={() => setZen(true)}
           >
             <Maximize2 />
+          </ToolButton>
+          <ToolButton label="Run & export" onClick={() => setRunExport(true)}>
+            <MonitorPlay />
           </ToolButton>
           <ToolButton
             label="Undo"
@@ -672,6 +687,36 @@ export function CharsetDesigner({
         </p>
       </div>
 
+      {runExport && (
+        <RunExportDialog
+          title={charset.name}
+          runSummary={`Shows all ${charset.mode === 'ecm' ? '256 screen codes (64 shapes on the 4 backgrounds)' : '256 characters'} of “${charset.name}” as a 16 × 16 grid, in ${charset.mode === 'ecm' ? 'ECM' : charset.mode === 'multicolor' ? 'multicolour' : 'hires'} mode with their own colours.`}
+          onRun={() =>
+            setRunning({
+              prg: charsetViewerPrg(charset).prg,
+              title: charset.name,
+              joystick: false,
+            })
+          }
+          exportPanel={
+            <CharsetExportPanel
+              project={project}
+              charset={charset}
+              onClose={() => setRunExport(false)}
+            />
+          }
+          onClose={() => setRunExport(false)}
+        />
+      )}
+      {running && (
+        <EmulatorOverlay
+          prg={running.prg}
+          title={running.title}
+          joystick={running.joystick}
+          fileName={`${safeFileName(project.name)}-${safeFileName(charset.name)}.prg`}
+          onClose={() => setRunning(null)}
+        />
+      )}
       {zen && (
         <ZenMode
           title={`Char ${hex2(selected)}`}
