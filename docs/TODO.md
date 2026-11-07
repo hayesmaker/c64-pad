@@ -58,7 +58,8 @@ See `PLAN.md` → _Decisions_ for the reasoning behind these.
 - [x] SpritePad `.spd` V1 writer (spec from batchpad docs/spritepad.md)
 - [ ] User verifies a `.spd` export opens correctly in SpritePad
 - [x] PNG export (sheet & single, chosen scale, columns, transparent or screen colour)
-- [x] Save/download via browser on web, Capacitor Filesystem/Share on Android (binary + text)
+- [x] Save/download via browser on web; on Android, the system "Save as" picker (local `SaveAs` plugin, Storage Access Framework) to choose a folder and name, falling back to Filesystem/Share
+- [x] Verify Android "Save as" on the tablet
 - [x] KickAss example loader snippet in docs (`docs/kickass-sprites.md`, both assembled and checked)
 
 ### M5: c64-ready integration

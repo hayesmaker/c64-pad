@@ -142,22 +142,27 @@ export function RunExportSpritesDialog({
     setError(null)
     setSaving(true)
     try {
+      let saved = false
       if (format === 'spd' && spd) {
-        await saveFile(`${baseName}.spd`, spd.bytes)
+        saved = await saveFile(`${baseName}.spd`, spd.bytes)
       } else if (range) {
         if (format === 'bin')
-          await saveFile(`${baseName}.bin`, exportSpritesBin(set, range, pad))
+          saved = await saveFile(
+            `${baseName}.bin`,
+            exportSpritesBin(set, range, pad),
+          )
         if (format === 'asm' && asm)
-          await saveFile(`${baseName}.asm`, asm, 'text/plain')
+          saved = await saveFile(`${baseName}.asm`, asm, 'text/plain')
         if (format === 'png' && sheet) {
           const png = await indexedImageToPng(sheet, {
             scale,
             background: pngBackground === 'screen' ? screenColor : null,
           })
-          await saveFile(`${baseName}.png`, png, 'image/png')
+          saved = await saveFile(`${baseName}.png`, png, 'image/png')
         }
       }
-      onClose()
+      // Cancelled the Android picker: stay open to try again.
+      if (saved) onClose()
     } catch (e) {
       setError((e as Error).message)
     } finally {

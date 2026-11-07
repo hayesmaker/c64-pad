@@ -212,11 +212,28 @@ ANDROID_TARGET=192.168.0.34:5555 npm run android:run
 
 Without `ANDROID_TARGET`, Capacitor picks a target itself (often the emulator).
 
+Over USB, no IP is needed: use the serial from `adb devices -l` as the target
+(e.g. `ANDROID_TARGET=PDNP06J000033459`).
+
+**Linux: "no permissions (missing udev rules?)"** means adb can see the device
+but your user can't open it. Find the vendor ID with `lsusb` (`19d2` for
+ZTE/RedMagic), add a rule, then replug and accept "Allow USB debugging?" on
+the tablet (your user must be in `plugdev`):
+
+```zsh
+echo 'SUBSYSTEM=="usb", ATTR{idVendor}=="19d2", MODE="0660", GROUP="plugdev"' \
+  | sudo tee /etc/udev/rules.d/51-android.rules
+sudo udevadm control --reload-rules && sudo udevadm trigger
+```
+
 Wireless adb via a one-off USB connection (works on any Android):
 
 ```zsh
+adb shell ip -f inet addr show wlan0 | grep inet  # the tablet's IP (or Settings → About → Status)
 adb tcpip 5555 && adb connect <tablet-ip>:5555   # then unplug
 ```
 
-TCP mode lasts until the tablet reboots. On Linux, adb needs a udev rule for
-the device's USB vendor ID (for example `19d2` for ZTE/RedMagic).
+"Connection refused" straight after `adb tcpip` just means the tablet's adb
+hadn't restarted yet: run `adb connect <tablet-ip>:5555` again.
+
+TCP mode lasts until the tablet reboots.

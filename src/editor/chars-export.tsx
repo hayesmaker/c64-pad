@@ -63,12 +63,13 @@ function SaveFooter({
             setError(null)
             void (async () => {
               try {
-                await saveFile(
+                const saved = await saveFile(
                   `${fileName}${output.extension}`,
                   await output.data(),
                   output.mime,
                 )
-                onClose()
+                // Cancelled the Android picker: stay open to try again.
+                if (saved) onClose()
               } catch (e) {
                 setError((e as Error).message)
               } finally {
