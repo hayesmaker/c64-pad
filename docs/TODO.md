@@ -99,7 +99,7 @@ See `PLAN.md` → _Decisions_ for the reasoning behind these.
 - [x] Raw `.bin`: charset, map, attributes/colours
 - [x] KickAssembler source
 - [x] CharPad `.ctm` V7 writer (spec: batchpad docs/charpad.md)
-- [ ] User verifies a `.ctm` export opens correctly in CharPad
+- [x] User verifies a `.ctm` export opens correctly in CharPad
 - [x] PNG of map
 - [x] KickAss example loaders, verified in c64-ready (`docs/kickass-chars.md`)
 - [x] Run & export dialog for charsets and maps; Run on C64 with a charset/map viewer stub (maps scroll with joystick port 2 / on-screen arrows)
