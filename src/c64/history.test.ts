@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  discardGroup,
   canRedo,
   canUndo,
   closeGroup,
@@ -51,5 +52,22 @@ describe('history', () => {
     let h = createHistory(0)
     for (let i = 1; i <= 5; i++) h = record(h, i, { limit: 3 })
     expect(h.past).toEqual([2, 3, 4])
+  })
+})
+
+describe('discardGroup', () => {
+  it('drops a cancelled stroke without leaving a redo step', () => {
+    let h = record(createHistory(0), 1)
+    h = record(closeGroup(h), 2, { group: 's' })
+    h = record(h, 3, { group: 's' })
+    const d = discardGroup(h)
+    expect(d.present).toBe(1)
+    expect(canRedo(d)).toBe(false)
+    expect(d.past).toEqual([0])
+  })
+
+  it('does nothing when the stroke changed nothing', () => {
+    const h = closeGroup(record(createHistory(0), 1))
+    expect(discardGroup(h)).toBe(h)
   })
 })

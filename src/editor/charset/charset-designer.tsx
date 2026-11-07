@@ -191,19 +191,21 @@ export function CharsetDesigner({
     const group = `stroke-${strokeId.current}`
     if (tool === 'fill') {
       if (!start) return
-      change((cs) =>
-        setCharBytes(
-          cs,
-          selected,
-          floodFill(
-            getCharBytes(cs, selected),
-            CHAR_SHAPE,
-            charPixelMode(cs, selected),
-            x,
-            y,
-            value,
+      change(
+        (cs) =>
+          setCharBytes(
+            cs,
+            selected,
+            floodFill(
+              getCharBytes(cs, selected),
+              CHAR_SHAPE,
+              charPixelMode(cs, selected),
+              x,
+              y,
+              value,
+            ),
           ),
-        ),
+        group,
       )
       return
     }
@@ -250,10 +252,7 @@ export function CharsetDesigner({
       }}
       onStrokeMove={(x, y) => paint(x, y, false)}
       onStrokeEnd={history.endGroup}
-      onStrokeCancel={() => {
-        history.endGroup()
-        history.undo()
-      }}
+      onStrokeCancel={history.cancelGroup}
       onDoubleTap={(x, y) => {
         if (tool !== 'draw') return
         // Clear the pixel, as one undo step with the first tap.

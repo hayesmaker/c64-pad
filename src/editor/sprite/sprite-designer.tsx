@@ -182,7 +182,7 @@ export function SpriteDesigner({
   const paint = (x: number, y: number, start: boolean) => {
     const group = `stroke-${strokeId.current}`
     if (tool === 'fill') {
-      if (start) changeSprite((s) => fillSprite(s, x, y, value))
+      if (start) changeSprite((s) => fillSprite(s, x, y, value), group)
       return
     }
     changeSprite((s) => setSpritePixel(s, x, y, value), group)
@@ -214,10 +214,7 @@ export function SpriteDesigner({
       }}
       onStrokeMove={(x, y) => paint(x, y, false)}
       onStrokeEnd={history.endGroup}
-      onStrokeCancel={() => {
-        history.endGroup()
-        history.undo()
-      }}
+      onStrokeCancel={history.cancelGroup}
     />
   )
 

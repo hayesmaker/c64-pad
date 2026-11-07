@@ -111,12 +111,23 @@ export function MapDesigner({
   }
   const [ecmBg, setEcmBg] = useState(0)
   const [showGrid, setShowGrid] = useState(true)
-  const [cursor, setCursor] = useState<[number, number] | null>(null)
+  const [cursorState, setCursor] = useState<[number, number] | null>(null)
   const [hovering, setHovering] = useState(false)
-  const [selection, setSelection] = useState<CellRect | null>(null)
+  const [selectionState, setSelection] = useState<CellRect | null>(null)
   const [resizing, setResizing] = useState(false)
   const [zen, setZen] = useState(false)
   const [blankOpen, setBlankOpen] = useState(false)
+  // Undo, redo or a resize can shrink the map under the cursor or selection.
+  const cursor =
+    cursorState && cursorState[0] < map.width && cursorState[1] < map.height
+      ? cursorState
+      : null
+  const selection =
+    selectionState &&
+    selectionState.x + selectionState.width <= map.width &&
+    selectionState.y + selectionState.height <= map.height
+      ? selectionState
+      : null
   const stroke = useRef<{
     anchor: [number, number]
     last: string
@@ -198,7 +209,7 @@ export function MapDesigner({
         setSelection({ x, y, width: 1, height: 1 })
         return
       case 'fill':
-        history.change((m) => floodFillMap(m, x, y, brushCode))
+        history.change((m) => floodFillMap(m, x, y, brushCode), group)
         return
       case 'erase':
         history.change((m) => setCell(m, x, y, m.blank), group)
@@ -268,8 +279,7 @@ export function MapDesigner({
       }}
       onStrokeCancel={() => {
         stroke.current = null
-        history.endGroup()
-        if (tool !== 'select' && tool !== 'pick') history.undo()
+        history.cancelGroup()
       }}
       onDoubleTap={(x, y) => {
         if (tool !== 'paint') return
@@ -277,8 +287,9 @@ export function MapDesigner({
         if (beforeStroke.current !== map) history.undo()
         if (brushIsSingle) history.change((m) => setCell(m, x, y, m.blank))
       }}
-      onHover={(at) => {
-        setHovering(!!at)
+      onHover={(at, pointerType) => {
+        // A finger has no hover: show the brush outline only for mouse / stylus.
+        setHovering(!!at && pointerType !== 'touch')
         if (at) setCursor(at)
       }}
     />
