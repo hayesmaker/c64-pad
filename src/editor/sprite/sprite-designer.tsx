@@ -710,13 +710,15 @@ function LayerToggle({
   editing: 'front' | 'back'
   onPick: (id: string) => void
 }) {
-  const mode = (s: Sprite) => (s.mode === 'multicolor' ? 'MC' : 'Hi-res')
   return (
     <div className="flex shrink-0 flex-col gap-0.5">
-      <span className="text-[11px] text-muted-foreground">
-        Editing layer · front is drawn over back
+      <span
+        className="text-[11px] text-muted-foreground"
+        title="The front sprite is drawn over the back one"
+      >
+        Layer · front over back
       </span>
-      <div className="w-[236px]">
+      <div className="w-[150px]">
         <Segmented
           label="Layer to edit"
           size="sm"
@@ -724,11 +726,11 @@ function LayerToggle({
           options={[
             {
               value: 'front',
-              label: `Front #${set.sprites.indexOf(front)} · ${mode(front)}`,
+              label: `Front ${set.sprites.indexOf(front)}`,
             },
             {
               value: 'back',
-              label: `Back #${set.sprites.indexOf(back)} · ${mode(back)}`,
+              label: `Back ${set.sprites.indexOf(back)}`,
             },
           ]}
           onChange={(v) => onPick(v === 'front' ? front.id : back.id)}

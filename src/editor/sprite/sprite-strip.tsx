@@ -113,7 +113,7 @@ export function SpriteStrip({
         >
           <SelectTrigger
             size="sm"
-            className="h-8 max-w-[150px] text-xs"
+            className="h-8 max-w-[112px] text-xs"
             aria-label="Sprite set"
           >
             <SelectValue />
@@ -127,7 +127,7 @@ export function SpriteStrip({
           </SelectContent>
         </Select>
       </div>
-      <ul className="flex min-w-0 gap-1.5 overflow-x-auto p-[3px]">
+      <ul className="flex min-w-[76px] gap-1.5 overflow-x-auto p-[3px]">
         {set.sprites.map((sprite, i) => (
           <li key={sprite.id} className="shrink-0">
             <button
@@ -177,7 +177,7 @@ export function SpriteStrip({
             <EllipsisVertical aria-hidden="true" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" side="top">
+        <DropdownMenuContent align="end" side="top" className="w-60">
           <DropdownMenuItem onSelect={actions.duplicate}>
             <CopyPlus aria-hidden="true" /> Duplicate sprite
           </DropdownMenuItem>
@@ -196,7 +196,7 @@ export function SpriteStrip({
               disabled={!actions.unlinkOverlay}
               onSelect={() => actions.unlinkOverlay?.()}
             >
-              <Layers aria-hidden="true" /> Separate overlay (keeps both)
+              <Layers aria-hidden="true" /> Separate overlay
             </DropdownMenuItem>
           ) : (
             <>
