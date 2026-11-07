@@ -617,7 +617,7 @@ export function MapDesigner({
           side={
             <div className="flex w-[240px] flex-col gap-2.5">{brushPicker}</div>
           }
-          sideWidth={272}
+          sideWidth={292}
           zoom={(v, factor, at, f) =>
             zoomAroundIn(
               v,

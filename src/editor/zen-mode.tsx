@@ -24,6 +24,8 @@ export type ZenTool = 'draw' | 'erase' | 'fill'
 
 /** Room left for the floating panels around the grid. */
 const TOP = 72
+/** Room for the tools panel on the left. */
+const LEFT = 96
 
 const TRANSPARENT_SWATCH =
   'repeating-conic-gradient(#d9d7cf 0% 25%, #fdfcf8 0% 50%) 0 0 / 8px 8px'
@@ -75,7 +77,7 @@ export function ZenMode({
   onTool: (tool: ZenTool) => void
   /** The right-hand panel: pens (ZenPens) or a brush picker. */
   side: ReactNode
-  /** Room kept for each side panel, in px. */
+  /** Room kept on the right for the side panel, in px. */
   sideWidth?: number
   /** Zoom by `factor` around `at` (the +/- buttons). */
   zoom?: (
@@ -112,7 +114,7 @@ export function ZenMode({
     4,
     Math.floor(
       Math.min(
-        (box.width - 2 * sideWidth) / columns,
+        (box.width - LEFT - sideWidth) / columns,
         (box.height - 2 * TOP) / rows,
       ),
     ),
@@ -143,7 +145,10 @@ export function ZenMode({
       aria-label={`Zen mode: ${title}`}
       className="fixed inset-0 z-40 overflow-hidden bg-desk"
     >
-      <div className="absolute inset-0 flex items-center justify-center">
+      <div
+        className="absolute inset-y-0 flex items-center justify-center"
+        style={{ left: LEFT, right: sideWidth }}
+      >
         {box.width > 0 && (
           <div className="rounded-[2px] border-2 border-[#77756f] shadow-[0_6px_24px_rgba(43,43,40,0.12)]">
             {renderGrid(cell, view, setView)}
