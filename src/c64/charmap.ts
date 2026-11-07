@@ -18,6 +18,8 @@ export interface Charmap {
   readonly height: number
   /** Row-major screen codes, width × height. */
   readonly cells: Uint8Array
+  /** Screen code the eraser writes (and new cells get): $00 unless changed. */
+  readonly blank: number
 }
 
 function checkSize(width: number, height: number) {
@@ -47,7 +49,8 @@ export function createCharmap(
     id: newId(),
     name: 'Map',
     notes: '',
-    cells: new Uint8Array(width * height),
+    cells: new Uint8Array(width * height).fill(init.blank ?? 0),
+    blank: 0,
     ...init,
     width,
     height,
@@ -55,6 +58,7 @@ export function createCharmap(
   if (map.cells.length !== width * height) {
     throw new RangeError(`Map cells must have ${width * height} entries`)
   }
+  checkCode(map.blank)
   return map
 }
 
@@ -88,12 +92,12 @@ export function setCell(
   return { ...map, cells }
 }
 
-/** Resize keeping the top-left content; new cells get `fill`. */
+/** Resize keeping the top-left content; new cells get `fill` (the blank char). */
 export function resizeCharmap(
   map: Charmap,
   width: number,
   height: number,
-  fill = 0,
+  fill = map.blank,
 ): Charmap {
   checkSize(width, height)
   checkCode(fill)
@@ -198,4 +202,35 @@ export function encodeEcm(char: number, background: number): number {
 export function decodeEcm(code: number): { char: number; background: number } {
   checkCode(code)
   return { char: code & 63, background: code >> 6 }
+}
+
+export function setMapBlank(map: Charmap, blank: number): Charmap {
+  checkCode(blank)
+  return blank === map.blank ? map : { ...map, blank }
+}
+
+/** Flood-fill the 4-connected area of equal codes at (x, y) with `code`. */
+export function floodFillMap(
+  map: Charmap,
+  x: number,
+  y: number,
+  code: number,
+): Charmap {
+  checkCoords(map, x, y)
+  checkCode(code)
+  const target = map.cells[y * map.width + x]
+  if (target === code) return map
+  const cells = map.cells.slice()
+  const stack = [y * map.width + x]
+  while (stack.length > 0) {
+    const i = stack.pop()!
+    if (cells[i] !== target) continue
+    cells[i] = code
+    const cx = i % map.width
+    if (cx > 0) stack.push(i - 1)
+    if (cx < map.width - 1) stack.push(i + 1)
+    if (i >= map.width) stack.push(i - map.width)
+    if (i + map.width < cells.length) stack.push(i + map.width)
+  }
+  return { ...map, cells }
 }

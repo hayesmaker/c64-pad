@@ -5,10 +5,12 @@ import {
   decodeEcm,
   encodeEcm,
   fillRect,
+  floodFillMap,
   getCell,
   pasteRegion,
   resizeCharmap,
   setCell,
+  setMapBlank,
 } from './charmap'
 
 const map = () => createCharmap({ charsetId: 'cs' })
@@ -62,5 +64,26 @@ describe('charmap', () => {
     expect(decodeEcm(0xc1)).toEqual({ char: 1, background: 3 })
     expect(() => encodeEcm(64, 0)).toThrow(RangeError)
     expect(() => encodeEcm(0, 4)).toThrow(RangeError)
+  })
+})
+
+describe('blank char and flood fill', () => {
+  it('erases and grows with the blank char', () => {
+    const m = createCharmap({ charsetId: 'cs', width: 2, height: 1, blank: 32 })
+    expect([...m.cells]).toEqual([32, 32])
+    expect(map().blank).toBe(0)
+    const grown = resizeCharmap(setMapBlank(m, 5), 3, 1)
+    expect([...grown.cells]).toEqual([32, 32, 5])
+    expect(() => setMapBlank(m, 256)).toThrow(RangeError)
+  })
+
+  it('fills the connected area only', () => {
+    let m = createCharmap({ charsetId: 'cs', width: 4, height: 3 })
+    for (let y = 0; y < 3; y++) m = setCell(m, 2, y, 9) // a wall
+    const filled = floodFillMap(m, 0, 0, 1)
+    expect(getCell(filled, 1, 2)).toBe(1)
+    expect(getCell(filled, 3, 0)).toBe(0)
+    expect(getCell(filled, 2, 1)).toBe(9)
+    expect(floodFillMap(filled, 0, 0, 1)).toBe(filled)
   })
 })

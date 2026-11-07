@@ -4,8 +4,7 @@ import { PALETTE } from '@/c64/palette'
 import type { Charset } from '@/c64/charset'
 
 const COLUMNS = 16
-const SCALE = 2
-const PITCH = 8 * SCALE + 1
+const LABEL_W = 24
 const ACCENT = '#2e2c9b'
 
 const hexDigit = (n: number) => n.toString(16).toUpperCase()
@@ -17,15 +16,23 @@ const hexDigit = (n: number) => n.toString(16).toUpperCase()
 export function CharsetSheet({
   charset,
   selected,
-  swapping,
+  swapping = false,
   onPick,
+  pitch = 17,
+  background,
 }: {
   charset: Charset
   selected: number
   /** Mark the sheet as waiting for a swap target. */
-  swapping: boolean
+  swapping?: boolean
   onPick: (index: number) => void
+  /** Px per char including a 1 px gap. */
+  pitch?: number
+  /** ECM background 0-3 to draw the chars on (default 0). */
+  background?: number
 }) {
+  const PITCH = pitch
+  const SCALE = (pitch - 1) / 8
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const count = charCount(charset.mode)
   const rows = Math.ceil(count / COLUMNS)
@@ -44,7 +51,7 @@ export function CharsetSheet({
     for (let i = 0; i < count; i++) {
       const ox = (i % COLUMNS) * PITCH + 1
       const oy = Math.floor(i / COLUMNS) * PITCH + 1
-      const pixels = renderChar(charset, i)
+      const pixels = renderChar(charset, i, background)
       for (let y = 0; y < 8; y++) {
         for (let x = 0; x < 8; x++) {
           ctx.fillStyle = PALETTE[pixels[y * 8 + x]].hex
@@ -52,12 +59,13 @@ export function CharsetSheet({
         }
       }
     }
+    if (selected < 0) return
     const sx = (selected % COLUMNS) * PITCH
     const sy = Math.floor(selected / COLUMNS) * PITCH
     ctx.strokeStyle = ACCENT
     ctx.lineWidth = 2
     ctx.strokeRect(sx, sy, PITCH, PITCH)
-  }, [charset, count, selected, width, height])
+  }, [charset, count, selected, width, height, PITCH, SCALE, background])
 
   const pick = (e: React.PointerEvent<HTMLCanvasElement>) => {
     const rect = e.currentTarget.getBoundingClientRect()
@@ -69,7 +77,7 @@ export function CharsetSheet({
 
   return (
     <div className="flex flex-col">
-      <div aria-hidden="true" className="flex" style={{ marginLeft: 24 }}>
+      <div aria-hidden="true" className="flex" style={{ marginLeft: LABEL_W }}>
         {Array.from({ length: COLUMNS }, (_, c) => (
           <div
             key={c}
@@ -81,7 +89,11 @@ export function CharsetSheet({
         ))}
       </div>
       <div className="flex">
-        <div aria-hidden="true" className="flex w-[24px] flex-col">
+        <div
+          aria-hidden="true"
+          className="flex flex-col"
+          style={{ width: LABEL_W }}
+        >
           {Array.from({ length: rows }, (_, r) => (
             <div
               key={r}

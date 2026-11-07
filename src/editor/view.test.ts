@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { DEFAULT_VIEW, clampView, zoomAround } from './view'
+import {
+  DEFAULT_VIEW,
+  clampView,
+  clampViewTo,
+  zoomAround,
+  zoomAroundIn,
+} from './view'
 
 describe('grid view', () => {
   it('clamps zoom to 1-8 and keeps the content covering the frame', () => {
@@ -25,5 +31,31 @@ describe('grid view', () => {
     expect(zoomAround(zoomed, 1, { x: 30, y: 30 }, 100, 100)).toEqual(
       DEFAULT_VIEW,
     )
+  })
+})
+
+describe('content larger or smaller than the frame', () => {
+  const b = {
+    frameW: 100,
+    frameH: 100,
+    contentW: 300,
+    contentH: 50,
+    minZoom: 0.5,
+    maxZoom: 8,
+  }
+  it('pans across larger content without gaps, keeps smaller content inside', () => {
+    expect(clampViewTo({ zoom: 1, x: -500, y: 80 }, b)).toEqual({
+      zoom: 1,
+      x: -200,
+      y: 50,
+    })
+    expect(clampViewTo({ zoom: 1, x: 20, y: -10 }, b)).toEqual({
+      zoom: 1,
+      x: 0,
+      y: 0,
+    })
+  })
+  it('zooms out below 1 when allowed', () => {
+    expect(zoomAroundIn(DEFAULT_VIEW, 0.1, { x: 0, y: 0 }, b).zoom).toBe(0.5)
   })
 })
