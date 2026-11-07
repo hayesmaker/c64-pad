@@ -583,15 +583,6 @@ export function SpriteDesigner({
                 : null,
             }}
           >
-            {pairBase && pairOverlay && (
-              <LayerToggle
-                set={set}
-                back={pairBase}
-                front={pairOverlay}
-                editing={selected.id === pairOverlay.id ? 'front' : 'back'}
-                onPick={select}
-              />
-            )}
             <AnimationControls
               set={set}
               animationId={animation?.id ?? null}
@@ -693,50 +684,6 @@ export function SpriteDesigner({
         />
       )}
     </WorksheetLayout>
-  )
-}
-
-/** Front / back of an overlay pair: pick which one to edit. */
-function LayerToggle({
-  set,
-  back,
-  front,
-  editing,
-  onPick,
-}: {
-  set: SpriteSet
-  back: Sprite
-  front: Sprite
-  editing: 'front' | 'back'
-  onPick: (id: string) => void
-}) {
-  return (
-    <div className="flex shrink-0 flex-col gap-0.5">
-      <span
-        className="text-[11px] text-muted-foreground"
-        title="The front sprite is drawn over the back one"
-      >
-        Layer · front over back
-      </span>
-      <div className="w-[150px]">
-        <Segmented
-          label="Layer to edit"
-          size="sm"
-          value={editing}
-          options={[
-            {
-              value: 'front',
-              label: `Front ${set.sprites.indexOf(front)}`,
-            },
-            {
-              value: 'back',
-              label: `Back ${set.sprites.indexOf(back)}`,
-            },
-          ]}
-          onChange={(v) => onPick(v === 'front' ? front.id : back.id)}
-        />
-      </div>
-    </div>
   )
 }
 
