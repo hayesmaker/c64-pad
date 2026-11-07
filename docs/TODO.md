@@ -74,14 +74,14 @@ See `PLAN.md` → _Decisions_ for the reasoning behind these.
 
 ### M6: Charset editor
 
-- [ ] 8×8 char grid editor reusing sprite canvas/input (hires / MC / ECM)
-- [ ] Charset palette view (16×16 grid), select/copy/paste/swap chars
-- [ ] New charset dialog: blank (default) or optional PETSCII starter (upper/graphics or lower case); ROM charset kept as a separate data file
-- [ ] Per-char colour attribute; global bg/MC1/MC2 (+ECM bg colours)
-- [ ] DATA panel (8 bytes) + bit headers like the Character Worksheet
-- [ ] Tools: flip, rotate, shift, invert, clear
-- [ ] Layout per the approved mock-up (Character Worksheet artboard)
-- [ ] Double-tap a pixel to clear it, with the draw tool; same undo step as the first tap (shared grid input, so the sprite designer gets it too)
+- [x] 8×8 char grid editor reusing sprite canvas/input (hires / MC / ECM)
+- [x] Charset palette view (16×16 grid), select/copy/paste/swap chars
+- [x] New charset dialog: blank (default) or optional PETSCII starter (upper/graphics or lower case); ROM charset kept as a separate data file
+- [x] Per-char colour attribute; global bg/MC1/MC2 (+ECM bg colours)
+- [x] DATA panel (8 bytes) + bit headers like the Character Worksheet
+- [x] Tools: flip, rotate, shift, invert, clear
+- [x] Layout per the approved mock-up (Character Worksheet artboard)
+- [x] Double-tap a pixel to clear it, with the draw tool; same undo step as the first tap (shared grid input, so the sprite designer gets it too)
 - [ ] Zen mode on every worksheet (sprites, chars, screen): full-screen grid with pinch zoom/pan, minimal tools (draw/erase/fill, undo/redo), pens, recolour a pen from the project's colours, prev/next asset, exit back to the worksheet
 
 ### M7: Charmap editor

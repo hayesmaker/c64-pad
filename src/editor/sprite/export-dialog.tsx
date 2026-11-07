@@ -21,7 +21,7 @@ import {
 } from '@/components/ui/dialog'
 import { indexedImageToPng } from '@/platform/png'
 import { safeFileName, saveFile } from '@/platform/save-file'
-import { Segmented } from './segmented'
+import { Segmented } from '../segmented'
 import type { PadByte, SpriteRange } from '@/export/sprites'
 import type { C64Color } from '@/c64/palette'
 import type { Project } from '@/c64/project'

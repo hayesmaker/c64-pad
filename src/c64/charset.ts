@@ -9,7 +9,9 @@ import {
   setPixel,
   shift,
 } from './bitmap'
+import { base64ToBytes } from '@/storage/bytes'
 import { ModelError } from './errors'
+import { chargenRom } from './rom/chargen.gen'
 import { newId } from './ids'
 import { assertC64Color } from './palette'
 import type { PixelMode } from './bitmap'
@@ -316,4 +318,16 @@ export function renderChar(
     }
   }
   return out
+}
+
+export type PetsciiSet = 'upper' | 'lower'
+
+/**
+ * Pixels for a PETSCII starter: one of the two sets in the C64 character ROM
+ * (upper case / graphics, or lower / upper case), as 2048 bytes.
+ */
+export function petsciiData(set: PetsciiSet): Uint8Array {
+  const rom = base64ToBytes(chargenRom)
+  const start = set === 'upper' ? 0 : CHARSET_BYTES
+  return rom.slice(start, start + CHARSET_BYTES)
 }

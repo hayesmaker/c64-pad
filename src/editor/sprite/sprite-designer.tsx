@@ -1,10 +1,4 @@
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   ArrowDown,
   ArrowLeft,
@@ -69,14 +63,23 @@ import { buildViewerPrg, spriteSetShowcase } from '@/emulator/sprite-viewer'
 import { safeFileName } from '@/platform/save-file'
 import { Button } from '@/components/ui/button'
 import { DEFAULT_VIEW, zoomAround } from '../view'
+import {
+  BIT_HEADER_H,
+  BitHeader,
+  RowNumbers,
+  ToolButton,
+  useCellSize,
+  useUndoShortcuts,
+  zoomLabel,
+} from '../grid-parts'
 import type { GridView } from '../view'
 import { SpriteGrid } from './sprite-grid'
 import { DataColumn } from './data-column'
-import { PaletteGrid, PensPanel, spritePens } from './pens-panel'
+import { PaletteGrid, PensPanel } from '../pens-panel'
+import { spritePens } from './sprite-pens'
 import { SpritePreview } from './sprite-preview'
 import { SpriteStrip } from './sprite-strip'
-import { Segmented } from './segmented'
-import type { ReactNode } from 'react'
+import { Segmented } from '../segmented'
 import type { PixelMode } from '@/c64/bitmap'
 import type { C64Color } from '@/c64/palette'
 import type { Project } from '@/c64/project'
@@ -90,13 +93,6 @@ type Tool = 'draw' | 'erase' | 'fill'
 let clipboard: Pick<Sprite, 'data' | 'mode'> | null = null
 /** Last selected sprite per set, so returning to a set keeps your place. */
 const lastSelected = new Map<string, string>()
-
-const RAIL_W = 40
-const RAIL_GAP = 12
-const BIT_HEADER_H = 16
-const ROW_NUMBERS_W = 28
-const MIN_CELL = 12
-const MAX_CELL = 34
 
 export function SpriteDesigner({
   session,
@@ -139,11 +135,13 @@ export function SpriteDesigner({
   })
   const [asHex, setAsHex] = useState(false)
   const [background, setBackground] = useStoredBackground()
-  const cell = useCellSize()
+  const cell = useCellSize({ columns: 24, rows: 21, min: 12, max: 34 })
   const [view, setView] = useState<GridView>(DEFAULT_VIEW)
   // A new cell size changes the frame; start again at 1×.
   useEffect(() => setView(DEFAULT_VIEW), [cell.size])
   const strokeId = useRef(0)
+  /** The sprite before the last stroke, to tell whether a tap changed it. */
+  const beforeStroke = useRef<Sprite | null>(null)
 
   useEffect(() => {
     if (selected) lastSelected.set(set.id, selected.id)
@@ -163,24 +161,7 @@ export function SpriteDesigner({
     [history, sprite],
   )
 
-  // Desktop shortcuts.
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (
-        !(e.ctrlKey || e.metaKey) ||
-        e.target instanceof HTMLInputElement ||
-        e.target instanceof HTMLTextAreaElement
-      )
-        return
-      const key = e.key.toLowerCase()
-      if (key === 'z' && !e.shiftKey) history.undo()
-      else if (key === 'y' || (key === 'z' && e.shiftKey)) history.redo()
-      else return
-      e.preventDefault()
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [history])
+  useUndoShortcuts(history)
 
   if (!sprite || !selected) {
     return null // a set always has at least one sprite; see removeSprite guard below
@@ -470,9 +451,14 @@ export function SpriteDesigner({
               </div>
 
               <div className="flex min-h-0 flex-col">
-                <BitHeader cell={cell.size} view={view} />
+                <BitHeader bytes={3} cell={cell.size} view={view} />
                 <div ref={cell.slotRef} className="flex min-h-0 flex-1 gap-1">
-                  <RowNumbers cell={cell.size} view={view} />
+                  <RowNumbers
+                    rows={21}
+                    first={1}
+                    cell={cell.size}
+                    view={view}
+                  />
                   <div className="h-fit rounded-[2px] border-2 border-[#77756f]">
                     <SpriteGrid
                       set={set}
@@ -484,7 +470,14 @@ export function SpriteDesigner({
                       onViewChange={setView}
                       onStrokeStart={(x, y) => {
                         strokeId.current++
+                        beforeStroke.current = sprite
                         paint(x, y, true)
+                      }}
+                      onDoubleTap={(x, y) => {
+                        if (tool !== 'draw') return
+                        // Clear the pixel, as one undo step with the first tap.
+                        if (beforeStroke.current !== sprite) history.undo()
+                        changeSprite((s) => setSpritePixel(s, x, y, 0))
                       }}
                       onStrokeMove={(x, y) => paint(x, y, false)}
                       onStrokeEnd={history.endGroup}
@@ -670,102 +663,6 @@ function LayerToggle({
   )
 }
 
-function ToolButton({
-  label,
-  pressed,
-  disabled,
-  onClick,
-  children,
-  ...rest
-}: {
-  label: string
-  pressed?: boolean
-  disabled?: boolean
-  onClick?: () => void
-  children: ReactNode
-}) {
-  return (
-    <button
-      type="button"
-      aria-label={label}
-      title={label}
-      aria-pressed={pressed}
-      disabled={disabled}
-      onClick={onClick}
-      className={cn(
-        'flex size-10 shrink-0 items-center justify-center rounded-lg border disabled:opacity-40 [&_svg]:size-[21px] [&_svg]:stroke-[1.7]',
-        pressed
-          ? 'border-primary bg-primary text-primary-foreground'
-          : 'border-rule-soft bg-paper hover:bg-muted',
-      )}
-      {...rest}
-    >
-      {children}
-    </button>
-  )
-}
-
-function BitHeader({ cell, view }: { cell: number; view: GridView }) {
-  const weights = [128, 64, 32, 16, 8, 4, 2, 1]
-  const size = cell * view.zoom
-  return (
-    <div
-      aria-hidden="true"
-      className="flex shrink-0 items-end"
-      style={{ height: BIT_HEADER_H, paddingLeft: ROW_NUMBERS_W + 2 }}
-    >
-      <div className="overflow-hidden" style={{ width: 24 * cell }}>
-        <div
-          className="flex font-mono leading-[14px] text-muted-foreground"
-          style={{
-            transform: `translateX(${view.x}px)`,
-            fontSize: size < 22 ? 8 : 9,
-          }}
-        >
-          {[0, 1, 2].flatMap((b) =>
-            weights.map((w) => (
-              <div
-                key={`${b}-${w}`}
-                className="shrink-0 text-center"
-                style={{ width: size }}
-              >
-                {w}
-              </div>
-            )),
-          )}
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function RowNumbers({ cell, view }: { cell: number; view: GridView }) {
-  const size = cell * view.zoom
-  return (
-    <div
-      aria-hidden="true"
-      className="mt-[2px] shrink-0 overflow-hidden"
-      style={{ width: ROW_NUMBERS_W - 4, height: 21 * cell }}
-    >
-      <div style={{ transform: `translateY(${view.y}px)` }}>
-        {Array.from({ length: 21 }, (_, i) => (
-          <div
-            key={i}
-            className="flex items-center justify-end font-mono text-[10px] text-muted-foreground"
-            style={{ height: size }}
-          >
-            {i + 1}
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
-
-function zoomLabel(zoom: number) {
-  return zoom < 1.05 ? '1×' : `${zoom.toFixed(1)}×`
-}
-
 const BG_KEY = 'c64pad:sprite-background'
 
 /** Grid/preview background, remembered on this device. */
@@ -787,30 +684,4 @@ function useStoredBackground() {
     }
   }
   return [bg, set] as const
-}
-
-/** Cell size that fits the grid into the space left for it (measured). */
-function useCellSize() {
-  const [size, setSize] = useState(22)
-  const [slot, setSlot] = useState<HTMLDivElement | null>(null)
-  const [area, setArea] = useState<HTMLDivElement | null>(null)
-  useLayoutEffect(() => {
-    if (!slot || !area) return
-    const measure = () => {
-      const h = slot.clientHeight - 4
-      const w = area.clientWidth - RAIL_W - RAIL_GAP - ROW_NUMBERS_W - 8
-      setSize(
-        Math.max(
-          MIN_CELL,
-          Math.min(MAX_CELL, Math.floor(Math.min(h / 21, w / 24))),
-        ),
-      )
-    }
-    measure()
-    const ro = new ResizeObserver(measure)
-    ro.observe(slot)
-    ro.observe(area)
-    return () => ro.disconnect()
-  }, [slot, area])
-  return { size, slotRef: setSlot, areaRef: setArea }
 }

@@ -11,7 +11,7 @@ import {
   renameAsset,
 } from '@/c64/project'
 import { createSpriteSet } from '@/c64/sprite-set'
-import { createCharset } from '@/c64/charset'
+import { createCharset, petsciiData } from '@/c64/charset'
 import { MAX_MAP_SIZE, createCharmap } from '@/c64/charmap'
 import { PALETTE } from '@/c64/palette'
 import { WorksheetLayout } from '@/components/worksheet/worksheet-layout'
@@ -49,6 +49,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Segmented } from '@/editor/segmented'
 import { useCurrentProject } from '@/storage/use-current-project'
 import {
   PROJECT_FILE_EXTENSION,
@@ -58,7 +59,7 @@ import { safeFileName, saveTextFile } from '@/platform/save-file'
 import type { ReactNode } from 'react'
 import type { LinkProps } from '@tanstack/react-router'
 import type { AssetKind, Project } from '@/c64/project'
-import type { Charset, CharsetMode } from '@/c64/charset'
+import type { Charset, CharsetMode, PetsciiSet } from '@/c64/charset'
 
 export const Route = createFileRoute('/projects/$projectId/')({
   component: ProjectPage,
@@ -76,6 +77,7 @@ type DialogState =
   | { kind: 'delete'; asset: AssetRef }
   | { kind: 'deleteCharset'; charset: Charset }
   | { kind: 'newMap' }
+  | { kind: 'newCharset' }
   | null
 
 function nextName(base: string, existing: ReadonlyArray<{ name: string }>) {
@@ -226,15 +228,7 @@ function ProjectPage() {
         <AssetSection
           title="Character sets"
           addLabel="New charset"
-          onAdd={() =>
-            update((p) =>
-              addAsset(
-                p,
-                'charsets',
-                createCharset({ name: nextName('Charset', p.charsets) }),
-              ),
-            )
-          }
+          onAdd={() => setDialog({ kind: 'newCharset' })}
         >
           {project.charsets.map((cs) => (
             <AssetCard
@@ -331,6 +325,24 @@ function ProjectPage() {
           onOpenChange={close}
           onConfirm={(reassignTo) =>
             update((p) => removeCharset(p, dialog.charset.id, { reassignTo }))
+          }
+        />
+      )}
+      {dialog?.kind === 'newCharset' && (
+        <NewCharsetDialog
+          project={project}
+          onOpenChange={close}
+          onCreate={({ name, start }) =>
+            update((p) =>
+              addAsset(
+                p,
+                'charsets',
+                createCharset({
+                  name,
+                  ...(start === 'blank' ? {} : { data: petsciiData(start) }),
+                }),
+              ),
+            )
           }
         />
       )}
@@ -565,6 +577,70 @@ function NewMapDialog({
               Cancel
             </Button>
             <Button type="submit" disabled={!sizeOk || !name.trim()}>
+              Create
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+function NewCharsetDialog({
+  project,
+  onOpenChange,
+  onCreate,
+}: {
+  project: Project
+  onOpenChange: (open: boolean) => void
+  onCreate: (init: { name: string; start: 'blank' | PetsciiSet }) => void
+}) {
+  const [name, setName] = useState(nextName('Charset', project.charsets))
+  const [start, setStart] = useState<'blank' | PetsciiSet>('blank')
+  return (
+    <Dialog open onOpenChange={onOpenChange}>
+      <DialogContent onOpenAutoFocus={(e) => e.preventDefault()}>
+        <form
+          className="flex flex-col gap-4"
+          onSubmit={(e) => {
+            e.preventDefault()
+            if (!name.trim()) return
+            onCreate({ name: name.trim(), start })
+            onOpenChange(false)
+          }}
+        >
+          <DialogHeader>
+            <DialogTitle>New charset</DialogTitle>
+            <DialogDescription>
+              256 characters. Start blank, or from the C64’s built-in PETSCII
+              set to edit.
+            </DialogDescription>
+          </DialogHeader>
+          <Field label="Name">
+            <Input value={name} onChange={(e) => setName(e.target.value)} />
+          </Field>
+          <div className="flex flex-col gap-[3px]">
+            <span className="text-xs text-muted-foreground">Start from</span>
+            <Segmented
+              label="Start from"
+              value={start}
+              options={[
+                { value: 'blank', label: 'Blank' },
+                { value: 'upper', label: 'PETSCII upper' },
+                { value: 'lower', label: 'PETSCII lower' },
+              ]}
+              onChange={setStart}
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={!name.trim()}>
               Create
             </Button>
           </DialogFooter>

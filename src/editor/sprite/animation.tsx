@@ -43,7 +43,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
-import { Segmented } from './segmented'
+import { Segmented } from '../segmented'
 import type { C64Color } from '@/c64/palette'
 import type { Sprite } from '@/c64/sprite'
 import type {

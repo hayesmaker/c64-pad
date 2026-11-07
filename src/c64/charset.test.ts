@@ -20,6 +20,7 @@ import {
   setCharsetMode,
   setCharsetRegisters,
   swapChars,
+  petsciiData,
 } from './charset'
 
 describe('charset basics', () => {
@@ -153,5 +154,23 @@ describe('char transforms', () => {
     expect(getCharBytes(swapped, 0)[0]).toBe(1)
     expect(getCharBytes(swapped, 1)[0]).toBe(0)
     expect([swapped.colors[0], swapped.colors[1]]).toEqual([2, 14])
+  })
+})
+
+describe('petsciiData', () => {
+  it('takes the upper case / graphics set from the ROM', () => {
+    const data = petsciiData('upper')
+    expect(data).toHaveLength(2048)
+    // Screen code 1 is "A".
+    expect([...data.subarray(8, 16)]).toEqual([
+      0x18, 0x3c, 0x66, 0x7e, 0x66, 0x66, 0x66, 0x00,
+    ])
+  })
+
+  it('takes the lower case set from the second half', () => {
+    // Screen code 1 is "a".
+    expect([...petsciiData('lower').subarray(8, 16)]).toEqual([
+      0x00, 0x00, 0x3c, 0x06, 0x3e, 0x66, 0x3e, 0x00,
+    ])
   })
 })
