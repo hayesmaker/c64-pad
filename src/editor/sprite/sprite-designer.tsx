@@ -501,11 +501,17 @@ export function SpriteDesigner({
           </div>
 
           {/* Data bytes aligned to the grid rows */}
-          <div className="flex w-[152px] shrink-0 flex-col">
+          {/* Tap anywhere on the bytes to switch decimal / hex. */}
+          <button
+            type="button"
+            onClick={() => setAsHex((h) => !h)}
+            aria-label={`Sprite data bytes in ${asHex ? 'hex' : 'decimal'}; tap to show ${asHex ? 'decimal' : 'hex'}`}
+            title="Tap to switch decimal / hex. 63 bytes + 1 pad = 64 per sprite; sprite pointer = address ÷ 64."
+            className="flex w-[152px] shrink-0 cursor-pointer flex-col self-start rounded-md text-left"
+          >
             <div
-              className="flex items-end gap-2 font-mono text-[9px] leading-[14px] text-muted-foreground"
+              className="flex w-full items-end gap-2 font-mono text-[9px] leading-[14px] text-muted-foreground"
               style={{ height: BIT_HEADER_H }}
-              title="63 bytes + 1 pad = 64 per sprite. Sprite pointer = address ÷ 64."
             >
               {['byte 0', 'byte 1', 'byte 2'].map((b) => (
                 <div key={b} className="flex-1 text-center">
@@ -514,7 +520,7 @@ export function SpriteDesigner({
               ))}
             </div>
             <DataColumn sprite={sprite} cell={cell.size} asHex={asHex} />
-          </div>
+          </button>
         </div>
 
         <div className="mt-2 shrink-0">
@@ -592,21 +598,6 @@ export function SpriteDesigner({
               onChange={history.change}
               background={background}
             />
-            <div className="ml-auto flex shrink-0 flex-col gap-0.5">
-              <span className="text-[11px] text-muted-foreground">Data</span>
-              <div className="w-[96px]">
-                <Segmented
-                  label="Number format"
-                  size="sm"
-                  value={asHex ? 'hex' : 'dec'}
-                  options={[
-                    { value: 'dec', label: 'Dec' },
-                    { value: 'hex', label: 'Hex' },
-                  ]}
-                  onChange={(v) => setAsHex(v === 'hex')}
-                />
-              </div>
-            </div>
           </SpriteStrip>
         </div>
       </div>

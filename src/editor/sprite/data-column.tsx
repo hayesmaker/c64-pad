@@ -15,7 +15,7 @@ export function DataColumn({
   asHex: boolean
 }) {
   return (
-    <div className="flex flex-col pt-[2px]" aria-label="Sprite data bytes">
+    <div className="flex w-full flex-col pt-[2px]">
       {Array.from({ length: SPRITE_HEIGHT }, (_, row) => (
         <div
           key={row}
