@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react'
+import { Capacitor } from '@capacitor/core'
 import {
   Link,
   createFileRoute,
@@ -155,7 +156,14 @@ function Projects() {
       <input
         ref={fileInput}
         type="file"
-        accept={`${PROJECT_FILE_EXTENSION},application/json`}
+        // Android's picker only filters by MIME type and has none for
+        // .c64pad (downloads arrive as application/octet-stream), so any
+        // filter there greys the file out. Accept anything; import validates.
+        accept={
+          Capacitor.isNativePlatform()
+            ? undefined
+            : `${PROJECT_FILE_EXTENSION},application/json`
+        }
         className="hidden"
         onChange={(e) => {
           const file = e.target.files?.[0]
