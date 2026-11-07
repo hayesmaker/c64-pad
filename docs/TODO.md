@@ -91,7 +91,7 @@ See `PLAN.md` → _Decisions_ for the reasoning behind these.
 - [x] Palette-pick placement, rectangle select/copy/paste, fill
 - [x] Zoom/pan for large maps (virtualised rendering)
 - [x] Live charset edits reflected in map
-- [x] Blank (eraser) char per map, $00 by default; block brushes from a selection (CharPad-style stamping)
+- [x] Blank Char per map (tool rail button + dialog), $00 by default; block brushes from a selection (CharPad-style stamping)
 
 ### M8: Exporters (chars/maps)
 

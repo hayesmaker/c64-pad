@@ -116,6 +116,7 @@ export function MapDesigner({
   const [selection, setSelection] = useState<CellRect | null>(null)
   const [resizing, setResizing] = useState(false)
   const [zen, setZen] = useState(false)
+  const [blankOpen, setBlankOpen] = useState(false)
   const stroke = useRef<{
     anchor: [number, number]
     last: string
@@ -454,31 +455,6 @@ export function MapDesigner({
         </div>
 
         {brushPicker}
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <span className="flex-1">
-            Eraser writes{' '}
-            <span className="font-mono text-foreground">{hex(map.blank)}</span>
-          </span>
-          {brushIsSingle && brushCode !== map.blank && (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => history.change((m) => setMapBlank(m, brushCode))}
-            >
-              Use {hex(brushCode)}
-            </Button>
-          )}
-          {map.blank !== 0 && (
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => history.change((m) => setMapBlank(m, 0))}
-            >
-              Reset
-            </Button>
-          )}
-        </div>
-
         {selection && !stroke.current && tool === 'select' && (
           <div className="flex flex-col gap-1">
             <span className="text-xs text-muted-foreground">
@@ -543,7 +519,7 @@ export function MapDesigner({
               'Paint with the brush (double-tap to undo a stamp)',
               Pencil,
             ],
-            ['erase', 'Erase', Eraser],
+            ['erase', 'Erase (writes the Blank Char)', Eraser],
             ['fill', 'Fill with the brush char', PaintBucket],
             ['pick', 'Pick a char from the map', Pipette],
             ['select', 'Select an area', BoxSelect],
@@ -561,6 +537,12 @@ export function MapDesigner({
             <Icon />
           </ToolButton>
         ))}
+        <ToolButton
+          label={`Blank char: ${hex(map.blank)} (fills new cells; Erase writes it)`}
+          onClick={() => setBlankOpen(true)}
+        >
+          <CharIcon charset={charset} code={map.blank} />
+        </ToolButton>
         <div aria-hidden="true" className="mx-1.5 my-1 h-px bg-rule-soft" />
         <ToolButton
           label="Grid lines"
@@ -665,6 +647,14 @@ export function MapDesigner({
           canUndo={history.canUndo}
           canRedo={history.canRedo}
           onExit={() => setZen(false)}
+        />
+      )}
+      {blankOpen && (
+        <BlankCharDialog
+          charset={charset}
+          blank={map.blank}
+          onClose={() => setBlankOpen(false)}
+          onSave={(code) => history.change((m) => setMapBlank(m, code))}
         />
       )}
       {resizing && (
@@ -919,7 +909,7 @@ function ResizeDialog({
             <DialogTitle>Resize map</DialogTitle>
             <DialogDescription>
               Make the map bigger than one screen to draw scrolling levels.
-              Content stays at the top left; new cells get the eraser’s char (
+              Content stays at the top left; new cells get the Blank Char (
               {hex(map.blank)}). Up to {MAX_MAP_SIZE}×{MAX_MAP_SIZE} chars.
             </DialogDescription>
           </DialogHeader>
@@ -966,6 +956,119 @@ function ResizeDialog({
             </Button>
           </DialogFooter>
         </form>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+/** A char drawn at icon size, for buttons. */
+function CharIcon({
+  charset,
+  code,
+  className = 'size-5',
+}: {
+  charset: Charset
+  code: number
+  className?: string
+}) {
+  const image = useMemo(
+    () =>
+      renderCharmap(
+        {
+          id: '',
+          name: '',
+          notes: '',
+          charsetId: charset.id,
+          width: 1,
+          height: 1,
+          cells: Uint8Array.of(code),
+          blank: code,
+        },
+        charset,
+        { x: 0, y: 0, width: 1, height: 1 },
+      ),
+    [charset, code],
+  )
+  return (
+    <IndexedCanvas
+      image={image}
+      label=""
+      className={cn(
+        'rounded-[3px] outline-1 outline-offset-1 outline-rule outline-dashed',
+        className,
+      )}
+    />
+  )
+}
+
+/** Choose the map's Blank Char: what new cells get and what Erase writes. */
+function BlankCharDialog({
+  charset,
+  blank,
+  onClose,
+  onSave,
+}: {
+  charset: Charset
+  blank: number
+  onClose: () => void
+  onSave: (code: number) => void
+}) {
+  const ecm = charset.mode === 'ecm'
+  const [code, setCode] = useState(blank)
+  const char = ecm ? decodeEcm(code).char : code
+  return (
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent
+        className="max-w-[440px] sm:max-w-[440px]"
+        onOpenAutoFocus={(e) => e.preventDefault()}
+      >
+        <DialogHeader>
+          <DialogTitle>Blank Char</DialogTitle>
+          <DialogDescription>
+            The character that means “empty” on this map: Erase writes it, and
+            new cells get it when the map grows. Usually $00; with a PETSCII
+            set, $20 is the space.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="flex items-start gap-4">
+          <CharsetSheet
+            charset={charset}
+            selected={char}
+            pitch={15}
+            onPick={(i) =>
+              setCode(ecm ? encodeEcm(i, decodeEcm(code).background) : i)
+            }
+          />
+          <div className="flex flex-col items-center gap-1.5">
+            <span className="text-xs text-muted-foreground">Blank Char</span>
+            <CharIcon charset={charset} code={code} className="size-16" />
+            <span className="font-mono text-sm">{hex(code)}</span>
+            <span className="font-mono text-xs text-muted-foreground">
+              {code}
+            </span>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button
+            variant="ghost"
+            className="mr-auto"
+            disabled={code === 0}
+            onClick={() => setCode(0)}
+          >
+            Reset to $00
+          </Button>
+          <Button variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button
+            onClick={() => {
+              onSave(code)
+              onClose()
+            }}
+          >
+            Save
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   )
