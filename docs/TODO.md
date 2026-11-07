@@ -80,6 +80,9 @@ See `PLAN.md` → _Decisions_ for the reasoning behind these.
 - [ ] Per-char colour attribute; global bg/MC1/MC2 (+ECM bg colours)
 - [ ] DATA panel (8 bytes) + bit headers like the Character Worksheet
 - [ ] Tools: flip, rotate, shift, invert, clear
+- [ ] Layout per the approved mock-up (Character Worksheet artboard)
+- [ ] Double-tap a pixel to clear it, with the draw tool; same undo step as the first tap (shared grid input, so the sprite designer gets it too)
+- [ ] Zen mode on every worksheet (sprites, chars, screen): full-screen grid with pinch zoom/pan, minimal tools (draw/erase/fill, undo/redo), pens, recolour a pen from the project's colours, prev/next asset, exit back to the worksheet
 
 ### M7: Charmap editor
 
