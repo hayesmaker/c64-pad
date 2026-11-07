@@ -179,7 +179,10 @@ export function SpriteStrip({
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" side="top" className="w-60">
           <DropdownMenuItem onSelect={actions.duplicate}>
-            <CopyPlus aria-hidden="true" /> Duplicate sprite
+            <CopyPlus aria-hidden="true" />
+            {isOverlay || hasOverlay
+              ? 'Duplicate sprite + overlay'
+              : 'Duplicate sprite'}
           </DropdownMenuItem>
           <DropdownMenuItem onSelect={actions.copy}>
             <Copy aria-hidden="true" /> Copy pixels

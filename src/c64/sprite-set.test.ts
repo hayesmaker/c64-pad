@@ -188,3 +188,27 @@ describe('frames and overlays', () => {
     expect(frameSprites(next).map((s) => s.name)).toEqual([base.name, 'Walk 2'])
   })
 })
+
+describe('duplicating an overlay pair', () => {
+  it('copies both sprites, linked, after the pair', () => {
+    let set = createSpriteSet()
+    const base = set.sprites[0]
+    set = addSprite(set, createSprite({ name: 'Other' }))
+    const { set: paired, overlayId } = addOverlaySprite(set, base.id)
+    // From either half of the pair.
+    for (const id of [base.id, overlayId]) {
+      const next = duplicateSprite(paired, id)
+      expect(next.sprites.map((s) => s.name)).toEqual([
+        base.name,
+        `${base.name} overlay`,
+        `${base.name} copy`,
+        `${base.name} overlay copy`,
+        'Other',
+      ])
+      const [, , baseCopy, overlayCopy] = next.sprites
+      expect(baseCopy.overlayId).toBe(overlayCopy.id)
+      expect(overlayCopy.overlayId).toBeNull()
+      expect(next.sprites[0].overlayId).toBe(overlayId)
+    }
+  })
+})

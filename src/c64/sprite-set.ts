@@ -84,17 +84,32 @@ export function addSprite(
   return { ...set, sprites }
 }
 
-/** Copy a sprite (new id, no overlay link) and insert it after the original. */
+/**
+ * Copy a sprite and insert it after the original. A sprite in an overlay pair
+ * is copied with its partner: the copies (back, then front) go after the pair
+ * and are linked to each other.
+ */
 export function duplicateSprite(set: SpriteSet, id: string): SpriteSet {
   const original = requireSprite(set, id)
-  const copy: Sprite = {
-    ...original,
+  const copyOf = (s: Sprite, overlayId: string | null = null): Sprite => ({
+    ...s,
     id: newId(),
-    name: `${original.name} copy`,
-    data: original.data.slice(),
-    overlayId: null,
+    name: `${s.name} copy`,
+    data: s.data.slice(),
+    overlayId,
+  })
+  const base = original.overlayId
+    ? original
+    : set.sprites.find((s) => s.overlayId === id)
+  const overlay = base?.overlayId ? findSprite(set, base.overlayId) : undefined
+  if (!base || !overlay) {
+    return addSprite(set, copyOf(original), set.sprites.indexOf(original) + 1)
   }
-  return addSprite(set, copy, set.sprites.indexOf(original) + 1)
+  const overlayCopy = copyOf(overlay)
+  const baseCopy = copyOf(base, overlayCopy.id)
+  const after =
+    Math.max(set.sprites.indexOf(base), set.sprites.indexOf(overlay)) + 1
+  return addSprite(addSprite(set, baseCopy, after), overlayCopy, after + 1)
 }
 
 /** Remove a sprite and every reference to it (animation frames, overlay links). */
