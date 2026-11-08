@@ -11,7 +11,7 @@ import type { AsepriteDoc } from './parse'
 async function load(name: FixtureName) {
   const doc = await parseAseprite(fixture(name))
   const structure = checkStructure(doc)
-  const colours = analyseColours(structure.source!.tileset, 'colodore')
+  const colours = analyseColours(doc, structure.source!.tileset, 'colodore')
   return { doc, structure, colours, fit: fitCharset(colours) }
 }
 
@@ -67,8 +67,8 @@ describe('analyseColours', () => {
   })
 
   it('is exact for a Pepto project', async () => {
-    const { structure } = await load('island-8-2_test')
-    const colours = analyseColours(structure.source!.tileset, 'pepto')
+    const { doc, structure } = await load('island-8-2_test')
+    const colours = analyseColours(doc, structure.source!.tileset, 'pepto')
     expect(colours.verdict).toBe('project')
     expect(colours.transparent).toBe(true)
   })
@@ -82,14 +82,39 @@ describe('fitCharset', () => {
       [6, 7, 8],
     )
     expect(round4.failures).toEqual([])
+    expect(round4.backgroundFrom).toBe('fit')
 
-    const t81 = (await load('island-8-1_test')).fit
-    expect(t81.background).toBe(6) // transparent, and blue fits: blue
-    expect(t81.failures).toEqual([])
-    // Tile 1 is black and yellow on transparent: only a black background fits.
+    // Indexed files: the transparent colour (index 8, orange) is the
+    // background the art was drawn on.
+    const t81 = await load('island-8-1_test')
+    expect(t81.colours.fileBackground).toBe(8)
+    expect(t81.fit.background).toBe(8)
+    expect(t81.fit.backgroundFrom).toBe('file')
+    expect(t81.fit.failures).toEqual([])
+    expect(t81.fit.backgroundDrawn).toEqual([])
     const t82 = (await load('island-8-2_test')).fit
-    expect(t82.background).toBe(0)
+    expect(t82.background).toBe(8)
     expect(t82.failures).toEqual([])
+  })
+
+  it('guesses blue for transparent RGBA files that fit it', () => {
+    const tile = new Int8Array(64).fill(-1)
+    tile[0] = 1
+    const fit = fitCharset({
+      tiles: [new Int8Array(64).fill(-1), tile],
+      transparent: true,
+      fileBackground: null,
+    })
+    expect([fit.background, fit.backgroundFrom]).toEqual([6, 'fit'])
+  })
+
+  it('flags tiles whose pixels a chosen background would absorb', async () => {
+    // Brown is drawn in the island-8-1 tiles: as the background, those
+    // pixels would change colour with it later.
+    const { colours } = await load('island-8-1_test')
+    const fit = fitCharset(colours, { background: 9 })
+    expect(fit.backgroundFrom).toBe('choice')
+    expect(fit.backgroundDrawn.length).toBeGreaterThan(0)
   })
 
   it('keeps chosen registers and explains tiles that no longer fit', async () => {
@@ -118,12 +143,13 @@ describe('fitCharset', () => {
 
 describe('buildCharset / buildMap', () => {
   it.each(['island1_round4', 'island-8-1_test', 'island-8-2_test'] as const)(
-    '%s: every char draws exactly like its tile',
+    '%s: every char that fits draws exactly like its tile',
     async (name) => {
       const { colours, fit } = await load(name)
       const cs = buildCharset('Test', colours, fit)
       expect(cs.mode).toBe(fit.mode)
       colours.tiles.forEach((tile, i) => {
+        if (fit.tiles[i].problem) return // reported; imported best-effort
         const expected = Array.from(tile, (c) => (c < 0 ? fit.background : c))
         expect(Array.from(renderChar(cs, i)), `tile ${i}`).toEqual(expected)
       })

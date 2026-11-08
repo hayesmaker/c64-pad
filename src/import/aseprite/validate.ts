@@ -202,6 +202,11 @@ export interface ColourReport {
   readonly tiles: ReadonlyArray<Int8Array>
   /** Some tile pixels are transparent (they become the background). */
   readonly transparent: boolean
+  /**
+   * The background the file shows: an indexed file's transparent colour, when
+   * tiles have transparent pixels and it's a C64 colour. Null if unknown.
+   */
+  readonly fileBackground: C64Color | null
 }
 
 const hex = (r: number, g: number, b: number) =>
@@ -209,6 +214,7 @@ const hex = (r: number, g: number, b: number) =>
 
 /** Read the tileset's colours as C64 colours, matching them to a palette. */
 export function analyseColours(
+  doc: Pick<AsepriteDoc, 'depth' | 'palette' | 'transparentIndex'>,
   tileset: AseTileset,
   projectPalette: PaletteId,
 ): ColourReport {
@@ -260,7 +266,27 @@ export function analyseColours(
     }
     tiles.push(tile)
   }
-  return { verdict, palette, worst, matches, guessed, tiles, transparent }
+  // Indexed files draw transparent pixels in the transparent index's colour
+  // (e.g. Rainbow Islands' orange): that's the background, if it's a C64 one.
+  let fileBackground: C64Color | null = null
+  const clear =
+    doc.depth === 8 && doc.transparentIndex < doc.palette.length
+      ? doc.palette[doc.transparentIndex]
+      : null
+  if (transparent && clear) {
+    const near = nearestColor([clear[0], clear[1], clear[2]], palette)
+    if (near.distance <= NEAR_DISTANCE) fileBackground = near.color
+  }
+  return {
+    verdict,
+    palette,
+    worst,
+    matches,
+    guessed,
+    tiles,
+    transparent,
+    fileBackground,
+  }
 }
 
 // ---------------------------------------------------------------- C64 fit
@@ -277,6 +303,14 @@ export interface TileFit {
 export interface CharsetFit {
   readonly mode: 'hires' | 'multicolor'
   readonly background: C64Color
+  /** Where the background came from. */
+  readonly backgroundFrom: 'choice' | 'file' | 'fit'
+  /**
+   * Tiles with opaque pixels in the background colour (transparent files
+   * only): those pixels are stored as background, so they follow it if the
+   * background is changed later.
+   */
+  readonly backgroundDrawn: ReadonlyArray<number>
   readonly multicolor1: C64Color
   readonly multicolor2: C64Color
   readonly tiles: ReadonlyArray<TileFit>
@@ -354,13 +388,14 @@ function mostUsed(s: TileStats, mask: number, allowed = 0xffff) {
 /**
  * Choose the charset mode and background / MC1 / MC2 so the most tiles can be
  * shown exactly, then say how each tile is stored. Transparent pixels are the
- * background. Opaque tiles show the background (the most used colour wins
- * ties) and hires is preferred when every tile fits it; with transparent
- * tiles the background is blue unless another colour fits more tiles (then
- * the least used of those).
+ * background: chosen, else the file's own (an indexed file's transparent
+ * colour). Otherwise opaque tiles show it (the most used colour wins ties)
+ * and hires is preferred when every tile fits it; with transparent tiles it
+ * is blue unless another colour fits more tiles (then the least used).
  */
 export function fitCharset(
-  colours: Pick<ColourReport, 'tiles' | 'transparent'>,
+  colours: Pick<ColourReport, 'tiles' | 'transparent'> &
+    Partial<Pick<ColourReport, 'fileBackground'>>,
   choice: FitChoice = {},
 ): CharsetFit {
   // Tile 0 is the empty tile: always char 0, blank.
@@ -370,8 +405,19 @@ export function fitCharset(
   for (const s of used) s.counts.forEach((n, c) => (total[c] += n))
 
   const range = Array.from({ length: 16 }, (_, c) => c)
+  const fileBackground = colours.fileBackground ?? null
+  const backgroundFrom: CharsetFit['backgroundFrom'] =
+    choice.background !== undefined
+      ? 'choice'
+      : fileBackground !== null
+        ? 'file'
+        : 'fit'
   const backgrounds =
-    choice.background !== undefined ? [choice.background] : range
+    choice.background !== undefined
+      ? [choice.background]
+      : fileBackground !== null
+        ? [fileBackground]
+        : range
   const fixedMc =
     choice.multicolor1 !== undefined || choice.multicolor2 !== undefined
 
@@ -474,9 +520,15 @@ export function fitCharset(
     return { mode: 'hires', color: mcMode ? own & 7 : own, problem }
   })
 
+  const backgroundDrawn = colours.transparent
+    ? used.flatMap((s, i) => (s.mask & bit(bg) ? [i + 1] : []))
+    : []
+
   return {
     mode,
     background: bg,
+    backgroundFrom,
+    backgroundDrawn,
     multicolor1: m1,
     multicolor2: m2,
     tiles,

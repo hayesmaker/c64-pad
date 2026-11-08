@@ -129,8 +129,8 @@ function ImportBody({
   )
   const source = structure.ok ? structure.source : null
   const colours = useMemo(
-    () => source && analyseColours(source.tileset, project.palette),
-    [source, project.palette],
+    () => source && analyseColours(doc, source.tileset, project.palette),
+    [doc, source, project.palette],
   )
   const fit = useMemo(
     () => colours && fitCharset(colours, choice),
@@ -265,7 +265,13 @@ function ImportBody({
                 ? 'Multicolour charset (hires and multicolour chars mixed).'
                 : 'Hires charset.'}
               {colours.transparent &&
-                ' Transparent pixels use the background colour.'}
+                ' Transparent pixels use the background colour'}
+              {colours.transparent &&
+                (fit.backgroundFrom === 'file'
+                  ? ` (${COLOR_NAMES[fit.background]}, the file's transparent colour).`
+                  : fit.backgroundFrom === 'fit'
+                    ? "; the file doesn't say which, so this is a best guess."
+                    : '.')}
             </p>
             <PaletteScope id={shownPalette}>
               <div className="flex flex-wrap items-center gap-2">
@@ -300,10 +306,19 @@ function ImportBody({
                     size="sm"
                     onClick={() => setChoice({})}
                   >
-                    Reset to best fit
+                    Reset colours
                   </Button>
                 )}
               </div>
+              {fit.backgroundDrawn.length > 0 && (
+                <Note>
+                  {COLOR_NAMES[fit.background]} is also drawn in{' '}
+                  {fit.backgroundDrawn.length === 1 ? 'tile' : 'tiles'}{' '}
+                  {listTiles(fit.backgroundDrawn)}. Those pixels become
+                  background, so they'll change colour if you change the
+                  background later.
+                </Note>
+              )}
               {fit.failures.length === 0 ? (
                 <CheckLine ok>
                   All {fit.tiles.length - 1} tiles fit exactly
@@ -364,6 +379,13 @@ function ImportBody({
       </DialogFooter>
     </div>
   )
+}
+
+function listTiles(tiles: ReadonlyArray<number>) {
+  const shown = tiles.slice(0, MAX_LISTED).join(', ')
+  return tiles.length > MAX_LISTED
+    ? `${shown} and ${tiles.length - MAX_LISTED} more`
+    : shown
 }
 
 function paletteText(

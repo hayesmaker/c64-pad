@@ -152,7 +152,7 @@ Runs as soon as a file is picked. Returns **errors** (block import), **warnings*
 - Search every background / MC1 / MC2 combination (16 × 120, which is instant) for the one that fits the most tiles:
   - A hires tile fits if it uses at most one non-background colour, and in multicolour mode that colour is 0–7.
   - A multicolour tile fits if, after background / MC1 / MC2, at most one colour is left and it's 0–7.
-- **Background colour:** if the file shows it (opaque tile pixels, like `island1_round4`), use the solver's choice (ties go to the most used colour). With transparent tiles, use **blue (6)** unless the tiles only fit with another background: `island-8-2_test` has a black-and-yellow hires tile, so only black works there (ties go to the least used colour, since a transparent file's background is seldom drawn). It's easy to change in the dialog or the charset editor.
+- **Background colour:** chosen in the dialog, else the file's own: an 8-bit indexed file's transparent colour (Rainbow Islands' files use index 8, orange), if it's a C64 colour. Otherwise, opaque tiles show it (like `island1_round4`): the solver's choice, ties going to the most used colour. Transparent RGBA files: **blue (6)** unless another background fits more tiles. If the background is also drawn as opaque pixels in some tiles, the dialog warns: those pixels are stored as background and change with it.
 - Charset mode: hires if every tile fits as hires, otherwise multicolour. ECM is not considered.
 - List each tile that doesn't fit, with the reason (e.g. "tile 25: hires pixels in 2 non-background colours"). Tiles that don't fit still import, best-effort, but you're warned first.
 
