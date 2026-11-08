@@ -56,7 +56,7 @@ See `PLAN.md` → _Decisions_ for the reasoning behind these.
 - [x] Raw `.bin`: 64 bytes/sprite (63 + zero pad or SpritePad attribute byte), selectable range
 - [x] KickAssembler source: `.byte` lines with labels, row pictures, colour `.label`s (verified with KickAss 5)
 - [x] SpritePad `.spd` V1 writer (spec from batchpad docs/spritepad.md)
-- [ ] User verifies a `.spd` export opens correctly in SpritePad
+- [x] User verifies a `.spd` export opens correctly in SpritePad
 - [x] PNG export (sheet & single, chosen scale, columns, transparent or screen colour)
 - [x] Save/download via browser on web; on Android, the system "Save as" picker (local `SaveAs` plugin, Storage Access Framework) to choose a folder and name, falling back to Filesystem/Share
 - [x] Verify Android "Save as" on the tablet
@@ -130,3 +130,14 @@ Plan: [`docs/aseprite-import.md`](aseprite-import.md)
 
 - [x] Part 1: per-project colour palette (Colodore default; Pepto, VICE, CCS64, Frodo, C64HQ, Community Colors): palette tables, project field with v2 migration, rendering via `usePalette`, selector on the Project Worksheet
 - [x] Part 2: Aseprite import on the Project Worksheet: parser, validator (tileset + tilemap gate, palette match, C64 colour fit), converter to charset + map, import dialog (fixtures in `src/import/aseprite/__fixtures__/`)
+
+### M11: Refactor and hardening
+
+Next up. From a code review on 2026-11-08 (rated 8/10: solid model layer and tests; these are the gaps).
+
+- [ ] Lint React hooks: add `eslint-plugin-react-hooks` (`rules-of-hooks`, `exhaustive-deps`) and fix what it finds; canvas effects currently rely on hand-kept dependency lists (the palette work had to add them by hand in four places)
+- [ ] Split the big designers: `map-designer.tsx` (~1200 lines), `charset-designer.tsx` (~930), `sprite-designer.tsx` (~740) and the Project Worksheet route (~710) into tool rail, side panels, dialogs and canvas hooks; no behaviour change
+- [ ] One shared colour picker: the 16-swatch dropdown is repeated (sprite preview background, Aseprite import registers, pens panel grid); make one component that draws in the project palette
+- [ ] UI tests for the main flows (Playwright or Vitest browser mode): create project, draw and undo, Aseprite import, `.c64pad` export/import round trip, palette switch; run in CI
+- [ ] Project-level undo on the Project Worksheet (rename, palette, add / duplicate / delete assets, imports), reusing `c64/history.ts`
+- [ ] Turn on `noUncheckedIndexedAccess` in `tsconfig.json` and fix the fallout, so out-of-range lookups (palette, chars, cells) are type errors instead of silent `undefined`
