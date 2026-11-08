@@ -3,7 +3,7 @@ import { SPRITE_HEIGHT } from '@/c64/sprite'
 import { SPRITE_RENDER_WIDTH, renderSprite } from '@/c64/sprite-set'
 import { IndexedCanvas } from '@/components/c64/indexed-canvas'
 import { cn } from '@/lib/utils'
-import { COLOR_NAMES } from '@/c64/palette'
+import { ColorMenuGrid } from '@/components/c64/color-menu-grid'
 import { usePalette } from '@/components/c64/palette-context'
 import {
   DropdownMenu,
@@ -121,21 +121,7 @@ function BackgroundPicker({
           />
           Paper (preview on blue)
         </DropdownMenuItem>
-        <div className="grid grid-cols-4 gap-1 p-1">
-          {palette.hex.map((hex, index) => (
-            <DropdownMenuItem
-              key={index}
-              aria-label={COLOR_NAMES[index]}
-              title={COLOR_NAMES[index]}
-              onSelect={() => onChange(index)}
-              className={cn(
-                'h-9 min-h-0 justify-center border border-rule p-0',
-                value === index && 'ring-2 ring-primary',
-              )}
-              style={{ background: hex }}
-            />
-          ))}
-        </div>
+        <ColorMenuGrid value={value} onPick={onChange} />
       </DropdownMenuContent>
     </DropdownMenu>
   )

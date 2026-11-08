@@ -17,7 +17,6 @@ import {
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import {
@@ -29,6 +28,7 @@ import {
 } from '@/components/ui/select'
 import { Segmented } from '@/editor/segmented'
 import { cn } from '@/lib/utils'
+import { ColorMenuGrid } from '@/components/c64/color-menu-grid'
 import { baseName, buildCharset, buildMap, uniqueName } from './convert'
 import { analyseColours, checkStructure, fitCharset, mapSize } from './validate'
 import type { ReactNode } from 'react'
@@ -470,21 +470,7 @@ function RegisterPicker({
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-56">
-        <div className="grid grid-cols-4 gap-1 p-1">
-          {palette.hex.map((hex, index) => (
-            <DropdownMenuItem
-              key={index}
-              aria-label={COLOR_NAMES[index]}
-              title={`${COLOR_NAMES[index]} (${index})`}
-              onSelect={() => onChange(index)}
-              className={cn(
-                'h-9 min-h-0 justify-center border border-rule p-0',
-                value === index && 'ring-2 ring-primary',
-              )}
-              style={{ background: hex }}
-            />
-          ))}
-        </div>
+        <ColorMenuGrid value={value} onPick={onChange} />
       </DropdownMenuContent>
     </DropdownMenu>
   )
