@@ -222,7 +222,15 @@ adb devices -l                                  # find the device serial / ip:po
 ANDROID_TARGET=192.168.0.34:5555 npm run android:run
 ```
 
-Without `ANDROID_TARGET`, Capacitor picks a target itself (often the emulator).
+Without `ANDROID_TARGET`, adb uses the only connected device (it stops if
+there are several).
+
+**Your projects are safe across installs.** `android:run` installs with
+`adb install -r`, which keeps the app's data. It never uninstalls: if the
+device's copy was signed with a different key, it stops and explains instead
+(uninstalling deletes every project on the device). Debug builds are signed
+with `android/app/debug.keystore`, which is committed, so every computer and
+Android Studio sign the same way. It's a standard debug key, never for release.
 
 Over USB, no IP is needed: use the serial from `adb devices -l` as the target
 (e.g. `ANDROID_TARGET=PDNP06J000033459`).

@@ -19,7 +19,7 @@
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "android:sync": "npm run build && cap sync android",
-    "android:run": "npm run android:sync && cap run android --no-sync ${ANDROID_TARGET:+--target $ANDROID_TARGET}",
+    "android:run": "npm run android:sync && scripts/android-install.sh",
     "android:open": "cap open android",
     "android:apk": "npm run android:sync && cd android && ./gradlew assembleDebug",
     "c64-assets": "node scripts/copy-c64-assets.mjs",
