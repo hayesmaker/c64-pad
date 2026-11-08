@@ -135,9 +135,9 @@ Plan: [`docs/aseprite-import.md`](aseprite-import.md)
 
 Next up. From a code review on 2026-11-08 (rated 8/10: solid model layer and tests; these are the gaps).
 
-- [ ] Lint React hooks: add `eslint-plugin-react-hooks` (`rules-of-hooks`, `exhaustive-deps`) and fix what it finds; canvas effects currently rely on hand-kept dependency lists (the palette work had to add them by hand in four places)
-- [ ] Split the big designers: `map-designer.tsx` (~1200 lines), `charset-designer.tsx` (~930), `sprite-designer.tsx` (~740) and the Project Worksheet route (~710) into tool rail, side panels, dialogs and canvas hooks; no behaviour change
-- [ ] One shared colour picker: the 16-swatch dropdown is repeated (sprite preview background, Aseprite import registers, pens panel grid); make one component that draws in the project palette
+- [x] Lint React hooks: add `eslint-plugin-react-hooks` (`rules-of-hooks`, `exhaustive-deps`) and fix what it finds; canvas effects currently rely on hand-kept dependency lists (the palette work had to add them by hand in four places)
+- [x] Split the big designers: `map-designer.tsx` (~1200 lines), `charset-designer.tsx` (~930), `sprite-designer.tsx` (~740) and the Project Worksheet route (~710) into tool rail, side panels, dialogs and canvas hooks; no behaviour change
+- [x] One shared colour picker: the 16-swatch dropdown is repeated (sprite preview background, Aseprite import registers, pens panel grid); make one component that draws in the project palette
 - [ ] UI tests for the main flows (Playwright or Vitest browser mode): create project, draw and undo, Aseprite import, `.c64pad` export/import round trip, palette switch; run in CI
 - [ ] Project-level undo on the Project Worksheet (rename, palette, add / duplicate / delete assets, imports), reusing `c64/history.ts`
 - [ ] Turn on `noUncheckedIndexedAccess` in `tsconfig.json` and fix the fallout, so out-of-range lookups (palette, chars, cells) are type errors instead of silent `undefined`
