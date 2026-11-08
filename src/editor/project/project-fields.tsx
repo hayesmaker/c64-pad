@@ -9,23 +9,33 @@ import type { Project } from '@/c64/project'
 export function ProjectFields({
   project,
   update,
+  onEndTyping,
 }: {
   project: Project
-  update: (fn: (p: Project) => Project) => void
+  /** Change the project; typing into one field shares a `group`. */
+  update: (fn: (p: Project) => Project, group?: string) => void
+  /** Leaving a field: the next edit is a new undo step. */
+  onEndTyping: () => void
 }) {
   return (
     <div className="flex w-[260px] shrink-0 flex-col gap-3">
       <Field label="Project name">
         <Input
           value={project.name}
-          onChange={(e) => update((p) => ({ ...p, name: e.target.value }))}
+          onChange={(e) =>
+            update((p) => ({ ...p, name: e.target.value }), 'name')
+          }
+          onBlur={onEndTyping}
         />
       </Field>
       <Field label="Program">
         <Input
           value={project.program}
           placeholder="e.g. the game these graphics are for"
-          onChange={(e) => update((p) => ({ ...p, program: e.target.value }))}
+          onChange={(e) =>
+            update((p) => ({ ...p, program: e.target.value }), 'program')
+          }
+          onBlur={onEndTyping}
         />
       </Field>
       <Field label="Date designed">
@@ -54,7 +64,10 @@ export function ProjectFields({
           rows={6}
           className="resize-none bg-paper text-base"
           value={project.notes}
-          onChange={(e) => update((p) => ({ ...p, notes: e.target.value }))}
+          onChange={(e) =>
+            update((p) => ({ ...p, notes: e.target.value }), 'notes')
+          }
+          onBlur={onEndTyping}
         />
       </Field>
     </div>

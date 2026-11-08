@@ -58,7 +58,7 @@ So when an imported file uses a different palette from the project, "switch the 
 - Bump `PROJECT_VERSION` to 2. `migrateProject` sets `palette: 'colodore'` for v1 projects and files.
 - `validateProject` falls back to the default for an unknown palette id instead of failing.
 - Bumping the version means an older app build refuses a v2 file instead of silently dropping the palette.
-- `setProjectPalette(project, id)` in `project.ts`. It goes through `update()` like the other project fields. (The Project Worksheet has no undo; pick the old palette again to go back.)
+- `setProjectPalette(project, id)` in `project.ts`. It goes through the Project Worksheet's undo history like the other project fields.
 
 ### 1.3 Rendering uses the project palette
 
@@ -192,7 +192,7 @@ Pure functions:
   - Background / MC1 / MC2, already set from the validator. Changing them re-runs the fit check.
 - **Import:**
   - One `update((p) => …)`: optional `setProjectPalette`, then `addAsset` for the charset and the map.
-  - `checkIntegrity` runs as usual. Nothing existing is changed apart from the optional palette switch, so the lack of undo on the Project Worksheet matters less: delete the new assets to back out.
+  - `checkIntegrity` runs as usual. Nothing existing is changed apart from the optional palette switch, and one undo on the Project Worksheet removes the whole import.
 
 ### 2.5 Later (not in the first pass)
 

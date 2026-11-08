@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
-import { Download } from 'lucide-react'
+import { Download, Redo2, Undo2 } from 'lucide-react'
 import {
   addAsset,
   duplicateAsset,
@@ -32,6 +32,8 @@ import {
   nextName,
 } from '@/editor/project/asset-dialogs'
 import { ProjectFields } from '@/editor/project/project-fields'
+import { useProjectHistory } from '@/editor/project-history'
+import { ToolButton, useUndoShortcuts } from '@/editor/grid-parts'
 import { ImportAsepriteButton } from '@/import/aseprite/import-aseprite-button'
 import { useCurrentProject } from '@/storage/use-current-project'
 import {
@@ -65,7 +67,10 @@ type DialogState =
 function ProjectPage() {
   const { session, project, status, error } = useCurrentProject()
   const [dialog, setDialog] = useState<DialogState>(null)
-  const update = (fn: (p: Project) => Project) => session.update(fn)
+  const history = useProjectHistory(session, project)
+  useUndoShortcuts(history)
+  /** Every change here is one undo step. */
+  const update = (fn: (p: Project) => Project) => history.change(fn)
   const projectId = project.id
   const close = (open: boolean) => !open && setDialog(null)
 
@@ -98,11 +103,29 @@ function ProjectPage() {
             <Download aria-hidden="true" />
             Export
           </Button>
+          <ToolButton
+            label="Undo"
+            disabled={!history.canUndo}
+            onClick={history.undo}
+          >
+            <Undo2 />
+          </ToolButton>
+          <ToolButton
+            label="Redo"
+            disabled={!history.canRedo}
+            onClick={history.redo}
+          >
+            <Redo2 />
+          </ToolButton>
         </div>
       }
       className="flex gap-7 overflow-auto px-6 py-5"
     >
-      <ProjectFields project={project} update={update} />
+      <ProjectFields
+        project={project}
+        update={history.change}
+        onEndTyping={history.endGroup}
+      />
 
       {/* Assets */}
       <div className="flex min-w-0 flex-1 flex-col gap-6">
@@ -204,7 +227,7 @@ function ProjectPage() {
         open={dialog?.kind === 'delete'}
         onOpenChange={close}
         title={`Delete “${dialog?.kind === 'delete' ? dialog.asset.name : ''}”?`}
-        description="This can’t be undone."
+        description="You can undo this."
         onConfirm={() => {
           if (dialog?.kind !== 'delete') return
           const { kind, id } = dialog.asset
