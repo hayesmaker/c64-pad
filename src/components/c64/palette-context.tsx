@@ -24,6 +24,20 @@ export function usePalette(): ActivePalette {
 }
 
 /**
+ * Draw canvases below in another palette (e.g. a preview of a palette switch)
+ * without touching the page's CSS colours.
+ */
+export function PaletteScope({
+  id,
+  children,
+}: {
+  id: PaletteId
+  children: ReactNode
+}) {
+  return <PaletteContext value={ACTIVE[id]}>{children}</PaletteContext>
+}
+
+/**
  * Draw everything below in a palette. Also points the `--c64-screen` /
  * `--c64-border` CSS colours (blue / light blue) at it, on the document root
  * so dialogs rendered in portals follow too.

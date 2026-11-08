@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Link, createFileRoute } from '@tanstack/react-router'
-import { Download, EllipsisVertical, Plus } from 'lucide-react'
+import { Capacitor } from '@capacitor/core'
+import { Download, EllipsisVertical, FileUp, Plus } from 'lucide-react'
 import {
   addAsset,
   duplicateAsset,
@@ -59,6 +60,9 @@ import {
   exportProjectFile,
 } from '@/storage/project-file'
 import { safeFileName, saveTextFile } from '@/platform/save-file'
+import { AsepriteError, parseAseprite } from '@/import/aseprite/parse'
+import { ImportAsepriteDialog } from '@/import/aseprite/import-dialog'
+import type { AsepriteFile } from '@/import/aseprite/import-dialog'
 import type { ReactNode } from 'react'
 import type { LinkProps } from '@tanstack/react-router'
 import type { AssetKind, Project } from '@/c64/project'
@@ -81,6 +85,7 @@ type DialogState =
   | { kind: 'deleteCharset'; charset: Charset }
   | { kind: 'newMap' }
   | { kind: 'newCharset' }
+  | { kind: 'aseprite'; file: AsepriteFile }
   | null
 
 function nextName(base: string, existing: ReadonlyArray<{ name: string }>) {
@@ -95,6 +100,21 @@ function ProjectPage() {
   const update = (fn: (p: Project) => Project) => session.update(fn)
   const projectId = project.id
   const close = (open: boolean) => !open && setDialog(null)
+  const asepriteInput = useRef<HTMLInputElement>(null)
+
+  const openAseprite = async (file: File) => {
+    const fileName = file.name
+    try {
+      const doc = await parseAseprite(new Uint8Array(await file.arrayBuffer()))
+      setDialog({ kind: 'aseprite', file: { fileName, doc } })
+    } catch (e) {
+      const message =
+        e instanceof AsepriteError
+          ? e.message
+          : `Couldn't read the file (${(e as Error).message})`
+      setDialog({ kind: 'aseprite', file: { fileName, error: message } })
+    }
+  }
 
   const exportFile = async () => {
     await session.flush()
@@ -141,6 +161,13 @@ function ProjectPage() {
       actions={
         <div className="flex items-center gap-3">
           <SaveStatus status={status} error={error} />
+          <Button
+            variant="outline"
+            onClick={() => asepriteInput.current?.click()}
+          >
+            <FileUp aria-hidden="true" />
+            Import Aseprite
+          </Button>
           <Button variant="outline" onClick={() => void exportFile()}>
             <Download aria-hidden="true" />
             Export
@@ -149,6 +176,19 @@ function ProjectPage() {
       }
       className="flex gap-7 overflow-auto px-6 py-5"
     >
+      <input
+        ref={asepriteInput}
+        type="file"
+        // Android's picker filters by MIME type and has none for .aseprite,
+        // so any filter there greys the file out. Accept anything; import checks.
+        accept={Capacitor.isNativePlatform() ? undefined : '.aseprite,.ase'}
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0]
+          e.target.value = ''
+          if (file) void openAseprite(file)
+        }}
+      />
       {/* Worksheet fields */}
       <div className="flex w-[260px] shrink-0 flex-col gap-3">
         <Field label="Project name">
@@ -360,6 +400,14 @@ function ProjectPage() {
           onCreate={(init) =>
             update((p) => addAsset(p, 'maps', createCharmap(init)))
           }
+        />
+      )}
+      {dialog?.kind === 'aseprite' && (
+        <ImportAsepriteDialog
+          file={dialog.file}
+          project={project}
+          onOpenChange={close}
+          onImport={update}
         />
       )}
     </WorksheetLayout>

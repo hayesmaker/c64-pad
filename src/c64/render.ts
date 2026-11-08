@@ -10,9 +10,16 @@ export interface IndexedImage {
   pixels: Int8Array
 }
 
-/** All usable chars as a grid sheet (16 per row by default). */
-export function renderCharsetSheet(cs: Charset, columns = 16): IndexedImage {
-  const count = charCount(cs.mode)
+/**
+ * The usable chars (or the first `limit`) as a grid sheet, 16 per row by
+ * default.
+ */
+export function renderCharsetSheet(
+  cs: Charset,
+  columns = 16,
+  limit = Infinity,
+): IndexedImage {
+  const count = Math.min(charCount(cs.mode), limit)
   const rows = Math.ceil(count / columns)
   const width = columns * 8
   const pixels = new Int8Array(width * rows * 8)
