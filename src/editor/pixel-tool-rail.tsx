@@ -14,22 +14,14 @@ import {
   TrianglesCenterlineDashedVertical,
 } from 'lucide-react'
 import {
-  clearChar,
-  flipCharHorizontal,
-  flipCharVertical,
-  invertChar,
-  rotateCharClockwise,
-  shiftChar,
-} from '@/c64/charset'
-import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { BIT_HEADER_H, ToolButton, zoomLabel } from '../grid-parts'
-import type { Charset } from '@/c64/charset'
-import type { CharTool } from './use-char-tools'
+import { BIT_HEADER_H, ToolButton, zoomLabel } from './grid-parts'
+
+export type PixelTool = 'draw' | 'erase' | 'fill'
 
 const SHIFTS = [
   ['Shift up', 0, -1, ArrowUp],
@@ -38,21 +30,36 @@ const SHIFTS = [
   ['Shift right', 1, 0, ArrowRight],
 ] as const
 
-/** Drawing tools, char transforms and zoom, beside the grid. */
-export function CharsetToolRail({
+/**
+ * The tool bar beside a pixel grid (sprite or char): draw / erase / fill, the
+ * whole-image transforms, and zoom.
+ */
+export function PixelToolRail({
   tool,
   onTool,
-  multicolor,
-  onTransform,
+  drawLabel = 'Draw',
+  onFlipHorizontal,
+  onFlipVertical,
+  rotate,
+  onShift,
+  onInvert,
+  clearLabel,
+  onClear,
   zoom,
   onZoom,
 }: {
-  tool: CharTool
-  onTool: (tool: CharTool) => void
-  /** The char is multicolour (it can't be rotated). */
-  multicolor: boolean
-  /** Apply a transform to the selected char (an undoable step). */
-  onTransform: (fn: (cs: Charset, index: number) => Charset) => void
+  tool: PixelTool
+  onTool: (tool: PixelTool) => void
+  drawLabel?: string
+  onFlipHorizontal: () => void
+  onFlipVertical: () => void
+  /** Rotate clockwise, if this grid can (chars can, sprites can't). */
+  rotate?: { label: string; disabled: boolean; onRotate: () => void }
+  /** Shift by one pixel, wrapping around. */
+  onShift: (dx: number, dy: number) => void
+  onInvert: () => void
+  clearLabel: string
+  onClear: () => void
   zoom: number
   /** Zoom in, or reset when zoomed. */
   onZoom: () => void
@@ -66,7 +73,7 @@ export function CharsetToolRail({
       style={{ paddingTop: BIT_HEADER_H + 2 }}
     >
       <ToolButton
-        label="Draw (double-tap a pixel to clear it)"
+        label={drawLabel}
         pressed={tool === 'draw'}
         onClick={() => onTool('draw')}
       >
@@ -87,25 +94,21 @@ export function CharsetToolRail({
         <PaintBucket />
       </ToolButton>
       <div aria-hidden="true" className="mx-1.5 my-1 h-px bg-rule-soft" />
-      <ToolButton
-        label="Flip horizontally"
-        onClick={() => onTransform(flipCharHorizontal)}
-      >
+      <ToolButton label="Flip horizontally" onClick={onFlipHorizontal}>
         <TrianglesCenterlineDashedVertical />
       </ToolButton>
-      <ToolButton
-        label="Flip vertically"
-        onClick={() => onTransform(flipCharVertical)}
-      >
+      <ToolButton label="Flip vertically" onClick={onFlipVertical}>
         <TrianglesCenterlineDashedHorizontal />
       </ToolButton>
-      <ToolButton
-        label={multicolor ? 'Rotate (hires chars only)' : 'Rotate clockwise'}
-        disabled={multicolor}
-        onClick={() => onTransform(rotateCharClockwise)}
-      >
-        <RotateCw />
-      </ToolButton>
+      {rotate && (
+        <ToolButton
+          label={rotate.label}
+          disabled={rotate.disabled}
+          onClick={rotate.onRotate}
+        >
+          <RotateCw />
+        </ToolButton>
+      )}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <ToolButton label="Shift (wraps around)">
@@ -114,22 +117,16 @@ export function CharsetToolRail({
         </DropdownMenuTrigger>
         <DropdownMenuContent side="right" align="start">
           {SHIFTS.map(([label, dx, dy, Icon]) => (
-            <DropdownMenuItem
-              key={label}
-              onSelect={() => onTransform((cs, i) => shiftChar(cs, i, dx, dy))}
-            >
+            <DropdownMenuItem key={label} onSelect={() => onShift(dx, dy)}>
               <Icon aria-hidden="true" /> {label}
             </DropdownMenuItem>
           ))}
         </DropdownMenuContent>
       </DropdownMenu>
-      <ToolButton label="Invert" onClick={() => onTransform(invertChar)}>
+      <ToolButton label="Invert" onClick={onInvert}>
         <Contrast />
       </ToolButton>
-      <ToolButton
-        label="Clear character"
-        onClick={() => onTransform(clearChar)}
-      >
+      <ToolButton label={clearLabel} onClick={onClear}>
         <Trash2 />
       </ToolButton>
       <div aria-hidden="true" className="mx-1.5 my-1 h-px bg-rule-soft" />

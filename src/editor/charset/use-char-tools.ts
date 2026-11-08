@@ -13,8 +13,7 @@ import type { Charset } from '@/c64/charset'
 import type { useAssetHistory } from '../asset-history'
 import type { StrokeHandlers } from '../gestures'
 import type { CharSlot } from './char-pens'
-
-export type CharTool = 'draw' | 'erase' | 'fill'
+import type { PixelTool } from '../pixel-tool-rail'
 
 export type CharsetHistory = ReturnType<typeof useAssetHistory<'charsets'>>
 
@@ -28,7 +27,7 @@ export function useCharTools(
   selected: number,
   history: CharsetHistory,
 ) {
-  const [tool, setTool] = useState<CharTool>('draw')
+  const [tool, setTool] = useState<PixelTool>('draw')
   const [penByMode, setPenByMode] = useState<Record<PixelMode, number>>({
     hires: 1,
     multicolor: 3,

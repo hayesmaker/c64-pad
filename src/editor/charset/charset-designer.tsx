@@ -2,11 +2,17 @@ import { useEffect, useMemo, useState } from 'react'
 import { Maximize2, MonitorPlay, Redo2, Undo2 } from 'lucide-react'
 import {
   charCount,
+  clearChar,
+  flipCharHorizontal,
+  flipCharVertical,
   getCharBytes,
+  invertChar,
   isCharMulticolor,
   renderChar,
+  rotateCharClockwise,
   setCharMulticolor,
   setCharsetMode,
+  shiftChar,
   swapChars,
 } from '@/c64/charset'
 import { usePalette } from '@/components/c64/palette-context'
@@ -33,6 +39,7 @@ import {
 } from '../grid-parts'
 import { hex } from '../hex'
 import { PixelGrid } from '../pixel-grid'
+import { PixelToolRail } from '../pixel-tool-rail'
 import { PaletteGrid, PensPanel } from '../pens-panel'
 import { Segmented } from '../segmented'
 import { ZenMode, ZenPens } from '../zen-mode'
@@ -42,7 +49,6 @@ import { setSlotColor, slotColor } from './char-pens'
 import { CharDataColumn, CharMemoryNote, DATA_W, MEM_H } from './char-data'
 import { CharNumberField, CharPreview, EcmBackgrounds } from './char-panels'
 import { CharsetPanel } from './charset-panel'
-import { CharsetToolRail } from './charset-tool-rail'
 import { useCharTools } from './use-char-tools'
 import type { GridView } from '../view'
 import type { Charset, CharsetMode } from '@/c64/charset'
@@ -264,11 +270,27 @@ export function CharsetDesigner({
       {/* Middle: tool rail, grid, data bytes */}
       <div ref={cell.areaRef} className="flex min-w-0 flex-1 flex-col">
         <div className="flex min-h-0 flex-1 justify-center gap-3">
-          <CharsetToolRail
+          <PixelToolRail
             tool={tool}
             onTool={tools.setTool}
-            multicolor={mcChar}
-            onTransform={(fn) => change((cs) => fn(cs, selected))}
+            drawLabel="Draw (double-tap a pixel to clear it)"
+            onFlipHorizontal={() =>
+              change((cs) => flipCharHorizontal(cs, selected))
+            }
+            onFlipVertical={() =>
+              change((cs) => flipCharVertical(cs, selected))
+            }
+            rotate={{
+              label: mcChar ? 'Rotate (hires chars only)' : 'Rotate clockwise',
+              disabled: mcChar,
+              onRotate: () => change((cs) => rotateCharClockwise(cs, selected)),
+            }}
+            onShift={(dx, dy) =>
+              change((cs) => shiftChar(cs, selected, dx, dy))
+            }
+            onInvert={() => change((cs) => invertChar(cs, selected))}
+            clearLabel="Clear character"
+            onClear={() => change((cs) => clearChar(cs, selected))}
             zoom={view.zoom}
             onZoom={() =>
               setView(

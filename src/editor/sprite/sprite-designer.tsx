@@ -1,45 +1,15 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
-import {
-  ArrowDown,
-  ArrowLeft,
-  ArrowRight,
-  ArrowUp,
-  Contrast,
-  Eraser,
-  TrianglesCenterlineDashedHorizontal,
-  TrianglesCenterlineDashedVertical,
-  Maximize2,
-  MonitorPlay,
-  Move,
-  PaintBucket,
-  Pencil,
-  Redo2,
-  Trash2,
-  Undo2,
-} from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Maximize2, MonitorPlay, Redo2, Undo2 } from 'lucide-react'
 import {
   clearSprite,
-  createSprite,
-  fillSprite,
   flipSpriteHorizontal,
   flipSpriteVertical,
   invertSprite,
-  setSpriteColor,
   setSpriteMode,
-  setSpritePixel,
   shiftSprite,
 } from '@/c64/sprite'
-import {
-  addSprite,
-  duplicateSprite,
-  moveSprite,
-  findSprite,
-  removeSprite,
-  setMulticolors,
-  addOverlaySprite,
-  setOverlay,
-  updateSprite,
-} from '@/c64/sprite-set'
+import { findSprite, updateSprite } from '@/c64/sprite-set'
+import { projectColors } from '@/c64/project'
 import { WorksheetLayout } from '@/components/worksheet/worksheet-layout'
 import { Breadcrumbs } from '@/components/worksheet/breadcrumbs'
 import { EdgeTabs } from '@/components/worksheet/edge-tabs'
@@ -48,59 +18,46 @@ import { Field } from '@/components/worksheet/field'
 import { SaveStatus } from '@/components/save-status'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import { ModelError } from '@/c64/errors'
-import { useAssetHistory } from '../asset-history'
-import { AnimationControls, useAnimationFrame } from './animation'
-import { RunExportSpritesDialog } from './export-dialog'
 import { EmulatorOverlay } from '@/emulator/emulator-overlay'
 import { buildViewerPrg, spriteSetShowcase } from '@/emulator/sprite-viewer'
 import { safeFileName } from '@/platform/save-file'
+import { useAssetHistory } from '../asset-history'
 import { DEFAULT_VIEW, zoomAround } from '../view'
 import {
-  BIT_HEADER_H,
   BitHeader,
   RowNumbers,
   ToolButton,
   useCellSize,
   useUndoShortcuts,
-  zoomLabel,
 } from '../grid-parts'
-import type { GridView } from '../view'
-import { SpriteGrid } from './sprite-grid'
+import { PaletteGrid, PensPanel } from '../pens-panel'
+import { PixelToolRail } from '../pixel-tool-rail'
+import { Segmented } from '../segmented'
 import { ZenMode, ZenPens } from '../zen-mode'
 import { TracingPanel } from '../tracing/tracing-panel'
 import { TracingButtons } from '../tracing/tracing-buttons'
 import { useGridTracing } from '../tracing/use-tracing'
-import { projectColors } from '@/c64/project'
-import { DataColumn } from './data-column'
-import { PaletteGrid, PensPanel } from '../pens-panel'
-import { spritePens } from './sprite-pens'
+import { AnimationControls, useAnimationFrame } from './animation'
+import { SpriteDataPanel } from './data-column'
+import { RunExportSpritesDialog } from './export-dialog'
+import { spriteStripActions } from './sprite-actions'
+import { SpriteGrid } from './sprite-grid'
 import { SpritePreview } from './sprite-preview'
 import { SpriteStrip } from './sprite-strip'
-import { Segmented } from '../segmented'
-import type { PixelMode } from '@/c64/bitmap'
-import type { C64Color } from '@/c64/palette'
+import { useSpriteTools } from './use-sprite-tools'
+import { useStoredBackground } from './use-stored-background'
+import type { GridView } from '../view'
 import type { Project } from '@/c64/project'
-import type { Sprite } from '@/c64/sprite'
 import type { SpriteSet } from '@/c64/sprite-set'
 import type { ProjectSession, SaveStatus as Status } from '@/storage/session'
-
-type Tool = 'draw' | 'erase' | 'fill'
 
 /** Tracing paper covers the sprite: 24 × 21 C64 pixels. */
 const SPRITE_TARGET = { width: 24, height: 21 }
 
-/** Pixels copied with "Copy pixels", kept for the app session. */
-let clipboard: Pick<Sprite, 'data' | 'mode'> | null = null
 /** Last selected sprite per set, so returning to a set keeps your place. */
 const lastSelected = new Map<string, string>()
 
+/** The Sprite Worksheet: one sprite of a set at a time. */
 export function SpriteDesigner({
   session,
   project,
@@ -133,7 +90,6 @@ export function SpriteDesigner({
   const pairOverlay = pairBase?.overlayId
     ? (findSprite(set, pairBase.overlayId) ?? null)
     : null
-  const sprite = selected
   const [animationId, setAnimationId] = useState<string | null>(null)
   const [playing, setPlaying] = useState(false)
   const [exporting, setExporting] = useState(false)
@@ -144,57 +100,30 @@ export function SpriteDesigner({
   } | null>(null)
   const animation = set.animations.find((a) => a.id === animationId)
   const frameId = useAnimationFrame(animation, playing)
-  const [tool, setTool] = useState<Tool>('draw')
-  const [penByMode, setPenByMode] = useState<Record<PixelMode, number>>({
-    hires: 1,
-    multicolor: 2,
-  })
+  const tools = useSpriteTools(set, selected, history)
+  const { tool, pens, pen, changeSprite } = tools
   const [asHex, setAsHex] = useState(false)
   const [background, setBackground] = useStoredBackground()
   const cell = useCellSize({ columns: 24, rows: 21, min: 12, max: 34 })
   const [view, setView] = useState<GridView>(DEFAULT_VIEW)
   // A new cell size changes the frame; start again at 1×.
   useEffect(() => setView(DEFAULT_VIEW), [cell.size])
-  const strokeId = useRef(0)
   const [tracingOpen, setTracingOpen] = useState(false)
   const trace = useGridTracing(selected?.id ?? '', SPRITE_TARGET)
-  /** The sprite before the last stroke, to tell whether a tap changed it. */
-  const beforeStroke = useRef<Sprite | null>(null)
 
   useEffect(() => {
     if (selected) lastSelected.set(set.id, selected.id)
   }, [set.id, selected])
 
-  const select = (id: string) => setSelectedId(id)
-
-  /** Apply a change to the selected sprite. */
-  const changeSprite = useCallback(
-    (fn: (s: Sprite) => Sprite, group?: string) => {
-      if (!sprite) return
-      history.change((s) => updateSprite(s, sprite.id, fn), group)
-    },
-    [history, sprite],
-  )
-
   useUndoShortcuts(history)
 
-  if (!sprite) {
-    return null // a set always has at least one sprite; see removeSprite guard below
+  if (!selected || !tools.penDef) {
+    return null // a set always has at least one sprite (removeSprite keeps one)
   }
-
-  const pens = spritePens(set, sprite)
-  const pen = Math.min(penByMode[sprite.mode], pens.length - 1)
-  const penDef = pens[pen]
-  const value = tool === 'erase' ? 0 : pen
-
-  const paint = (x: number, y: number, start: boolean) => {
-    const group = `stroke-${strokeId.current}`
-    if (tool === 'fill') {
-      if (start) changeSprite((s) => fillSprite(s, x, y, value), group)
-      return
-    }
-    changeSprite((s) => setSpritePixel(s, x, y, value), group)
-  }
+  const sprite = selected
+  const penDef = tools.penDef
+  const select = (id: string) => setSelectedId(id)
+  const indexOf = (id: string) => set.sprites.findIndex((s) => s.id === id)
 
   const renderGrid = (
     size: number,
@@ -204,34 +133,15 @@ export function SpriteDesigner({
     <SpriteGrid
       set={set}
       sprite={sprite}
-      layers={{ base: pairBase ?? selected, overlay: pairOverlay }}
+      layers={{ base: pairBase ?? sprite, overlay: pairOverlay }}
       cell={size}
       background={background}
       view={v}
       onViewChange={onV}
-      onStrokeStart={(x, y) => {
-        strokeId.current++
-        beforeStroke.current = sprite
-        paint(x, y, true)
-      }}
-      onDoubleTap={(x, y) => {
-        if (tool !== 'draw') return
-        // Clear the pixel, as one undo step with the first tap.
-        if (beforeStroke.current !== sprite) history.undo()
-        changeSprite((s) => setSpritePixel(s, x, y, 0))
-      }}
-      onStrokeMove={(x, y) => paint(x, y, false)}
-      onStrokeEnd={history.endGroup}
-      onStrokeCancel={history.cancelGroup}
       tracing={trace.grid}
+      {...tools.gridHandlers}
     />
   )
-
-  const setPenColor = (color: number) => {
-    if (!penDef.slot) return
-    if (penDef.slot === 'color') changeSprite((s) => setSpriteColor(s, color))
-    else history.change((s) => setMulticolors(s, { [penDef.slot!]: color }))
-  }
 
   return (
     <WorksheetLayout
@@ -307,7 +217,7 @@ export function SpriteDesigner({
               <Field
                 label={
                   pairOverlay
-                    ? `Sprite name · ${selected.id === pairOverlay.id ? 'front' : 'back'} layer`
+                    ? `Sprite name · ${sprite.id === pairOverlay.id ? 'front' : 'back'} layer`
                     : 'Sprite name'
                 }
                 className="flex-1"
@@ -325,7 +235,7 @@ export function SpriteDesigner({
               </Field>
               <Field label="Number" className="w-16">
                 <Input
-                  value={String(set.sprites.indexOf(sprite))}
+                  value={String(indexOf(sprite.id))}
                   readOnly
                   className="font-mono"
                 />
@@ -340,30 +250,23 @@ export function SpriteDesigner({
               ]}
               onChange={(mode) => changeSprite((s) => setSpriteMode(s, mode))}
             />
-            <PensPanel
-              pens={pens}
-              pen={pen}
-              onPen={(v) => {
-                setPenByMode((p) => ({ ...p, [sprite.mode]: v }))
-                if (tool === 'erase') setTool('draw')
-              }}
-            />
+            <PensPanel pens={pens} pen={pen} onPen={tools.choosePen} />
             <PaletteGrid
               selected={penDef.color}
               disabled={!penDef.slot}
               penName={penDef.name.split(' · ')[0].toLowerCase()}
-              onPick={setPenColor}
+              onPick={tools.setPenColor}
             />
             <SpritePreview
               set={set}
               sprite={
-                (frameId && findSprite(set, frameId)) || pairBase || selected
+                (frameId && findSprite(set, frameId)) || pairBase || sprite
               }
               background={background}
               onBackground={setBackground}
               onToggleExpand={(axis) =>
                 history.change((s) =>
-                  updateSprite(s, selected.id, (x) => ({
+                  updateSprite(s, sprite.id, (x) => ({
                     ...x,
                     [axis]: !x[axis],
                   })),
@@ -392,128 +295,35 @@ export function SpriteDesigner({
         <div className="flex min-h-0 flex-1 gap-4">
           <div ref={cell.areaRef} className="flex min-w-0 flex-1 flex-col">
             <div className="flex min-h-0 flex-1 justify-center gap-3">
-              <div
-                role="toolbar"
-                aria-label="Drawing tools"
-                aria-orientation="vertical"
-                className="flex shrink-0 flex-col gap-1"
-                style={{ paddingTop: BIT_HEADER_H + 2 }}
-              >
-                <ToolButton
-                  label="Draw"
-                  pressed={tool === 'draw'}
-                  onClick={() => setTool('draw')}
-                >
-                  <Pencil />
-                </ToolButton>
-                <ToolButton
-                  label="Erase"
-                  pressed={tool === 'erase'}
-                  onClick={() => setTool('erase')}
-                >
-                  <Eraser />
-                </ToolButton>
-                <ToolButton
-                  label="Fill"
-                  pressed={tool === 'fill'}
-                  onClick={() => setTool('fill')}
-                >
-                  <PaintBucket />
-                </ToolButton>
-                <div
-                  aria-hidden="true"
-                  className="mx-1.5 my-1 h-px bg-rule-soft"
-                />
-                <ToolButton
-                  label="Flip horizontally"
-                  onClick={() => changeSprite(flipSpriteHorizontal)}
-                >
-                  <TrianglesCenterlineDashedVertical />
-                </ToolButton>
-                <ToolButton
-                  label="Flip vertically"
-                  onClick={() => changeSprite(flipSpriteVertical)}
-                >
-                  <TrianglesCenterlineDashedHorizontal />
-                </ToolButton>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <ToolButton label="Shift (wraps around)">
-                      <Move />
-                    </ToolButton>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent side="right" align="start">
-                    <DropdownMenuItem
-                      onSelect={() =>
-                        changeSprite((s) => shiftSprite(s, 0, -1))
-                      }
-                    >
-                      <ArrowUp aria-hidden="true" /> Shift up
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onSelect={() => changeSprite((s) => shiftSprite(s, 0, 1))}
-                    >
-                      <ArrowDown aria-hidden="true" /> Shift down
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onSelect={() =>
-                        changeSprite((s) => shiftSprite(s, -1, 0))
-                      }
-                    >
-                      <ArrowLeft aria-hidden="true" /> Shift left
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onSelect={() => changeSprite((s) => shiftSprite(s, 1, 0))}
-                    >
-                      <ArrowRight aria-hidden="true" /> Shift right
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-                <ToolButton
-                  label="Invert"
-                  onClick={() => changeSprite(invertSprite)}
-                >
-                  <Contrast />
-                </ToolButton>
-                <ToolButton
-                  label="Clear sprite"
-                  onClick={() => changeSprite(clearSprite)}
-                >
-                  <Trash2 />
-                </ToolButton>
-                <div
-                  aria-hidden="true"
-                  className="mx-1.5 my-1 h-px bg-rule-soft"
-                />
-                <ToolButton
-                  label={
+              <PixelToolRail
+                tool={tool}
+                onTool={tools.setTool}
+                onFlipHorizontal={() => changeSprite(flipSpriteHorizontal)}
+                onFlipVertical={() => changeSprite(flipSpriteVertical)}
+                onShift={(dx, dy) =>
+                  changeSprite((s) => shiftSprite(s, dx, dy))
+                }
+                onInvert={() => changeSprite(invertSprite)}
+                clearLabel="Clear sprite"
+                onClear={() => changeSprite(clearSprite)}
+                zoom={view.zoom}
+                onZoom={() =>
+                  setView(
                     view.zoom > 1
-                      ? 'Reset zoom (pinch to zoom)'
-                      : 'Zoom in (or pinch)'
-                  }
-                  pressed={view.zoom > 1}
-                  onClick={() =>
-                    setView(
-                      view.zoom > 1
-                        ? DEFAULT_VIEW
-                        : zoomAround(
-                            DEFAULT_VIEW,
-                            2,
-                            {
-                              x: (24 * cell.size) / 2,
-                              y: (21 * cell.size) / 2,
-                            },
-                            24 * cell.size,
-                            21 * cell.size,
-                          ),
-                    )
-                  }
-                >
-                  <span className="font-mono text-[11px] font-medium">
-                    {zoomLabel(view.zoom)}
-                  </span>
-                </ToolButton>
-              </div>
+                      ? DEFAULT_VIEW
+                      : zoomAround(
+                          DEFAULT_VIEW,
+                          2,
+                          {
+                            x: (24 * cell.size) / 2,
+                            y: (21 * cell.size) / 2,
+                          },
+                          24 * cell.size,
+                          21 * cell.size,
+                        ),
+                  )
+                }
+              />
 
               <div className="flex min-h-0 flex-col">
                 <BitHeader bytes={3} cell={cell.size} view={view} />
@@ -533,93 +343,27 @@ export function SpriteDesigner({
           </div>
 
           {/* Data bytes aligned to the grid rows */}
-          {/* Tap anywhere on the bytes to switch decimal / hex. */}
-          <button
-            type="button"
-            onClick={() => setAsHex((h) => !h)}
-            aria-label={`Sprite data bytes in ${asHex ? 'hex' : 'decimal'}; tap to show ${asHex ? 'decimal' : 'hex'}`}
-            title="Tap to switch decimal / hex. 63 bytes + 1 pad = 64 per sprite; sprite pointer = address ÷ 64."
-            className="flex w-[152px] shrink-0 cursor-pointer flex-col self-start rounded-md text-left"
-          >
-            <div
-              className="flex w-full items-end gap-2 font-mono text-[9px] leading-[14px] text-muted-foreground"
-              style={{ height: BIT_HEADER_H }}
-            >
-              {['byte 0', 'byte 1', 'byte 2'].map((b) => (
-                <div key={b} className="flex-1 text-center">
-                  {b}
-                </div>
-              ))}
-            </div>
-            <DataColumn sprite={sprite} cell={cell.size} asHex={asHex} />
-          </button>
+          <SpriteDataPanel
+            sprite={sprite}
+            cell={cell.size}
+            asHex={asHex}
+            onToggleHex={() => setAsHex((h) => !h)}
+          />
         </div>
 
         <div className="mt-2 shrink-0">
           <SpriteStrip
             project={project}
             set={set}
-            selectedId={selected.id}
-            actions={{
+            selectedId={sprite.id}
+            actions={spriteStripActions({
+              set,
+              selected: sprite,
+              pairBase,
+              history,
               select,
-              add: () => {
-                const created = createSprite({
-                  name: `Sprite ${set.sprites.length}`,
-                  mode: selected.mode,
-                })
-                history.change((s) => addSprite(s, created))
-                select(created.id)
-              },
-              duplicate: () => {
-                history.change((s) => duplicateSprite(s, selected.id))
-              },
-              copy: () => {
-                clipboard = { data: sprite.data.slice(), mode: sprite.mode }
-              },
-              paste: clipboard
-                ? () => {
-                    const c = clipboard!
-                    changeSprite((s) => ({
-                      ...s,
-                      data: c.data.slice(),
-                      mode: c.mode,
-                    }))
-                  }
-                : null,
-              move: (delta) => {
-                const from = set.sprites.indexOf(selected)
-                history.change((s) => moveSprite(s, from, from + delta))
-              },
-              remove:
-                set.sprites.length > 1
-                  ? () => {
-                      const i = set.sprites.indexOf(selected)
-                      const next = set.sprites[i + 1] ?? set.sprites[i - 1]
-                      history.change((s) => removeSprite(s, selected.id))
-                      select(next.id)
-                    }
-                  : null,
-              setOverlay: (overlayId) => {
-                try {
-                  history.change((s) => setOverlay(s, selected.id, overlayId))
-                  if (overlayId) select(overlayId)
-                } catch (e) {
-                  if (!(e instanceof ModelError)) throw e
-                }
-              },
-              addOverlay: () => {
-                let created = ''
-                history.change((s) => {
-                  const r = addOverlaySprite(s, selected.id)
-                  created = r.overlayId
-                  return r.set
-                })
-                if (created) select(created)
-              },
-              unlinkOverlay: pairBase
-                ? () => history.change((s) => setOverlay(s, pairBase.id, null))
-                : null,
-            }}
+              changeSprite,
+            })}
           >
             <AnimationControls
               set={set}
@@ -637,24 +381,24 @@ export function SpriteDesigner({
         <RunExportSpritesDialog
           project={project}
           set={set}
-          currentIndex={set.sprites.indexOf(selected)}
+          currentIndex={indexOf(sprite.id)}
           background={background}
           runSummary={
             animation
               ? `Plays “${animation.name}” large in the middle, with the other sprites of ${set.name} along the bottom.`
-              : `Shows sprite ${set.sprites.indexOf(pairBase ?? selected)} large in the middle${pairOverlay ? ` with sprite ${set.sprites.indexOf(pairOverlay)} over it` : ''}, and the other sprites of ${set.name} along the bottom.`
+              : `Shows sprite ${indexOf((pairBase ?? sprite).id)} large in the middle${pairOverlay ? ` with sprite ${indexOf(pairOverlay.id)} over it` : ''}, and the other sprites of ${set.name} along the bottom.`
           }
           onRun={() => {
             const prg = buildViewerPrg(
               spriteSetShowcase(set, {
-                selectedId: (pairBase ?? selected).id,
+                selectedId: (pairBase ?? sprite).id,
                 animationId: animation?.id ?? null,
                 background: background ?? 6,
               }),
             )
             setRunning({
               prg,
-              title: `${set.name}${animation ? ` · ${animation.name}` : ` · sprite ${set.sprites.indexOf(pairBase ?? selected)}`}`,
+              title: `${set.name}${animation ? ` · ${animation.name}` : ` · sprite ${indexOf((pairBase ?? sprite).id)}`}`,
             })
           }}
           onClose={() => setExporting(false)}
@@ -662,24 +406,21 @@ export function SpriteDesigner({
       )}
       {zen && (
         <ZenMode
-          title={`Sprite ${set.sprites.indexOf(sprite)}`}
+          title={`Sprite ${indexOf(sprite.id)}`}
           columns={24}
           rows={21}
           renderGrid={renderGrid}
           tool={tool}
           // No Hand tool here (canPan is off).
-          onTool={(t) => t !== 'pan' && setTool(t)}
+          onTool={(t) => t !== 'pan' && tools.setTool(t)}
           side={
             <ZenPens
               pens={pens}
               pen={pen}
-              onPen={(v) => {
-                setPenByMode((p) => ({ ...p, [sprite.mode]: v }))
-                if (tool === 'erase') setTool('draw')
-              }}
+              onPen={tools.choosePen}
               colors={projectColors(project)}
               penColor={penDef.slot ? penDef.color : null}
-              onRecolor={setPenColor}
+              onRecolor={tools.setPenColor}
             />
           }
           onUndo={history.undo}
@@ -687,13 +428,13 @@ export function SpriteDesigner({
           canUndo={history.canUndo}
           canRedo={history.canRedo}
           onPrev={() => {
-            const i = set.sprites.indexOf(selected)
+            const i = indexOf(sprite.id)
             select(
               set.sprites[(i + set.sprites.length - 1) % set.sprites.length].id,
             )
           }}
           onNext={() => {
-            const i = set.sprites.indexOf(selected)
+            const i = indexOf(sprite.id)
             select(set.sprites[(i + 1) % set.sprites.length].id)
           }}
           onExit={() => setZen(false)}
@@ -709,27 +450,4 @@ export function SpriteDesigner({
       )}
     </WorksheetLayout>
   )
-}
-
-const BG_KEY = 'c64pad:sprite-background'
-
-/** Grid/preview background, remembered on this device. */
-function useStoredBackground() {
-  const [bg, setBg] = useState<C64Color | null>(() => {
-    try {
-      const v = localStorage.getItem(BG_KEY)
-      return v === null || v === 'paper' ? null : Number(v)
-    } catch {
-      return null
-    }
-  })
-  const set = (color: C64Color | null) => {
-    setBg(color)
-    try {
-      localStorage.setItem(BG_KEY, color === null ? 'paper' : String(color))
-    } catch {
-      // storage unavailable: keep for this session only
-    }
-  }
-  return [bg, set] as const
 }
