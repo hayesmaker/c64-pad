@@ -32,6 +32,7 @@ import {
   nextName,
 } from '@/editor/project/asset-dialogs'
 import { ProjectFields } from '@/editor/project/project-fields'
+import { MergeCharsDialog } from '@/editor/project/merge-chars-dialog'
 import { useProjectHistory } from '@/editor/project-history'
 import { ToolButton, useUndoShortcuts } from '@/editor/grid-parts'
 import { ImportAsepriteButton } from '@/import/aseprite/import-aseprite-button'
@@ -41,6 +42,7 @@ import {
   exportProjectFile,
 } from '@/storage/project-file'
 import { safeFileName, saveTextFile } from '@/platform/save-file'
+import type { ComponentProps } from 'react'
 import type { AssetKind, Project } from '@/c64/project'
 import type { Charset, CharsetMode } from '@/c64/charset'
 
@@ -61,6 +63,7 @@ type DialogState =
   | { kind: 'deleteCharset'; charset: Charset }
   | { kind: 'newMap' }
   | { kind: 'newCharset' }
+  | { kind: 'mergeChars'; charset: Charset }
   | null
 
 /** The Project Worksheet: the project's fields and all its assets. */
@@ -82,11 +85,16 @@ function ProjectPage() {
     )
   }
 
-  const menuFor = (asset: AssetRef, onDelete?: () => void) => (
+  const menuFor = (
+    asset: AssetRef,
+    onDelete?: () => void,
+    extra?: ComponentProps<typeof AssetMenu>['extra'],
+  ) => (
     <AssetMenu
       name={asset.name}
       onRename={() => setDialog({ kind: 'rename', asset })}
       onDuplicate={() => update((p) => duplicateAsset(p, asset.kind, asset.id))}
+      extra={extra}
       onDelete={onDelete ?? (() => setDialog({ kind: 'delete', asset }))}
     />
   )
@@ -178,6 +186,14 @@ function ProjectPage() {
                 mapsUsingCharset(project, cs.id).length > 0
                   ? () => setDialog({ kind: 'deleteCharset', charset: cs })
                   : undefined,
+                [
+                  {
+                    label: 'Merge chars into new charset…',
+                    disabled: project.charsets.length < 2,
+                    onSelect: () =>
+                      setDialog({ kind: 'mergeChars', charset: cs }),
+                  },
+                ],
               )}
             />
           ))}
@@ -266,6 +282,14 @@ function ProjectPage() {
               ),
             )
           }
+        />
+      )}
+      {dialog?.kind === 'mergeChars' && (
+        <MergeCharsDialog
+          project={project}
+          source={dialog.charset}
+          onOpenChange={close}
+          onMerge={update}
         />
       )}
       {dialog?.kind === 'newMap' && (

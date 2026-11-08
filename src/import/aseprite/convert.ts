@@ -1,4 +1,4 @@
-import { CHAR_SHAPE, writePixels } from '@/c64/bitmap'
+import { encodeTile } from '@/c64/char-fit'
 import { createCharmap } from '@/c64/charmap'
 import { CHARSET_BYTES, CHAR_BYTES, createCharset } from '@/c64/charset'
 import { TILE_SIZE, mapSize } from './validate'
@@ -15,39 +15,6 @@ export function uniqueName(
   const taken = new Set(existing.map((a) => a.name))
   if (!taken.has(base)) return base
   for (let n = 2; ; n++) if (!taken.has(`${base} ${n}`)) return `${base} ${n}`
-}
-
-/** Encode one tile (64 C64 colours, -1 transparent) as char bytes. */
-function encodeTile(
-  tile: Int8Array,
-  fit: CharsetFit,
-  mode: 'hires' | 'multicolor',
-): Uint8Array {
-  const bg = fit.background
-  if (mode === 'hires') {
-    return writePixels(
-      Array.from(tile, (c) => (c < 0 || c === bg ? 0 : 1)),
-      CHAR_SHAPE,
-      'hires',
-    )
-  }
-  // Multicolour: 4×8, from the left pixel of each pair.
-  const values: Array<number> = []
-  for (let y = 0; y < TILE_SIZE; y++) {
-    for (let x = 0; x < TILE_SIZE; x += 2) {
-      const c = tile[y * TILE_SIZE + x]
-      values.push(
-        c < 0 || c === bg
-          ? 0
-          : c === fit.multicolor1
-            ? 1
-            : c === fit.multicolor2
-              ? 2
-              : 3,
-      )
-    }
-  }
-  return writePixels(values, CHAR_SHAPE, 'multicolor')
 }
 
 /** The tileset as a charset: tile n → char n, chars after the tiles blank. */

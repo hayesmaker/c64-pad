@@ -78,16 +78,23 @@ export function AssetCard({
   )
 }
 
-/** Rename / Duplicate / Delete for one asset. */
+/** Rename / Duplicate (and any extra actions) / Delete for one asset. */
 export function AssetMenu({
   name,
   onRename,
   onDuplicate,
+  extra = [],
   onDelete,
 }: {
   name: string
   onRename: () => void
   onDuplicate: () => void
+  /** More actions for this kind of asset, after Duplicate. */
+  extra?: ReadonlyArray<{
+    label: string
+    onSelect: () => void
+    disabled?: boolean
+  }>
   onDelete: () => void
 }) {
   return (
@@ -100,6 +107,15 @@ export function AssetMenu({
       <DropdownMenuContent align="end">
         <DropdownMenuItem onSelect={onRename}>Rename</DropdownMenuItem>
         <DropdownMenuItem onSelect={onDuplicate}>Duplicate</DropdownMenuItem>
+        {extra.map((item) => (
+          <DropdownMenuItem
+            key={item.label}
+            disabled={item.disabled}
+            onSelect={item.onSelect}
+          >
+            {item.label}
+          </DropdownMenuItem>
+        ))}
         <DropdownMenuSeparator />
         <DropdownMenuItem variant="destructive" onSelect={onDelete}>
           Delete

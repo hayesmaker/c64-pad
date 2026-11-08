@@ -20,6 +20,7 @@ export function CharsetSheet({
   onPick,
   pitch = 17,
   background,
+  marked,
 }: {
   charset: Charset
   selected: number
@@ -30,6 +31,8 @@ export function CharsetSheet({
   pitch?: number
   /** ECM background 0-3 to draw the chars on (default 0). */
   background?: number
+  /** Chars outlined as chosen (multi-select), besides `selected`. */
+  marked?: ReadonlySet<number>
 }) {
   const palette = usePalette()
   const PITCH = pitch
@@ -61,10 +64,24 @@ export function CharsetSheet({
         }
       }
     }
+    const primary = cssVar('--primary') || '#2e2c9b'
+    if (marked) {
+      ctx.strokeStyle = primary
+      ctx.lineWidth = 2
+      for (const i of marked) {
+        if (i >= count) continue
+        ctx.strokeRect(
+          (i % COLUMNS) * PITCH + 1,
+          Math.floor(i / COLUMNS) * PITCH + 1,
+          PITCH - 2,
+          PITCH - 2,
+        )
+      }
+    }
     if (selected < 0) return
     const sx = (selected % COLUMNS) * PITCH
     const sy = Math.floor(selected / COLUMNS) * PITCH
-    ctx.strokeStyle = cssVar('--primary') || '#2e2c9b'
+    ctx.strokeStyle = primary
     ctx.lineWidth = 2
     ctx.strokeRect(sx, sy, PITCH, PITCH)
   }, [
@@ -78,6 +95,7 @@ export function CharsetSheet({
     background,
     scheme,
     palette,
+    marked,
   ])
 
   const pick = (e: React.PointerEvent<HTMLCanvasElement>) => {

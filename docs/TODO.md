@@ -114,7 +114,8 @@ See `PLAN.md` → _Decisions_ for the reasoning behind these.
 - [x] Dark mode (follows the device setting; an in-app switch is later)
 - [ ] Optional: CharPad tiles/blocks layer
 - [ ] Char materials (CharPad convention): a 0-15 attribute per char (solid, ladder, hazard, …) with editable names per charset; set in the charset editor, shown as an overlay in the map editor; written to the high nibble of the `.ctm` char attribute byte (currently 0), as a materials table in `.bin` / KickAss exports, and imported from Aseprite tile properties
-- [ ] Move / copy chars between charsets in a project, renumbering the screen codes in maps that use them (see `docs/aseprite-import.md` § 2.5)
+- [x] Merge charsets: Project Worksheet → charset ⋮ → “Merge chars into new charset…”. Makes a new charset: a copy of the chosen base (its chars keep their slots, so its maps work with it) plus all used or tapped chars from the other, in empty slots no map uses, re-fitted to the base's registers, identical chars reused. Existing charsets and maps are untouched (switch maps and delete old charsets by hand); one undo
+- [ ] Switch a map to another charset by matching chars (renumber its cells to identical chars in the new set), so maps of the merged-in charset can move to a merged one too
 - [ ] New worksheet: **Multi-Sprites**, a compositor for entities bigger than one sprite (e.g. a 2×2 boss). Arrange sprites from a set on a shared canvas with positions/offsets; supports overlays and animations (frames advance together); its own edge tab; Run shows it in the viewer; export positions with the sprite data
 - [ ] Publish to deployed backend (auth, server functions, sharing)
 - [ ] Remote KickAssembler build service (containerised, CORS PRG URLs); "Build on server" option for custom asm templates; enables "Open in c64-ready" from app builds

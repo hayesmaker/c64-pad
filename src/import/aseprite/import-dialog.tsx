@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react'
-import { Check, TriangleAlert, X } from 'lucide-react'
 import { addAsset, setProjectPalette } from '@/c64/project'
 import { COLOR_NAMES, PALETTES } from '@/c64/palette'
 import { renderCharsetSheet } from '@/c64/render'
@@ -27,11 +26,10 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Segmented } from '@/editor/segmented'
-import { cn } from '@/lib/utils'
+import { CheckLine, Note, ReportSection } from '@/components/report'
 import { ColorMenuGrid } from '@/components/c64/color-menu-grid'
 import { baseName, buildCharset, buildMap, uniqueName } from './convert'
 import { analyseColours, checkStructure, fitCharset, mapSize } from './validate'
-import type { ReactNode } from 'react'
 import type { C64Color } from '@/c64/palette'
 import type { Project } from '@/c64/project'
 import type { AsepriteDoc } from './parse'
@@ -183,7 +181,7 @@ function ImportBody({
 
   return (
     <div className="flex flex-col gap-5 text-sm">
-      <Section title="File">
+      <ReportSection title="File">
         <ul className="flex flex-col gap-1">
           {structure.checks.map((c) => (
             <li key={c.text}>
@@ -221,11 +219,11 @@ function ImportBody({
             ))}
           </ul>
         )}
-      </Section>
+      </ReportSection>
 
       {colours && fit && sheet && (
         <>
-          <Section title="Palette">
+          <ReportSection title="Palette">
             <p>{paletteText(colours, project.palette)}</p>
             {canSwitch && (
               <>
@@ -257,9 +255,9 @@ function ImportBody({
                 colours.
               </Note>
             )}
-          </Section>
+          </ReportSection>
 
-          <Section title="C64 colours">
+          <ReportSection title="C64 colours">
             <p>
               {fit.mode === 'multicolor'
                 ? 'Multicolour charset (hires and multicolour chars mixed).'
@@ -347,9 +345,9 @@ function ImportBody({
                 className="w-full max-w-[384px] rounded-sm border border-rule"
               />
             </PaletteScope>
-          </Section>
+          </ReportSection>
 
-          <Section title="Adds to the project">
+          <ReportSection title="Adds to the project">
             <CheckLine ok>
               Charset “{charsetName}” ({fit.tiles.length} chars)
             </CheckLine>
@@ -365,7 +363,7 @@ function ImportBody({
             <p className="text-xs text-muted-foreground">
               Existing charsets and maps are not changed.
             </p>
-          </Section>
+          </ReportSection>
         </>
       )}
 
@@ -403,42 +401,6 @@ function paletteText(
     case 'far':
       return `The file's colours aren't close to any C64 palette; each is read as the nearest ${name(project)} colour.`
   }
-}
-
-function Section({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <section className="flex flex-col gap-2">
-      <h3 className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-        {title}
-      </h3>
-      {children}
-    </section>
-  )
-}
-
-function CheckLine({ ok, children }: { ok: boolean; children: ReactNode }) {
-  const Icon = ok ? Check : X
-  return (
-    <span className="flex items-start gap-2">
-      <Icon
-        aria-label={ok ? 'OK' : 'Problem'}
-        className={cn(
-          'mt-0.5 size-4 shrink-0',
-          ok ? 'text-ok-foreground' : 'text-destructive',
-        )}
-      />
-      <span>{children}</span>
-    </span>
-  )
-}
-
-function Note({ children }: { children: ReactNode }) {
-  return (
-    <span className="flex items-start gap-2 rounded-md bg-warn px-2.5 py-1.5 text-warn-foreground">
-      <TriangleAlert aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
-      <span>{children}</span>
-    </span>
-  )
 }
 
 /** A VIC colour register: swatch button opening a 16-colour grid. */
