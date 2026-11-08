@@ -57,7 +57,7 @@ export function DeleteCharsetDialog({
           <DialogDescription>
             It’s used by {users.map((m) => m.name).join(', ')}.
             {others.length > 0
-              ? ' Choose a charset for those maps to use instead.'
+              ? ' Choose a charset for those maps to use instead: their chars are matched to the same-looking ones there.'
               : ' Create another charset first, so those maps have one to use.'}
           </DialogDescription>
         </DialogHeader>

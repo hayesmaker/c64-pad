@@ -33,6 +33,7 @@ import {
 } from '@/editor/project/asset-dialogs'
 import { ProjectFields } from '@/editor/project/project-fields'
 import { MergeCharsDialog } from '@/editor/project/merge-chars-dialog'
+import { switchMapsToCharset } from '@/c64/charset-match'
 import { useProjectHistory } from '@/editor/project-history'
 import { ToolButton, useUndoShortcuts } from '@/editor/grid-parts'
 import { ImportAsepriteButton } from '@/import/aseprite/import-aseprite-button'
@@ -262,7 +263,13 @@ function ProjectPage() {
           charset={dialog.charset}
           onOpenChange={close}
           onConfirm={(reassignTo) =>
-            update((p) => removeCharset(p, dialog.charset.id, { reassignTo }))
+            update((p) =>
+              // Maps move with their cells matched to the same-looking chars.
+              removeCharset(
+                switchMapsToCharset(p, dialog.charset.id, reassignTo),
+                dialog.charset.id,
+              ),
+            )
           }
         />
       )}

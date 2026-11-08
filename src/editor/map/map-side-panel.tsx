@@ -1,5 +1,8 @@
+import { useState } from 'react'
 import { Expand, Plus } from 'lucide-react'
 import { MAX_MAP_SIZE, resizeCharmap } from '@/c64/charmap'
+import { switchMapCharset } from '@/c64/charset-match'
+import { Note } from '@/components/report'
 import { Field } from '@/components/worksheet/field'
 import { Button } from '@/components/ui/button'
 import {
@@ -9,12 +12,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { hex } from '../hex'
 import { describeScreens } from './map-size'
+import type { CharsetSwitch } from '@/c64/charset-match'
 import type { Charmap } from '@/c64/charmap'
 import type { Project } from '@/c64/project'
 import type { CellRect } from './map-canvas'
 
-/** Map size, its charset and quick "add a screen" buttons. */
+/**
+ * Map size, its charset and quick "add a screen" buttons. Switching the
+ * charset renumbers the map's cells to the chars that look the same in the
+ * new one, and says how that went.
+ */
 export function MapSettings({
   project,
   map,
@@ -28,6 +37,24 @@ export function MapSettings({
   /** Open the resize dialog. */
   onResize: () => void
 }) {
+  const [switched, setSwitched] = useState<{
+    charsetId: string
+    result: CharsetSwitch
+  } | null>(null)
+  const switchTo = (id: string) => {
+    const from = project.charsets.find((c) => c.id === map.charsetId)
+    const to = project.charsets.find((c) => c.id === id)
+    if (!from || !to) {
+      onChange((m) => ({ ...m, charsetId: id }))
+      return
+    }
+    const result = switchMapCharset(map, from, to)
+    onChange(() => result.map)
+    setSwitched({ charsetId: id, result })
+  }
+  // Only while the map is still on that charset (an undo forgets it).
+  const report = switched?.charsetId === map.charsetId ? switched.result : null
+
   return (
     <>
       <div className="flex gap-2">
@@ -43,10 +70,7 @@ export function MapSettings({
           </Button>
         </Field>
         <Field label="Charset" className="min-w-0 flex-1">
-          <Select
-            value={map.charsetId}
-            onValueChange={(id) => onChange((m) => ({ ...m, charsetId: id }))}
-          >
+          <Select value={map.charsetId} onValueChange={switchTo}>
             <SelectTrigger className="w-full">
               <SelectValue />
             </SelectTrigger>
@@ -60,6 +84,7 @@ export function MapSettings({
           </Select>
         </Field>
       </div>
+      {report && <SwitchNote result={report} />}
       <div className="flex flex-col gap-1">
         <span className="text-xs text-muted-foreground">
           {describeScreens(map.width, map.height)} · add a screen
@@ -120,5 +145,40 @@ export function SelectionActions({
         </Button>
       </div>
     </div>
+  )
+}
+
+/** How switching charsets went: what was renumbered, what didn't match. */
+function SwitchNote({ result }: { result: CharsetSwitch }) {
+  const { renumbered, unmatched, ecm } = result
+  const list = (codes: ReadonlyArray<number>) =>
+    codes
+      .slice(0, 6)
+      .map((c) => hex(c))
+      .join(', ') + (codes.length > 6 ? '…' : '')
+  if (ecm) {
+    return (
+      <p className="text-xs text-muted-foreground">
+        ECM charsets aren't matched: the map's screen codes are kept.
+      </p>
+    )
+  }
+  return (
+    <>
+      <p className="text-xs text-muted-foreground">
+        {renumbered.length === 0
+          ? 'Every char already matched; no screen codes changed.'
+          : `${renumbered.length} char${renumbered.length === 1 ? '' : 's'} renumbered to the matching char${renumbered.length === 1 ? '' : 's'} (${renumbered
+              .slice(0, 4)
+              .map((r) => `${hex(r.from)}→${hex(r.to)}`)
+              .join(', ')}${renumbered.length > 4 ? '…' : ''}).`}
+      </p>
+      {unmatched.length > 0 && (
+        <Note>
+          No matching char for {list(unmatched)}: kept as they were, so they may
+          look different.
+        </Note>
+      )}
+    </>
   )
 }

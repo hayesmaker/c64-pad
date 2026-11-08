@@ -1,12 +1,6 @@
-import { CHAR_SHAPE, readPixels } from './bitmap'
 import { encodeTile, fitCharset } from './char-fit'
-import {
-  CHAR_BYTES,
-  charCount,
-  charPixelMode,
-  getCharBytes,
-  renderChar,
-} from './charset'
+import { charLook } from './charset-match'
+import { CHAR_BYTES, charCount, getCharBytes } from './charset'
 import { COLOR_NAMES } from './palette'
 import { newId } from './ids'
 import { addAsset, mapsUsingCharset } from './project'
@@ -58,20 +52,7 @@ function fitToTarget(
   target: Charset,
   chars: ReadonlyArray<number>,
 ): Array<{ bytes: Uint8Array; color: number; problem: string | null }> {
-  const tiles = chars.map((i) => {
-    const mode = charPixelMode(source, i)
-    const values = readPixels(getCharBytes(source, i), CHAR_SHAPE, mode)
-    const colors = renderChar(source, i)
-    const scale = mode === 'multicolor' ? 2 : 1
-    const tile = new Int8Array(64)
-    for (let y = 0; y < 8; y++) {
-      for (let x = 0; x < 8; x++) {
-        const v = values[y * (8 / scale) + Math.floor(x / scale)]
-        tile[y * 8 + x] = v === 0 ? -1 : colors[y * 8 + x]
-      }
-    }
-    return tile
-  })
+  const tiles = chars.map((i) => charLook(source, i))
   const mc = target.mode === 'multicolor'
   const fit = fitCharset(
     // Tile 0 of a fit is the empty tile.
