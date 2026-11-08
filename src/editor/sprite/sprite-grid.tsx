@@ -39,7 +39,9 @@ export function SpriteGrid({
   const palette = usePalette()
   const { base, overlay } = layers
   const scheme = useColorScheme()
-  // Re-read the paper colour when the device switches light / dark.
+  // Re-read the paper colour when the device switches light / dark: the
+  // scheme isn't used, it only says when the CSS variable has changed.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const paper = useMemo(() => cssVar('--paper') || '#fdfcf8', [scheme])
   const gridLayers = useMemo<Array<GridLayer>>(
     () =>

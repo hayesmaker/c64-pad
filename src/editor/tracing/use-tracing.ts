@@ -111,17 +111,19 @@ export function useGridTracing(
 ) {
   const hook = useTracing(assetId)
   const t = hook.tracing
+  // By size, so a new target object each render doesn't re-place it.
+  const { width, height } = target
   const grid = useMemo<GridTracing | null>(
     () =>
       t && t.settings.visible
         ? {
             image: t.bitmap,
-            placement: placeTracing(t, target, t.settings),
+            placement: placeTracing(t, { width, height }, t.settings),
             opacity: t.settings.opacity,
             layer: t.settings.layer,
           }
         : null,
-    [t, target.width, target.height],
+    [t, width, height],
   )
   return { ...hook, grid }
 }

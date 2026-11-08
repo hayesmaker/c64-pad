@@ -1,9 +1,19 @@
 //  @ts-check
 
 import { tanstackConfig } from '@tanstack/eslint-config'
+import reactHooks from 'eslint-plugin-react-hooks'
 
 export default [
   ...tanstackConfig,
+  {
+    // Only the classic hook rules for now; the React Compiler rules in the
+    // plugin's recommended set are a separate decision.
+    plugins: { 'react-hooks': reactHooks },
+    rules: {
+      'react-hooks/rules-of-hooks': 'error',
+      'react-hooks/exhaustive-deps': 'error',
+    },
+  },
   {
     rules: {
       'import/no-cycle': 'off',
