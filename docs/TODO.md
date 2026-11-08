@@ -121,3 +121,10 @@ See `PLAN.md` → _Decisions_ for the reasoning behind these.
 - [x] Hand tool on the map tool rail and in map Zen mode: one finger / the mouse drags the map
 - [ ] Maybe: arrow keys / PgUp / PgDn step one screen (40 × 25)
 - [x] PNG tracing paper (Sprite and Screen worksheets): load a reference image per sprite or map; crop, 1:1 / fit / stretch / custom size, 9-point anchor, nudge, opacity, over all or under empty cells, show/hide. Kept on the device (not in project files)
+
+### M10: Project palettes + Aseprite import
+
+Plan: [`docs/aseprite-import.md`](aseprite-import.md)
+
+- [ ] Part 1: per-project colour palette (Colodore default; Pepto, VICE, CCS64, Frodo, C64HQ, Community Colors once its source is confirmed): palette tables, project field with v2 migration, rendering via `usePalette`, selector on the Project Worksheet
+- [ ] Part 2: Aseprite import on the Project Worksheet: parser, validator (tileset + tilemap gate, palette match, C64 colour fit), converter to charset + map, import dialog (fixtures in `src/import/aseprite/__fixtures__/`)
