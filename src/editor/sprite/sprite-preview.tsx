@@ -3,7 +3,8 @@ import { SPRITE_HEIGHT } from '@/c64/sprite'
 import { SPRITE_RENDER_WIDTH, renderSprite } from '@/c64/sprite-set'
 import { IndexedCanvas } from '@/components/c64/indexed-canvas'
 import { cn } from '@/lib/utils'
-import { PALETTE } from '@/c64/palette'
+import { COLOR_NAMES } from '@/c64/palette'
+import { usePalette } from '@/components/c64/palette-context'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -28,6 +29,7 @@ export function SpritePreview({
   onBackground: (color: C64Color | null) => void
   onToggleExpand: (axis: 'expandX' | 'expandY') => void
 }) {
+  const palette = usePalette()
   const image = useMemo(
     () => ({
       width: SPRITE_RENDER_WIDTH,
@@ -67,7 +69,7 @@ export function SpritePreview({
       </div>
       <div
         className="flex h-[100px] items-center justify-center rounded-lg border-[5px] border-c64-border"
-        style={{ background: PALETTE[background ?? 6].hex }}
+        style={{ background: palette.hex[background ?? 6] }}
       >
         <IndexedCanvas
           image={image}
@@ -91,6 +93,7 @@ function BackgroundPicker({
   value: C64Color | null
   onChange: (color: C64Color | null) => void
 }) {
+  const palette = usePalette()
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -104,7 +107,7 @@ function BackgroundPicker({
             aria-hidden="true"
             className="size-3.5 rounded-sm border border-rule"
             style={{
-              background: value === null ? 'var(--paper)' : PALETTE[value].hex,
+              background: value === null ? 'var(--paper)' : palette.hex[value],
             }}
           />
           Bg
@@ -119,17 +122,17 @@ function BackgroundPicker({
           Paper (preview on blue)
         </DropdownMenuItem>
         <div className="grid grid-cols-4 gap-1 p-1">
-          {PALETTE.map((p) => (
+          {palette.hex.map((hex, index) => (
             <DropdownMenuItem
-              key={p.index}
-              aria-label={p.name}
-              title={p.name}
-              onSelect={() => onChange(p.index)}
+              key={index}
+              aria-label={COLOR_NAMES[index]}
+              title={COLOR_NAMES[index]}
+              onSelect={() => onChange(index)}
               className={cn(
                 'h-9 min-h-0 justify-center border border-rule p-0',
-                value === p.index && 'ring-2 ring-primary',
+                value === index && 'ring-2 ring-primary',
               )}
-              style={{ background: p.hex }}
+              style={{ background: hex }}
             />
           ))}
         </div>

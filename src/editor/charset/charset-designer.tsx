@@ -44,7 +44,8 @@ import {
   swapChars,
 } from '@/c64/charset'
 import { CHAR_SHAPE, floodFill } from '@/c64/bitmap'
-import { PALETTE } from '@/c64/palette'
+import { COLOR_NAMES } from '@/c64/palette'
+import { usePalette } from '@/components/c64/palette-context'
 import { mapsUsingCharset, projectColors } from '@/c64/project'
 import { WorksheetLayout } from '@/components/worksheet/worksheet-layout'
 import { Breadcrumbs } from '@/components/worksheet/breadcrumbs'
@@ -128,6 +129,7 @@ export function CharsetDesigner({
   status: Status
   error: string | null
 }) {
+  const palette = usePalette()
   const history = useAssetHistory(session, 'charsets', charset.id, charset)
   useUndoShortcuts(history)
   const count = charCount(charset.mode)
@@ -239,7 +241,7 @@ export function CharsetDesigner({
     () => [{ pixels: Int8Array.from(renderChar(charset, selected)) }],
     [charset, selected],
   )
-  const bgHex = PALETTE[charset.background].hex
+  const bgHex = palette.hex[charset.background]
   const renderGrid = (
     size: number,
     v: GridView,
@@ -829,6 +831,7 @@ function EcmBackgrounds({
   target: number | null
   onTarget: (k: number) => void
 }) {
+  const palette = usePalette()
   return (
     <div className="flex flex-col gap-1">
       <div className="text-xs text-muted-foreground">
@@ -840,7 +843,7 @@ function EcmBackgrounds({
             key={k}
             type="button"
             aria-pressed={target === k}
-            aria-label={`ECM background ${k}, ${PALETTE[c].name} ($D02${k + 1})`}
+            aria-label={`ECM background ${k}, ${COLOR_NAMES[c]} ($D02${k + 1})`}
             title={`$D02${k + 1}`}
             onClick={() => onTarget(k)}
             className={cn(
@@ -853,7 +856,7 @@ function EcmBackgrounds({
             <span
               aria-hidden="true"
               className="size-4 shrink-0 rounded-[4px] border border-rule"
-              style={{ background: PALETTE[c].hex }}
+              style={{ background: palette.hex[c] }}
             />
             B{k}
           </button>
@@ -865,6 +868,7 @@ function EcmBackgrounds({
 
 /** The char tiled on the screen, or in ECM on each of the four backgrounds. */
 function CharPreview({ charset, index }: { charset: Charset; index: number }) {
+  const palette = usePalette()
   if (charset.mode === 'ecm') {
     return (
       <div className="flex flex-col gap-1">
@@ -911,7 +915,7 @@ function CharPreview({ charset, index }: { charset: Charset; index: number }) {
       <div className="text-xs text-muted-foreground">Preview · tiled</div>
       <div
         className="rounded-lg border-[5px]"
-        style={{ borderColor: PALETTE[14].hex }}
+        style={{ borderColor: palette.hex[14] }}
       >
         <IndexedCanvas
           image={image}

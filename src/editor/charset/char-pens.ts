@@ -4,7 +4,7 @@ import {
   setCharColor,
   setCharsetRegisters,
 } from '@/c64/charset'
-import { PALETTE } from '@/c64/palette'
+import { COLOR_NAMES } from '@/c64/palette'
 import type { Charset } from '@/c64/charset'
 import type { C64Color } from '@/c64/palette'
 import type { PenDef } from '../pens-panel'
@@ -49,7 +49,7 @@ export function charPens(cs: Charset, index: number): Array<PenDef<CharSlot>> {
   const own: PenDef<CharSlot> = {
     value: 1,
     code: '1',
-    name: `Char colour · ${PALETTE[cc].name}`,
+    name: `Char colour · ${COLOR_NAMES[cc]}`,
     sub:
       cs.mode === 'multicolor'
         ? 'Colour RAM, 0–7 (hires char)'
@@ -58,7 +58,6 @@ export function charPens(cs: Charset, index: number): Array<PenDef<CharSlot>> {
     slot: 'char',
   }
   if (cs.mode === 'ecm') {
-    const bgs = ecmBackgroundColors(cs).map((c) => PALETTE[c].hex)
     return [
       {
         value: 0,
@@ -67,7 +66,7 @@ export function charPens(cs: Charset, index: number): Array<PenDef<CharSlot>> {
         sub: 'One of 4, picked per screen cell',
         color: null,
         slot: null,
-        swatch: `linear-gradient(90deg, ${bgs[0]} 25%, ${bgs[1]} 25% 50%, ${bgs[2]} 50% 75%, ${bgs[3]} 75%)`,
+        swatch: ecmBackgroundColors(cs),
       },
       own,
     ]
@@ -75,7 +74,7 @@ export function charPens(cs: Charset, index: number): Array<PenDef<CharSlot>> {
   const background: PenDef<CharSlot> = {
     value: 0,
     code: '0',
-    name: `Background · ${PALETTE[cs.background].name}`,
+    name: `Background · ${COLOR_NAMES[cs.background]}`,
     sub: '$D021 · whole screen',
     color: cs.background,
     slot: 'background',
@@ -86,7 +85,7 @@ export function charPens(cs: Charset, index: number): Array<PenDef<CharSlot>> {
     {
       value: 1,
       code: '01',
-      name: `Multicolour 1 · ${PALETTE[cs.multicolor1].name}`,
+      name: `Multicolour 1 · ${COLOR_NAMES[cs.multicolor1]}`,
       sub: '$D022 · whole screen',
       color: cs.multicolor1,
       slot: 'multicolor1',
@@ -94,7 +93,7 @@ export function charPens(cs: Charset, index: number): Array<PenDef<CharSlot>> {
     {
       value: 2,
       code: '10',
-      name: `Multicolour 2 · ${PALETTE[cs.multicolor2].name}`,
+      name: `Multicolour 2 · ${COLOR_NAMES[cs.multicolor2]}`,
       sub: '$D023 · whole screen',
       color: cs.multicolor2,
       slot: 'multicolor2',

@@ -9,14 +9,16 @@ import {
   removeMap,
   removeSpriteSet,
   renameAsset,
+  setProjectPalette,
 } from '@/c64/project'
 import { createSpriteSet } from '@/c64/sprite-set'
 import { createCharset, petsciiData } from '@/c64/charset'
 import { MAX_MAP_SIZE, createCharmap } from '@/c64/charmap'
-import { PALETTE } from '@/c64/palette'
+import { COLOR_NAMES } from '@/c64/palette'
 import { WorksheetLayout } from '@/components/worksheet/worksheet-layout'
 import { Breadcrumbs } from '@/components/worksheet/breadcrumbs'
 import { Field, worksheetInputClass } from '@/components/worksheet/field'
+import { PaletteSelect } from '@/components/c64/palette-select'
 import { ConfirmDialog, PromptDialog } from '@/components/dialogs'
 import { SaveStatus } from '@/components/save-status'
 import {
@@ -172,6 +174,17 @@ function ProjectPage() {
             }
           />
         </Field>
+        <div className="flex flex-col gap-[3px] text-xs text-muted-foreground">
+          <label htmlFor="project-palette">Colour palette</label>
+          <PaletteSelect
+            id="project-palette"
+            value={project.palette}
+            onChange={(id) => update((p) => setProjectPalette(p, id))}
+          />
+          <span className="leading-snug">
+            How colours look in C64-Pad. Data and exports are unchanged.
+          </span>
+        </div>
         <Field label="Notes">
           <Textarea
             rows={6}
@@ -201,7 +214,7 @@ function ProjectPage() {
             <AssetCard
               key={set.id}
               name={set.name}
-              meta={`${set.sprites.length} sprite${set.sprites.length === 1 ? '' : 's'} · MC ${PALETTE[set.multicolor1].name} / ${PALETTE[set.multicolor2].name}`}
+              meta={`${set.sprites.length} sprite${set.sprites.length === 1 ? '' : 's'} · MC ${COLOR_NAMES[set.multicolor1]} / ${COLOR_NAMES[set.multicolor2]}`}
               link={{
                 to: '/projects/$projectId/sprites/$setId',
                 params: { projectId, setId: set.id },

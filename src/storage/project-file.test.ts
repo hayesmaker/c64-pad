@@ -29,6 +29,20 @@ describe('.c64pad files', () => {
     expect(back.spriteSets[0].sprites[0].data).toBeInstanceOf(Uint8Array)
   })
 
+  it('keeps the palette, and gives v1 projects Colodore', () => {
+    const p = { ...sampleProject(), palette: 'pepto' as const }
+    expect(importProjectFile(exportProjectFile(p)).palette).toBe('pepto')
+    const json = JSON.parse(exportProjectFile(p))
+    json.version = 1
+    json.project.version = 1
+    delete json.project.palette
+    const v1 = importProjectFile(JSON.stringify(json))
+    expect(v1.version).toBe(2)
+    expect(v1.palette).toBe('colodore')
+    json.project.palette = 'made-up'
+    expect(importProjectFile(JSON.stringify(json)).palette).toBe('colodore')
+  })
+
   it('stores bytes as base64, not number arrays', () => {
     const text = exportProjectFile(sampleProject())
     expect(text).toContain('"$bytes"')

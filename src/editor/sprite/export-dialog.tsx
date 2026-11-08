@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Download, Play } from 'lucide-react'
-import { PALETTE } from '@/c64/palette'
+import { COLOR_NAMES } from '@/c64/palette'
 import {
   exportSpritesBin,
   exportSpritesKickAss,
@@ -20,6 +20,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { indexedImageToPng } from '@/platform/png'
+import { usePalette } from '@/components/c64/palette-context'
 import { safeFileName, saveFile } from '@/platform/save-file'
 import { Segmented } from '../segmented'
 import type { PadByte, SpriteRange } from '@/export/sprites'
@@ -93,6 +94,7 @@ export function RunExportSpritesDialog({
   const [to, setTo] = useState(String(last))
   const [pad, setPad] = useState<PadByte>('zero')
   const [scale, setScale] = useState(4)
+  const palette = usePalette()
   const [columns, setColumns] = useState(Math.min(8, set.sprites.length))
   const [pngBackground, setPngBackground] = useState<'transparent' | 'screen'>(
     'transparent',
@@ -157,6 +159,7 @@ export function RunExportSpritesDialog({
           const png = await indexedImageToPng(sheet, {
             scale,
             background: pngBackground === 'screen' ? screenColor : null,
+            palette: palette.id,
           })
           saved = await saveFile(`${baseName}.png`, png, 'image/png')
         }
@@ -309,7 +312,7 @@ export function RunExportSpritesDialog({
               <div className="flex flex-col gap-1 text-sm">
                 <p>
                   {set.sprites.length} sprites, {set.animations.length}{' '}
-                  animation(s). Screen colour {PALETTE[screenColor].name} (the
+                  animation(s). Screen colour {COLOR_NAMES[screenColor]} (the
                   editor background).
                 </p>
                 {spd.warnings.map((w) => (
@@ -350,7 +353,7 @@ export function RunExportSpritesDialog({
                       value={pngBackground}
                       options={[
                         { value: 'transparent', label: 'Transparent' },
-                        { value: 'screen', label: PALETTE[screenColor].name },
+                        { value: 'screen', label: COLOR_NAMES[screenColor] },
                       ]}
                       onChange={setPngBackground}
                     />
@@ -361,7 +364,7 @@ export function RunExportSpritesDialog({
                   style={{
                     background:
                       pngBackground === 'screen'
-                        ? PALETTE[screenColor].hex
+                        ? palette.hex[screenColor]
                         : 'repeating-conic-gradient(var(--checker-a) 0% 25%, var(--checker-b) 0% 50%) 0 0 / 12px 12px',
                   }}
                 >

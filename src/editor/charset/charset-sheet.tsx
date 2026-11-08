@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { charCount, renderChar } from '@/c64/charset'
-import { PALETTE } from '@/c64/palette'
+import { usePalette } from '@/components/c64/palette-context'
 import { cssVar, useColorScheme } from '@/lib/theme'
 import type { Charset } from '@/c64/charset'
 
@@ -31,6 +31,7 @@ export function CharsetSheet({
   /** ECM background 0-3 to draw the chars on (default 0). */
   background?: number
 }) {
+  const palette = usePalette()
   const PITCH = pitch
   const SCALE = (pitch - 1) / 8
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -55,7 +56,7 @@ export function CharsetSheet({
       const pixels = renderChar(charset, i, background)
       for (let y = 0; y < 8; y++) {
         for (let x = 0; x < 8; x++) {
-          ctx.fillStyle = PALETTE[pixels[y * 8 + x]].hex
+          ctx.fillStyle = palette.hex[pixels[y * 8 + x]]
           ctx.fillRect(ox + x * SCALE, oy + y * SCALE, SCALE, SCALE)
         }
       }
@@ -76,6 +77,7 @@ export function CharsetSheet({
     SCALE,
     background,
     scheme,
+    palette,
   ])
 
   const pick = (e: React.PointerEvent<HTMLCanvasElement>) => {

@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { PALETTE } from '@/c64/palette'
+import { usePalette } from '@/components/c64/palette-context'
 import { SPRITE_HEIGHT } from '@/c64/sprite'
 import { SPRITE_RENDER_WIDTH, renderSprite } from '@/c64/sprite-set'
 import { PixelGrid } from '../pixel-grid'
@@ -36,6 +36,7 @@ export function SpriteGrid({
   onViewChange: (view: GridView) => void
   tracing?: GridTracing | null
 } & StrokeHandlers) {
+  const palette = usePalette()
   const { base, overlay } = layers
   const scheme = useColorScheme()
   // Re-read the paper colour when the device switches light / dark.
@@ -59,7 +60,7 @@ export function SpriteGrid({
       majorX={8}
       majorY={7}
       layers={gridLayers}
-      background={background === null ? paper : PALETTE[background].hex}
+      background={background === null ? paper : palette.hex[background]}
       label={`${sprite.name} pixel grid, ${sprite.mode === 'multicolor' ? '12' : '24'} by 21`}
     />
   )

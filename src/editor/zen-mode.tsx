@@ -12,12 +12,14 @@ import {
   Redo2,
   Undo2,
 } from 'lucide-react'
-import { PALETTE } from '@/c64/palette'
+import { COLOR_NAMES } from '@/c64/palette'
+import { usePalette } from '@/components/c64/palette-context'
 import { cn } from '@/lib/utils'
 import { DEFAULT_VIEW, MAX_ZOOM, zoomAround } from './view'
 import { zoomLabel } from './grid-parts'
 import type { ReactNode } from 'react'
 import type { GridView } from './view'
+import { penSwatch } from './pens-panel'
 import type { PenDef } from './pens-panel'
 import type { C64Color } from '@/c64/palette'
 
@@ -27,9 +29,6 @@ export type ZenTool = 'draw' | 'erase' | 'fill' | 'pan'
 const TOP = 72
 /** Room for the tools panel on the left. */
 const LEFT = 96
-
-const TRANSPARENT_SWATCH =
-  'repeating-conic-gradient(var(--checker-a) 0% 25%, var(--checker-b) 0% 50%) 0 0 / 8px 8px'
 
 /**
  * Zen mode: the grid alone, filling the screen, with pinch zoom and only the
@@ -329,6 +328,7 @@ export function ZenPens({
   isAllowed?: (color: C64Color) => boolean
   onRecolor: (color: C64Color) => void
 }) {
+  const palette = usePalette()
   const chosen = pens.find((p) => p.value === pen)
   return (
     <div className="flex w-[108px] flex-col gap-2.5">
@@ -352,13 +352,7 @@ export function ZenPens({
             <span
               aria-hidden="true"
               className="size-8 rounded-full border border-rule"
-              style={{
-                background:
-                  p.swatch ??
-                  (p.color === null
-                    ? TRANSPARENT_SWATCH
-                    : PALETTE[p.color].hex),
-              }}
+              style={{ background: penSwatch(p, palette.hex) }}
             />
             <span className="font-mono text-[11px] text-ink-soft">
               {p.code}
@@ -377,8 +371,8 @@ export function ZenPens({
           <button
             key={c}
             type="button"
-            aria-label={`Set pen colour to ${PALETTE[c].name}`}
-            title={`${PALETTE[c].name} (${c})`}
+            aria-label={`Set pen colour to ${COLOR_NAMES[c]}`}
+            title={`${COLOR_NAMES[c]} (${c})`}
             disabled={penColor === null || !isAllowed(c)}
             onClick={() => onRecolor(c)}
             className={cn(
@@ -386,7 +380,7 @@ export function ZenPens({
               penColor === c &&
                 'ring-2 ring-primary ring-offset-2 ring-offset-paper',
             )}
-            style={{ background: PALETTE[c].hex }}
+            style={{ background: palette.hex[c] }}
           />
         ))}
       </div>

@@ -2,6 +2,8 @@ import { Link, Outlet, createFileRoute, notFound } from '@tanstack/react-router'
 import { ProjectNotFoundError, openSession } from '@/storage/sessions'
 import { WorksheetLayout } from '@/components/worksheet/worksheet-layout'
 import { Breadcrumbs } from '@/components/worksheet/breadcrumbs'
+import { PaletteProvider } from '@/components/c64/palette-context'
+import { useCurrentProject } from '@/storage/use-current-project'
 
 export const Route = createFileRoute('/projects/$projectId')({
   loader: async ({ params }) => {
@@ -13,9 +15,19 @@ export const Route = createFileRoute('/projects/$projectId')({
       throw e
     }
   },
-  component: Outlet,
+  component: ProjectShell,
   notFoundComponent: ProjectMissing,
 })
+
+/** Every page of an open project draws in the project's palette. */
+function ProjectShell() {
+  const { project } = useCurrentProject()
+  return (
+    <PaletteProvider id={project.palette}>
+      <Outlet />
+    </PaletteProvider>
+  )
+}
 
 function ProjectMissing() {
   return (

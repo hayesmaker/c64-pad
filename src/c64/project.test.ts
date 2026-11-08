@@ -13,6 +13,7 @@ import {
   removeMap,
   renameAsset,
   setMapCharset,
+  setProjectPalette,
   touchProject,
   updateAsset,
 } from './project'
@@ -22,12 +23,20 @@ const now = new Date('2026-11-06T12:00:00Z')
 describe('project', () => {
   it('starts with a sprite set, a charset and a map using it', () => {
     const p = createProject({ name: 'Star Patrol' }, now)
-    expect(p.version).toBe(1)
+    expect(p.version).toBe(2)
+    expect(p.palette).toBe('colodore')
     expect(p.dateDesigned).toBe('2026-11-06')
     expect([p.spriteSets.length, p.charsets.length, p.maps.length]).toEqual([
       1, 1, 1,
     ])
     expect(p.maps[0].charsetId).toBe(p.charsets[0].id)
+  })
+
+  it('switches the display palette', () => {
+    const p = createProject()
+    expect(setProjectPalette(p, 'pepto').palette).toBe('pepto')
+    expect(setProjectPalette(p, 'colodore')).toBe(p)
+    expect(() => setProjectPalette(p, 'nope' as 'pepto')).toThrow(ModelError)
   })
 
   it('rejects maps pointing at missing charsets', () => {

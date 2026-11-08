@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef } from 'react'
 import { decodeEcm } from '@/c64/charmap'
 import { renderChar } from '@/c64/charset'
-import { PALETTE } from '@/c64/palette'
+import { usePalette } from '@/components/c64/palette-context'
 import { cn } from '@/lib/utils'
 import { useGridGestures } from '../gestures'
 import { clampViewTo, zoomAroundIn } from '../view'
@@ -11,6 +11,7 @@ import type { StrokeHandlers } from '../gestures'
 import type { GridView, ViewBounds } from '../view'
 import type { Charmap } from '@/c64/charmap'
 import type { Charset } from '@/c64/charset'
+import type { Rgb } from '@/c64/palette'
 
 /** One C64 screen, for the heavy screen-boundary lines. */
 const SCREEN_W = 40
@@ -49,18 +50,16 @@ export function mapBounds(
  * Every screen code drawn once into an 8 px tall strip (2048 × 8), so the map
  * is drawn with one drawImage per visible cell.
  */
-export function charAtlas(charset: Charset): HTMLCanvasElement {
+export function charAtlas(
+  charset: Charset,
+  rgb: ReadonlyArray<Rgb>,
+): HTMLCanvasElement {
   const canvas = document.createElement('canvas')
   canvas.width = 256 * 8
   canvas.height = 8
   const ctx = canvas.getContext('2d')
   if (!ctx) return canvas
   const image = ctx.createImageData(256 * 8, 8)
-  const rgb = PALETTE.map(({ hex }) => [
-    parseInt(hex.slice(1, 3), 16),
-    parseInt(hex.slice(3, 5), 16),
-    parseInt(hex.slice(5, 7), 16),
-  ])
   for (let code = 0; code < 256; code++) {
     const pixels =
       charset.mode === 'ecm'
@@ -120,7 +119,11 @@ export function MapCanvas({
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const bounds = mapBounds(map, cell, frame)
   const { frameW, frameH } = bounds
-  const atlas = useMemo(() => charAtlas(charset), [charset])
+  const palette = usePalette()
+  const atlas = useMemo(
+    () => charAtlas(charset, palette.rgb),
+    [charset, palette.rgb],
+  )
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -151,7 +154,7 @@ export function MapCanvas({
     const under = tracing?.layer === 'under' ? tracing : null
     if (under) {
       // Background, the image, then every cell that isn't blank on top.
-      ctx.fillStyle = PALETTE[charset.background].hex
+      ctx.fillStyle = palette.hex[charset.background]
       ctx.fillRect(
         px(x0, view.x),
         px(y0, view.y),
@@ -258,6 +261,7 @@ export function MapCanvas({
     selection,
     tracing,
     charset.background,
+    palette,
   ])
 
   useGridGestures(canvasRef, {

@@ -5,11 +5,12 @@ import { newId } from './ids'
 import { createSpriteSet } from './sprite-set'
 import type { Charmap } from './charmap'
 import type { Charset } from './charset'
-import type { C64Color } from './palette'
+import { DEFAULT_PALETTE_ID, isPaletteId } from './palette'
+import type { C64Color, PaletteId } from './palette'
 import type { SpriteSet } from './sprite-set'
 
 /** Bump when the stored shape changes; persistence migrates older versions. */
-export const PROJECT_VERSION = 1
+export const PROJECT_VERSION = 2
 
 /** The unit of saving and export: holds any number of sprite sets, charsets and maps. */
 export interface Project {
@@ -19,6 +20,8 @@ export interface Project {
   /** The program the designs are for (worksheet "Program" field). */
   readonly program: string
   readonly notes: string
+  /** How colours are shown (display only; data stores colour indices). */
+  readonly palette: PaletteId
   /** Worksheet "Date designed", YYYY-MM-DD. */
   readonly dateDesigned: string
   readonly createdAt: string
@@ -43,6 +46,7 @@ export function createProject(
     name: 'Untitled project',
     program: '',
     notes: '',
+    palette: DEFAULT_PALETTE_ID,
     dateDesigned: iso.slice(0, 10),
     createdAt: iso,
     updatedAt: iso,
@@ -86,6 +90,15 @@ export function touchProject(
 
 export function renameProject(project: Project, name: string): Project {
   return { ...project, name }
+}
+
+/** Show the project in another palette. Returns the same project if unchanged. */
+export function setProjectPalette(
+  project: Project,
+  palette: PaletteId,
+): Project {
+  if (!isPaletteId(palette)) throw new ModelError(`Unknown palette ${palette}`)
+  return project.palette === palette ? project : { ...project, palette }
 }
 
 // ---- generic asset helpers

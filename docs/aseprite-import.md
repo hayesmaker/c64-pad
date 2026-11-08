@@ -35,15 +35,15 @@ So when an imported file uses a different palette from the project, "switch the 
   - `DEFAULT_PALETTE = 'colodore'`, so existing projects look the same as before.
 - Palettes:
 
-  | Id          | Name             | Notes                                                            |
-  | ----------- | ---------------- | ---------------------------------------------------------------- |
-  | `colodore`  | Colodore         | Pepto's 2017 model; the current C64-Pad palette                  |
-  | `pepto`     | Pepto (PAL)      | Pepto's original 2001 measurements; Aseprite's usual C64 palette |
-  | `vice`      | VICE default     | VICE's default palette                                           |
-  | `ccs64`     | CCS64            |                                                                  |
-  | `frodo`     | Frodo            |                                                                  |
-  | `c64hq`     | C64HQ            |                                                                  |
-  | `community` | Community Colors | See below                                                        |
+  | Id          | Name             | Notes                                                                                                                                  |
+  | ----------- | ---------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+  | `colodore`  | Colodore         | Pepto's 2017 model; the current C64-Pad palette                                                                                        |
+  | `pepto`     | Pepto            | Pepto's original 2001 values, as in Aseprite's Commodore 64 palette (VICE's `pepto-pal.vpl` is a later revision with different values) |
+  | `vice`      | VICE default     | VICE's default palette                                                                                                                 |
+  | `ccs64`     | CCS64            |                                                                                                                                        |
+  | `frodo`     | Frodo            |                                                                                                                                        |
+  | `c64hq`     | C64HQ            |                                                                                                                                        |
+  | `community` | Community Colors | See below                                                                                                                              |
 
 - Take the values from VICE's `data/C64/*.vpl` files and the original Colodore and Pepto references, not from memory. The user does a quick check against their emulator.
 - **Community Colors**: a palette tuned by people in the C64 community from real machines on CRTs, as an alternative to the measured palettes. It's the one entry whose source and exact values still need confirming. Before adding it, check whether VICE ships a `.vpl` for it; if there's no reliable source, drop it from the list.
@@ -58,7 +58,7 @@ So when an imported file uses a different palette from the project, "switch the 
 - Bump `PROJECT_VERSION` to 2. `migrateProject` sets `palette: 'colodore'` for v1 projects and files.
 - `validateProject` falls back to the default for an unknown palette id instead of failing.
 - Bumping the version means an older app build refuses a v2 file instead of silently dropping the palette.
-- `setProjectPalette(project, id)` in `project.ts`. It goes through `update()`, so it can be undone like any other edit.
+- `setProjectPalette(project, id)` in `project.ts`. It goes through `update()` like the other project fields. (The Project Worksheet has no undo; pick the old palette again to go back.)
 
 ### 1.3 Rendering uses the project palette
 
@@ -73,7 +73,7 @@ So when an imported file uses a different palette from the project, "switch the 
 ### 1.4 Selector UI (Project Worksheet)
 
 - A **Colour palette** field in the worksheet fields block. It opens a picker listing each palette as its name plus a strip of 16 swatches, with the current one marked.
-- Picking a palette changes it immediately and repaints the overview thumbnails. Undo reverts it.
+- Picking a palette changes it immediately and repaints the overview thumbnails.
 - Hint: "Changes how colours look in C64-Pad only. Your data and exports are unchanged."
 - Tablet rules apply: large touch targets, no hover-only previews.
 
@@ -192,7 +192,7 @@ Pure functions:
   - Background / MC1 / MC2, already set from the validator. Changing them re-runs the fit check.
 - **Import:**
   - One `update((p) => …)`: optional `setProjectPalette`, then add or replace the charset and map.
-  - `checkIntegrity` runs as usual, and one undo reverts the whole import.
+  - `checkIntegrity` runs as usual. The Project Worksheet has no undo, so the dialog should make clear what will be added or replaced before Import.
 
 ### 2.5 Later (not in the first pass)
 

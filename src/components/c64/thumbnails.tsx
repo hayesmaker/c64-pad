@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { renderCharmap, renderCharsetSheet } from '@/c64/render'
 import { SPRITE_RENDER_WIDTH, renderSprite } from '@/c64/sprite-set'
 import { SPRITE_HEIGHT } from '@/c64/sprite'
-import { PALETTE } from '@/c64/palette'
+import { usePalette } from '@/components/c64/palette-context'
 import { IndexedCanvas } from './indexed-canvas'
 import type { Charmap } from '@/c64/charmap'
 import type { Charset } from '@/c64/charset'
@@ -35,13 +35,14 @@ export function SpriteSetThumbnail({ set }: { set: SpriteSet }) {
 }
 
 export function CharsetThumbnail({ charset }: { charset: Charset }) {
+  const palette = usePalette()
   const image = useMemo(() => renderCharsetSheet(charset, 32), [charset])
   return (
     <div
       className={frame}
       style={{
-        backgroundColor: PALETTE[charset.background].hex,
-        borderColor: PALETTE[charset.background].hex,
+        backgroundColor: palette.hex[charset.background],
+        borderColor: palette.hex[charset.background],
       }}
     >
       <IndexedCanvas

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { MapIcon, Minus } from 'lucide-react'
-import { PALETTE } from '@/c64/palette'
+import { usePalette } from '@/components/c64/palette-context'
 import { drawTracing } from '../tracing/placement'
 import { clampViewTo } from '../view'
 import { charAtlas } from './map-canvas'
@@ -108,7 +108,11 @@ export function MapNavigator({
 }) {
   const [open, setOpen] = useState(true)
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const atlas = useMemo(() => charAtlas(charset), [charset])
+  const palette = usePalette()
+  const atlas = useMemo(
+    () => charAtlas(charset, palette.rgb),
+    [charset, palette.rgb],
+  )
   const averages = useMemo(() => averageColors(atlas), [atlas])
   const k = navigatorScale(map, {
     width: bounds.frameW,
@@ -133,7 +137,7 @@ export function MapNavigator({
     const sy = navH / map.height
     const under = tracing?.layer === 'under' ? tracing : null
     if (under) {
-      ctx.fillStyle = PALETTE[charset.background].hex
+      ctx.fillStyle = palette.hex[charset.background]
       ctx.fillRect(0, 0, navW, navH)
       drawTracing(ctx, under, sx / 8, { width: navW, height: navH })
     }
@@ -178,6 +182,7 @@ export function MapNavigator({
     navH,
     tracing,
     charset.background,
+    palette,
     open,
     fits,
   ])

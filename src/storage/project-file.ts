@@ -3,6 +3,7 @@ import { createCharset } from '@/c64/charset'
 import { PROJECT_VERSION, checkIntegrity } from '@/c64/project'
 import { createSprite } from '@/c64/sprite'
 import { createSpriteSet } from '@/c64/sprite-set'
+import { DEFAULT_PALETTE_ID, isPaletteId } from '@/c64/palette'
 import { base64ToBytes, bytesToBase64 } from './bytes'
 import type { Project } from '@/c64/project'
 
@@ -69,7 +70,8 @@ export function migrateProject(raw: unknown): Project {
       `This project was saved by a newer C64-Pad (format ${version}); please update the app`,
     )
   }
-  // Future migrations: if (version < 2) raw = migrateV1toV2(raw) ...
+  // v1 → v2: projects gained a display palette; v1 always showed Colodore,
+  // which validateProject fills in. Future: if (version < 3) raw = ...
   return validateProject(raw as unknown as Project)
 }
 
@@ -84,6 +86,8 @@ function validateProject(
       name: String(p.name),
       program: String(p.program ?? ''),
       notes: String(p.notes ?? ''),
+      // Missing (v1) or unknown (hand-edited): fall back rather than fail.
+      palette: isPaletteId(p.palette) ? p.palette : DEFAULT_PALETTE_ID,
       dateDesigned: String(p.dateDesigned ?? ''),
       createdAt: String(p.createdAt),
       updatedAt: String(p.updatedAt),

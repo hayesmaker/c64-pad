@@ -21,7 +21,7 @@ import {
   renderSprite,
   updateAnimation,
 } from '@/c64/sprite-set'
-import { PALETTE } from '@/c64/palette'
+import { usePalette } from '@/components/c64/palette-context'
 import { newId } from '@/c64/ids'
 import { IndexedCanvas } from '@/components/c64/indexed-canvas'
 import { Field } from '@/components/worksheet/field'
@@ -217,6 +217,7 @@ function AnimationDialog({
   onChange: (fn: (set: SpriteSet) => SpriteSet, group?: string) => void
   onDelete: () => void
 }) {
+  const palette = usePalette()
   const update = (
     fn: (a: SpriteAnimation) => SpriteAnimation,
     group?: string,
@@ -294,7 +295,7 @@ function AnimationDialog({
           </div>
           <div
             className="flex size-[132px] shrink-0 items-center justify-center rounded-lg border-[5px] border-c64-border"
-            style={{ background: PALETTE[background ?? 6].hex }}
+            style={{ background: palette.hex[background ?? 6] }}
             aria-label="Animation preview"
           >
             {frame && (

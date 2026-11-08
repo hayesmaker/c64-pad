@@ -1,4 +1,4 @@
-import { PALETTE } from '@/c64/palette'
+import { COLOR_NAMES } from '@/c64/palette'
 import type { PenDef } from '../pens-panel'
 import type { Sprite } from '@/c64/sprite'
 import type { SpriteSet } from '@/c64/sprite-set'
@@ -18,7 +18,7 @@ export function spritePens(
     slot: null,
   }
   const own: Omit<PenDef<SpriteSlot>, 'value' | 'code'> = {
-    name: `Sprite colour · ${PALETTE[sprite.color].name}`,
+    name: `Sprite colour · ${COLOR_NAMES[sprite.color]}`,
     sub: 'This sprite only',
     color: sprite.color,
     slot: 'color',
@@ -30,7 +30,7 @@ export function spritePens(
     {
       value: 1,
       code: '01',
-      name: `Multicolour 1 · ${PALETTE[set.multicolor1].name}`,
+      name: `Multicolour 1 · ${COLOR_NAMES[set.multicolor1]}`,
       sub: 'Shared by the set',
       color: set.multicolor1,
       slot: 'multicolor1',
@@ -39,7 +39,7 @@ export function spritePens(
     {
       value: 3,
       code: '11',
-      name: `Multicolour 2 · ${PALETTE[set.multicolor2].name}`,
+      name: `Multicolour 2 · ${COLOR_NAMES[set.multicolor2]}`,
       sub: 'Shared by the set',
       color: set.multicolor2,
       slot: 'multicolor2',

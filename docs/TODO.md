@@ -126,5 +126,5 @@ See `PLAN.md` → _Decisions_ for the reasoning behind these.
 
 Plan: [`docs/aseprite-import.md`](aseprite-import.md)
 
-- [ ] Part 1: per-project colour palette (Colodore default; Pepto, VICE, CCS64, Frodo, C64HQ, Community Colors once its source is confirmed): palette tables, project field with v2 migration, rendering via `usePalette`, selector on the Project Worksheet
+- [x] Part 1: per-project colour palette (Colodore default; Pepto, VICE, CCS64, Frodo, C64HQ, Community Colors): palette tables, project field with v2 migration, rendering via `usePalette`, selector on the Project Worksheet
 - [ ] Part 2: Aseprite import on the Project Worksheet: parser, validator (tileset + tilemap gate, palette match, C64 colour fit), converter to charset + map, import dialog (fixtures in `src/import/aseprite/__fixtures__/`)

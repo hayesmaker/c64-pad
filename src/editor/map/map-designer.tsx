@@ -27,7 +27,8 @@ import {
   setMapBlank,
 } from '@/c64/charmap'
 import { charColor, charCount } from '@/c64/charset'
-import { PALETTE } from '@/c64/palette'
+import { COLOR_NAMES } from '@/c64/palette'
+import { usePalette } from '@/components/c64/palette-context'
 import { renderCharmap } from '@/c64/render'
 import { WorksheetLayout } from '@/components/worksheet/worksheet-layout'
 import { Breadcrumbs } from '@/components/worksheet/breadcrumbs'
@@ -109,6 +110,7 @@ export function MapDesigner({
   status: Status
   error: string | null
 }) {
+  const palette = usePalette()
   const history = useAssetHistory(session, 'maps', map.id, map)
   useUndoShortcuts(history)
   const ecm = charset.mode === 'ecm'
@@ -345,7 +347,7 @@ export function MapDesigner({
                 key={k}
                 type="button"
                 aria-pressed={ecmBg === k}
-                aria-label={`Paint on ECM background ${k}, ${PALETTE[c].name}`}
+                aria-label={`Paint on ECM background ${k}, ${COLOR_NAMES[c]}`}
                 onClick={() => {
                   setEcmBg(k)
                   if (brushIsSingle)
@@ -361,7 +363,7 @@ export function MapDesigner({
                 <span
                   aria-hidden="true"
                   className="size-4 shrink-0 rounded-[4px] border border-rule"
-                  style={{ background: PALETTE[c].hex }}
+                  style={{ background: palette.hex[c] }}
                 />
                 B{k}
               </button>
@@ -912,7 +914,7 @@ function Readout({
     const char = charset.mode === 'ecm' ? decodeEcm(code).char : code
     const color =
       char < charCount(charset.mode)
-        ? PALETTE[charColor(charset, char)].name
+        ? COLOR_NAMES[charColor(charset, char)]
         : '—'
     items[0][1] = `x ${x}, y ${y}`
     items[1][1] = String(x + map.width * y)
@@ -988,7 +990,7 @@ function BrushBox({
           </span>
           <span className="text-[11px] text-muted-foreground">
             {isSingle
-              ? `${code} · ${char < charCount(charset.mode) ? PALETTE[charColor(charset, char)].name : ''}`
+              ? `${code} · ${char < charCount(charset.mode) ? COLOR_NAMES[charColor(charset, char)] : ''}`
               : 'From a selection · tiles as you drag'}
           </span>
         </div>

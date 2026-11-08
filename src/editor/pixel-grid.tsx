@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { PALETTE } from '@/c64/palette'
+import { usePalette } from '@/components/c64/palette-context'
 import { useGridGestures } from './gestures'
 import { drawTracing } from './tracing/placement'
 import type { GridTracing } from './tracing/placement'
@@ -58,6 +58,7 @@ export function PixelGrid({
 } & StrokeHandlers) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const scheme = useColorScheme()
+  const palette = usePalette()
   const width = columns * cell
   const height = rows * cell
 
@@ -83,8 +84,10 @@ export function PixelGrid({
       height,
       major: cssVar('--grid-major') || '#8f8d86',
       tracing: tracing ?? null,
+      hex: palette.hex,
     })
   }, [
+    palette,
     tracing,
     scheme,
     columns,
@@ -153,6 +156,8 @@ function draw(
     height: number
     major: string
     tracing: GridTracing | null
+    /** Palette colours by index. */
+    hex: ReadonlyArray<string>
   },
 ) {
   ctx.clearRect(0, 0, o.width, o.height)
@@ -172,7 +177,7 @@ function draw(
       for (let x = 0; x < o.columns; x++) {
         const index = layer.pixels[y * o.columns + x]
         if (index < 0) continue
-        ctx.fillStyle = PALETTE[index].hex
+        ctx.fillStyle = o.hex[index]
         // Slight overlap avoids hairline seams at fractional zoom.
         ctx.fillRect(x * cell, y * cell, cell + 0.5, cell + 0.5)
       }

@@ -16,6 +16,7 @@ import { Field } from '@/components/worksheet/field'
 import { Button } from '@/components/ui/button'
 import { DialogFooter } from '@/components/ui/dialog'
 import { indexedImageToPng } from '@/platform/png'
+import { usePalette } from '@/components/c64/palette-context'
 import { safeFileName, saveFile } from '@/platform/save-file'
 import { Segmented } from './segmented'
 import type { IndexedImage } from '@/c64/render'
@@ -135,6 +136,7 @@ export function CharsetExportPanel({
   type Format = 'chars' | 'colours' | 'asm' | 'png'
   const [format, setFormat] = useState<Format>('chars')
   const [scale, setScale] = useState(4)
+  const palette = usePalette().id
   const sheet = useMemo(() => renderCharsetSheet(charset), [charset])
   const asm = useMemo(
     () =>
@@ -170,7 +172,7 @@ export function CharsetExportPanel({
     },
     png: {
       extension: '.png',
-      data: () => indexedImageToPng(sheet, { scale }),
+      data: () => indexedImageToPng(sheet, { scale, palette }),
       mime: 'image/png',
       size: `${sheet.width * scale}×${sheet.height * scale} px`,
     },
@@ -241,6 +243,7 @@ export function MapExportPanel({
     ),
   )
   const [scale, setScale] = useState(Math.min(2, maxScale))
+  const palette = usePalette().id
   const image = useMemo(
     () => (format === 'png' ? renderMapImage(map, charset) : null),
     [format, map, charset],
@@ -293,7 +296,7 @@ export function MapExportPanel({
     },
     png: image && {
       extension: '.png',
-      data: () => indexedImageToPng(image, { scale }),
+      data: () => indexedImageToPng(image, { scale, palette }),
       mime: 'image/png',
       size: `${image.width * scale}×${image.height * scale} px`,
     },

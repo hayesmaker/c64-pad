@@ -1,5 +1,5 @@
 import { SPRITE_SHAPE, readPixels } from '@/c64/bitmap'
-import { PALETTE } from '@/c64/palette'
+import { COLOR_NAMES } from '@/c64/palette'
 import { SPRITE_BYTES, SPRITE_HEIGHT, SPRITE_STRIDE } from '@/c64/sprite'
 import { SPRITE_RENDER_WIDTH, renderSprite } from '@/c64/sprite-set'
 import type { C64Color } from '@/c64/palette'
@@ -121,7 +121,7 @@ export function exportSpritesKickAss(
   const sprites = spritesIn(set, range)
   const prefix = asmLabel(set.name, 'sprites')
   const lines: Array<string> = []
-  const colour = (c: C64Color) => `${c} // ${PALETTE[c].name}`
+  const colour = (c: C64Color) => `${c} // ${COLOR_NAMES[c]}`
   lines.push(
     `// Sprite set "${set.name}"${projectName ? ` from project "${projectName}"` : ''}`,
     `// ${sprites.length} sprite(s), sprites ${range.from}-${range.to}, 64 bytes each (63 data + 1 ${pad === 'zero' ? 'zero pad' : 'attribute byte'}).`,
