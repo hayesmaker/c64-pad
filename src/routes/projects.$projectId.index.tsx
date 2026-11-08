@@ -1,7 +1,6 @@
-import { useRef, useState } from 'react'
-import { Link, createFileRoute } from '@tanstack/react-router'
-import { Capacitor } from '@capacitor/core'
-import { Download, EllipsisVertical, FileUp, Plus } from 'lucide-react'
+import { useState } from 'react'
+import { createFileRoute } from '@tanstack/react-router'
+import { Download } from 'lucide-react'
 import {
   addAsset,
   duplicateAsset,
@@ -10,16 +9,13 @@ import {
   removeMap,
   removeSpriteSet,
   renameAsset,
-  setProjectPalette,
 } from '@/c64/project'
 import { createSpriteSet } from '@/c64/sprite-set'
 import { createCharset, petsciiData } from '@/c64/charset'
-import { MAX_MAP_SIZE, createCharmap } from '@/c64/charmap'
+import { createCharmap } from '@/c64/charmap'
 import { COLOR_NAMES } from '@/c64/palette'
 import { WorksheetLayout } from '@/components/worksheet/worksheet-layout'
 import { Breadcrumbs } from '@/components/worksheet/breadcrumbs'
-import { Field, worksheetInputClass } from '@/components/worksheet/field'
-import { PaletteSelect } from '@/components/c64/palette-select'
 import { ConfirmDialog, PromptDialog } from '@/components/dialogs'
 import { SaveStatus } from '@/components/save-status'
 import {
@@ -28,45 +24,23 @@ import {
   SpriteSetThumbnail,
 } from '@/components/c64/thumbnails'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
+import { AssetCard, AssetMenu, AssetSection } from '@/editor/project/asset-list'
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import { Segmented } from '@/editor/segmented'
+  DeleteCharsetDialog,
+  NewCharsetDialog,
+  NewMapDialog,
+  nextName,
+} from '@/editor/project/asset-dialogs'
+import { ProjectFields } from '@/editor/project/project-fields'
+import { ImportAsepriteButton } from '@/import/aseprite/import-aseprite-button'
 import { useCurrentProject } from '@/storage/use-current-project'
-import { ScreenPresets } from '@/editor/map/map-size'
 import {
   PROJECT_FILE_EXTENSION,
   exportProjectFile,
 } from '@/storage/project-file'
 import { safeFileName, saveTextFile } from '@/platform/save-file'
-import { AsepriteError, parseAseprite } from '@/import/aseprite/parse'
-import { ImportAsepriteDialog } from '@/import/aseprite/import-dialog'
-import type { AsepriteFile } from '@/import/aseprite/import-dialog'
-import type { ReactNode } from 'react'
-import type { LinkProps } from '@tanstack/react-router'
 import type { AssetKind, Project } from '@/c64/project'
-import type { Charset, CharsetMode, PetsciiSet } from '@/c64/charset'
+import type { Charset, CharsetMode } from '@/c64/charset'
 
 export const Route = createFileRoute('/projects/$projectId/')({
   component: ProjectPage,
@@ -85,36 +59,15 @@ type DialogState =
   | { kind: 'deleteCharset'; charset: Charset }
   | { kind: 'newMap' }
   | { kind: 'newCharset' }
-  | { kind: 'aseprite'; file: AsepriteFile }
   | null
 
-function nextName(base: string, existing: ReadonlyArray<{ name: string }>) {
-  let n = existing.length + 1
-  while (existing.some((a) => a.name === `${base} ${n}`)) n++
-  return `${base} ${n}`
-}
-
+/** The Project Worksheet: the project's fields and all its assets. */
 function ProjectPage() {
   const { session, project, status, error } = useCurrentProject()
   const [dialog, setDialog] = useState<DialogState>(null)
   const update = (fn: (p: Project) => Project) => session.update(fn)
   const projectId = project.id
   const close = (open: boolean) => !open && setDialog(null)
-  const asepriteInput = useRef<HTMLInputElement>(null)
-
-  const openAseprite = async (file: File) => {
-    const fileName = file.name
-    try {
-      const doc = await parseAseprite(new Uint8Array(await file.arrayBuffer()))
-      setDialog({ kind: 'aseprite', file: { fileName, doc } })
-    } catch (e) {
-      const message =
-        e instanceof AsepriteError
-          ? e.message
-          : `Couldn't read the file (${(e as Error).message})`
-      setDialog({ kind: 'aseprite', file: { fileName, error: message } })
-    }
-  }
 
   const exportFile = async () => {
     await session.flush()
@@ -124,34 +77,13 @@ function ProjectPage() {
     )
   }
 
-  const assetMenu = (asset: AssetRef, onDelete: () => void) => (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button
-          variant="ghost"
-          size="icon"
-          aria-label={`Actions for ${asset.name}`}
-        >
-          <EllipsisVertical aria-hidden="true" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        <DropdownMenuItem onSelect={() => setDialog({ kind: 'rename', asset })}>
-          Rename
-        </DropdownMenuItem>
-        <DropdownMenuItem
-          onSelect={() =>
-            update((p) => duplicateAsset(p, asset.kind, asset.id))
-          }
-        >
-          Duplicate
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem variant="destructive" onSelect={onDelete}>
-          Delete
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+  const menuFor = (asset: AssetRef, onDelete?: () => void) => (
+    <AssetMenu
+      name={asset.name}
+      onRename={() => setDialog({ kind: 'rename', asset })}
+      onDuplicate={() => update((p) => duplicateAsset(p, asset.kind, asset.id))}
+      onDelete={onDelete ?? (() => setDialog({ kind: 'delete', asset }))}
+    />
   )
 
   return (
@@ -161,13 +93,7 @@ function ProjectPage() {
       actions={
         <div className="flex items-center gap-3">
           <SaveStatus status={status} error={error} />
-          <Button
-            variant="outline"
-            onClick={() => asepriteInput.current?.click()}
-          >
-            <FileUp aria-hidden="true" />
-            Import Aseprite
-          </Button>
+          <ImportAsepriteButton project={project} onImport={update} />
           <Button variant="outline" onClick={() => void exportFile()}>
             <Download aria-hidden="true" />
             Export
@@ -176,64 +102,7 @@ function ProjectPage() {
       }
       className="flex gap-7 overflow-auto px-6 py-5"
     >
-      <input
-        ref={asepriteInput}
-        type="file"
-        // Android's picker filters by MIME type and has none for .aseprite,
-        // so any filter there greys the file out. Accept anything; import checks.
-        accept={Capacitor.isNativePlatform() ? undefined : '.aseprite,.ase'}
-        className="hidden"
-        onChange={(e) => {
-          const file = e.target.files?.[0]
-          e.target.value = ''
-          if (file) void openAseprite(file)
-        }}
-      />
-      {/* Worksheet fields */}
-      <div className="flex w-[260px] shrink-0 flex-col gap-3">
-        <Field label="Project name">
-          <Input
-            value={project.name}
-            onChange={(e) => update((p) => ({ ...p, name: e.target.value }))}
-          />
-        </Field>
-        <Field label="Program">
-          <Input
-            value={project.program}
-            placeholder="e.g. the game these graphics are for"
-            onChange={(e) => update((p) => ({ ...p, program: e.target.value }))}
-          />
-        </Field>
-        <Field label="Date designed">
-          <input
-            type="date"
-            className={worksheetInputClass}
-            value={project.dateDesigned}
-            onChange={(e) =>
-              update((p) => ({ ...p, dateDesigned: e.target.value }))
-            }
-          />
-        </Field>
-        <div className="flex flex-col gap-[3px] text-xs text-muted-foreground">
-          <label htmlFor="project-palette">Colour palette</label>
-          <PaletteSelect
-            id="project-palette"
-            value={project.palette}
-            onChange={(id) => update((p) => setProjectPalette(p, id))}
-          />
-          <span className="leading-snug">
-            How colours look in C64-Pad. Data and exports are unchanged.
-          </span>
-        </div>
-        <Field label="Notes">
-          <Textarea
-            rows={6}
-            className="resize-none bg-paper text-base"
-            value={project.notes}
-            onChange={(e) => update((p) => ({ ...p, notes: e.target.value }))}
-          />
-        </Field>
-      </div>
+      <ProjectFields project={project} update={update} />
 
       {/* Assets */}
       <div className="flex min-w-0 flex-1 flex-col gap-6">
@@ -260,14 +129,7 @@ function ProjectPage() {
                 params: { projectId, setId: set.id },
               }}
               thumbnail={<SpriteSetThumbnail set={set} />}
-              menu={assetMenu(
-                { kind: 'spriteSets', id: set.id, name: set.name },
-                () =>
-                  setDialog({
-                    kind: 'delete',
-                    asset: { kind: 'spriteSets', id: set.id, name: set.name },
-                  }),
-              )}
+              menu={menuFor({ kind: 'spriteSets', id: set.id, name: set.name })}
             />
           ))}
         </AssetSection>
@@ -287,15 +149,12 @@ function ProjectPage() {
                 params: { projectId, charsetId: cs.id },
               }}
               thumbnail={<CharsetThumbnail charset={cs} />}
-              menu={assetMenu(
+              menu={menuFor(
                 { kind: 'charsets', id: cs.id, name: cs.name },
-                () =>
-                  mapsUsingCharset(project, cs.id).length > 0
-                    ? setDialog({ kind: 'deleteCharset', charset: cs })
-                    : setDialog({
-                        kind: 'delete',
-                        asset: { kind: 'charsets', id: cs.id, name: cs.name },
-                      }),
+                // A charset that maps use needs them moved first.
+                mapsUsingCharset(project, cs.id).length > 0
+                  ? () => setDialog({ kind: 'deleteCharset', charset: cs })
+                  : undefined,
               )}
             />
           ))}
@@ -321,14 +180,7 @@ function ProjectPage() {
                   params: { projectId, mapId: map.id },
                 }}
                 thumbnail={<MapThumbnail map={map} charset={charset} />}
-                menu={assetMenu(
-                  { kind: 'maps', id: map.id, name: map.name },
-                  () =>
-                    setDialog({
-                      kind: 'delete',
-                      asset: { kind: 'maps', id: map.id, name: map.name },
-                    }),
-                )}
+                menu={menuFor({ kind: 'maps', id: map.id, name: map.name })}
               />
             )
           })}
@@ -402,313 +254,6 @@ function ProjectPage() {
           }
         />
       )}
-      {dialog?.kind === 'aseprite' && (
-        <ImportAsepriteDialog
-          file={dialog.file}
-          project={project}
-          onOpenChange={close}
-          onImport={update}
-        />
-      )}
     </WorksheetLayout>
-  )
-}
-
-function AssetSection({
-  title,
-  addLabel,
-  addDisabledReason,
-  onAdd,
-  children,
-}: {
-  title: string
-  addLabel: string
-  addDisabledReason?: string
-  onAdd: () => void
-  children: ReactNode
-}) {
-  return (
-    <section className="flex flex-col gap-3">
-      <div className="flex items-center gap-3 border-b border-rule-soft pb-2">
-        <h2 className="text-lg font-medium">{title}</h2>
-        <Button
-          variant="outline"
-          className="ml-auto"
-          disabled={!!addDisabledReason}
-          title={addDisabledReason}
-          onClick={onAdd}
-        >
-          <Plus aria-hidden="true" />
-          {addLabel}
-        </Button>
-      </div>
-      <ul className="grid grid-cols-[repeat(auto-fill,minmax(230px,1fr))] gap-4">
-        {children}
-      </ul>
-    </section>
-  )
-}
-
-function AssetCard({
-  name,
-  meta,
-  link,
-  thumbnail,
-  menu,
-}: {
-  name: string
-  meta: string
-  link: LinkProps
-  thumbnail: ReactNode
-  menu: ReactNode
-}) {
-  return (
-    <li className="relative flex flex-col gap-2 rounded-lg border border-rule bg-paper p-2 hover:border-primary">
-      {thumbnail}
-      <div className="flex flex-col px-1 pb-1">
-        <Link
-          {...link}
-          className="pr-10 font-medium after:absolute after:inset-0"
-        >
-          {name}
-        </Link>
-        <span className="text-xs text-muted-foreground">{meta}</span>
-      </div>
-      <div className="absolute right-1 bottom-1 z-10">{menu}</div>
-    </li>
-  )
-}
-
-function DeleteCharsetDialog({
-  project,
-  charset,
-  onOpenChange,
-  onConfirm,
-}: {
-  project: Project
-  charset: Charset
-  onOpenChange: (open: boolean) => void
-  onConfirm: (reassignTo: string) => void
-}) {
-  const others = project.charsets.filter((c) => c.id !== charset.id)
-  const users = mapsUsingCharset(project, charset.id)
-  const [target, setTarget] = useState(others.at(0)?.id ?? '')
-  return (
-    <Dialog open onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Delete “{charset.name}”?</DialogTitle>
-          <DialogDescription>
-            It’s used by {users.map((m) => m.name).join(', ')}.
-            {others.length > 0
-              ? ' Choose a charset for those maps to use instead.'
-              : ' Create another charset first, so those maps have one to use.'}
-          </DialogDescription>
-        </DialogHeader>
-        {others.length > 0 && (
-          <Field label="Move maps to">
-            <Select value={target} onValueChange={setTarget}>
-              <SelectTrigger className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {others.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {c.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </Field>
-        )}
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          {others.length > 0 && (
-            <Button
-              variant="destructive"
-              onClick={() => {
-                onConfirm(target)
-                onOpenChange(false)
-              }}
-            >
-              Move maps and delete
-            </Button>
-          )}
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  )
-}
-
-function NewMapDialog({
-  project,
-  onOpenChange,
-  onCreate,
-}: {
-  project: Project
-  onOpenChange: (open: boolean) => void
-  onCreate: (init: {
-    name: string
-    width: number
-    height: number
-    charsetId: string
-  }) => void
-}) {
-  const [name, setName] = useState(nextName('Map', project.maps))
-  const [width, setWidth] = useState('40')
-  const [height, setHeight] = useState('25')
-  const [charsetId, setCharsetId] = useState(project.charsets.at(0)?.id ?? '')
-  const w = Number(width)
-  const h = Number(height)
-  const sizeOk = [w, h].every(
-    (n) => Number.isInteger(n) && n >= 1 && n <= MAX_MAP_SIZE,
-  )
-
-  return (
-    <Dialog open onOpenChange={onOpenChange}>
-      <DialogContent>
-        <form
-          className="flex flex-col gap-4"
-          onSubmit={(e) => {
-            e.preventDefault()
-            if (!sizeOk || !name.trim() || !charsetId) return
-            onCreate({ name: name.trim(), width: w, height: h, charsetId })
-            onOpenChange(false)
-          }}
-        >
-          <DialogHeader>
-            <DialogTitle>New screen map</DialogTitle>
-            <DialogDescription>
-              One C64 screen is 40×25. Larger maps scroll, up to {MAX_MAP_SIZE}×
-              {MAX_MAP_SIZE}.
-            </DialogDescription>
-          </DialogHeader>
-          <Field label="Name">
-            <Input value={name} onChange={(e) => setName(e.target.value)} />
-          </Field>
-          <ScreenPresets
-            width={Number(width)}
-            height={Number(height)}
-            onPick={(pw, ph) => {
-              setWidth(String(pw))
-              setHeight(String(ph))
-            }}
-          />
-          <div className="flex gap-3">
-            <Field label="Width (chars)" className="flex-1">
-              <Input
-                inputMode="numeric"
-                value={width}
-                onChange={(e) => setWidth(e.target.value)}
-              />
-            </Field>
-            <Field label="Height (chars)" className="flex-1">
-              <Input
-                inputMode="numeric"
-                value={height}
-                onChange={(e) => setHeight(e.target.value)}
-              />
-            </Field>
-          </div>
-          <Field label="Charset">
-            <Select value={charsetId} onValueChange={setCharsetId}>
-              <SelectTrigger className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {project.charsets.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {c.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </Field>
-          {!sizeOk && (
-            <p className="text-sm text-destructive">
-              Width and height must be 1–{MAX_MAP_SIZE}.
-            </p>
-          )}
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={!sizeOk || !name.trim()}>
-              Create
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
-  )
-}
-
-function NewCharsetDialog({
-  project,
-  onOpenChange,
-  onCreate,
-}: {
-  project: Project
-  onOpenChange: (open: boolean) => void
-  onCreate: (init: { name: string; start: 'blank' | PetsciiSet }) => void
-}) {
-  const [name, setName] = useState(nextName('Charset', project.charsets))
-  const [start, setStart] = useState<'blank' | PetsciiSet>('blank')
-  return (
-    <Dialog open onOpenChange={onOpenChange}>
-      <DialogContent onOpenAutoFocus={(e) => e.preventDefault()}>
-        <form
-          className="flex flex-col gap-4"
-          onSubmit={(e) => {
-            e.preventDefault()
-            if (!name.trim()) return
-            onCreate({ name: name.trim(), start })
-            onOpenChange(false)
-          }}
-        >
-          <DialogHeader>
-            <DialogTitle>New charset</DialogTitle>
-            <DialogDescription>
-              256 characters. Start blank, or from the C64’s built-in PETSCII
-              set to edit.
-            </DialogDescription>
-          </DialogHeader>
-          <Field label="Name">
-            <Input value={name} onChange={(e) => setName(e.target.value)} />
-          </Field>
-          <div className="flex flex-col gap-[3px]">
-            <span className="text-xs text-muted-foreground">Start from</span>
-            <Segmented
-              label="Start from"
-              value={start}
-              options={[
-                { value: 'blank', label: 'Blank' },
-                { value: 'upper', label: 'PETSCII upper' },
-                { value: 'lower', label: 'PETSCII lower' },
-              ]}
-              onChange={setStart}
-            />
-          </div>
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={!name.trim()}>
-              Create
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
   )
 }
