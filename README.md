@@ -17,6 +17,18 @@ To build this application for production:
 npm run build
 ```
 
+## Testing
+
+```bash
+npm test             # unit tests (Vitest): the C64 model, encoders, importers
+npm run test:e2e     # browser tests (Playwright, Chromium) in e2e/
+npm run test:e2e:ui  # the same, in Playwright's UI mode
+```
+
+The browser tests start their own dev server on port 3100 (or reuse one already
+running there), so `npm run dev` on 3000 can stay open. The first time, install
+the browser with `npx playwright install chromium`. CI runs both suites.
+
 ## Styling
 
 This project uses [Tailwind CSS](https://tailwindcss.com/) for styling.

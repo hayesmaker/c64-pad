@@ -16,6 +16,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
     "android:sync": "npm run build && cap sync android",
     "android:run": "npm run android:sync && cap run android --no-sync ${ANDROID_TARGET:+--target $ANDROID_TARGET}",
     "android:open": "cap open android",
@@ -52,6 +54,7 @@
   },
   "devDependencies": {
     "@capacitor/cli": "^8.6.0",
+    "@playwright/test": "1.64.1",
     "@tanstack/devtools-vite": "0.8.6",
     "@tanstack/eslint-config": "0.4.0",
     "@types/node": "^22.10.2",

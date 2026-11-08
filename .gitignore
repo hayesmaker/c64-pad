@@ -16,3 +16,7 @@ claude_code_settings.json
 
 # Copied from c64-ready by scripts/copy-c64-assets.mjs
 public/c64/
+
+# Playwright
+test-results/
+playwright-report/
