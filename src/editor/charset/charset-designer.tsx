@@ -1,50 +1,14 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { Maximize2, MonitorPlay, Redo2, Undo2 } from 'lucide-react'
 import {
-  ArrowDown,
-  ArrowLeft,
-  ArrowLeftRight,
-  ArrowRight,
-  ArrowUp,
-  ClipboardPaste,
-  Contrast,
-  Copy,
-  Ellipsis,
-  Eraser,
-  TrianglesCenterlineDashedHorizontal,
-  TrianglesCenterlineDashedVertical,
-  Move,
-  PaintBucket,
-  Maximize2,
-  MonitorPlay,
-  Pencil,
-  Redo2,
-  RotateCw,
-  Trash2,
-  Undo2,
-} from 'lucide-react'
-import {
-  CHARSET_BYTES,
   charCount,
-  charPixelMode,
-  clearChar,
-  flipCharHorizontal,
-  flipCharVertical,
   getCharBytes,
-  getCharPixel,
-  invertChar,
   isCharMulticolor,
-  petsciiData,
   renderChar,
-  rotateCharClockwise,
-  setCharBytes,
   setCharMulticolor,
-  setCharPixel,
   setCharsetMode,
-  shiftChar,
   swapChars,
 } from '@/c64/charset'
-import { CHAR_SHAPE, floodFill } from '@/c64/bitmap'
-import { COLOR_NAMES } from '@/c64/palette'
 import { usePalette } from '@/components/c64/palette-context'
 import { mapsUsingCharset, projectColors } from '@/c64/project'
 import { WorksheetLayout } from '@/components/worksheet/worksheet-layout'
@@ -53,69 +17,42 @@ import { EdgeTabs } from '@/components/worksheet/edge-tabs'
 import { editorTabs } from '@/components/worksheet/editor-tabs'
 import { Field } from '@/components/worksheet/field'
 import { SaveStatus } from '@/components/save-status'
-import { IndexedCanvas } from '@/components/c64/indexed-canvas'
-import { ConfirmDialog } from '@/components/dialogs'
-import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import { cn } from '@/lib/utils'
+import { EmulatorOverlay } from '@/emulator/emulator-overlay'
+import { charsetViewerPrg } from '@/emulator/charmap-viewer'
+import { safeFileName } from '@/platform/save-file'
 import { useAssetHistory } from '../asset-history'
 import { DEFAULT_VIEW, zoomAround } from '../view'
 import {
   BIT_HEADER_H,
   BitHeader,
-  ROW_NUMBERS_W,
   RowNumbers,
   ToolButton,
   useCellSize,
   useUndoShortcuts,
-  zoomLabel,
 } from '../grid-parts'
+import { hex } from '../hex'
 import { PixelGrid } from '../pixel-grid'
 import { PaletteGrid, PensPanel } from '../pens-panel'
 import { Segmented } from '../segmented'
-import {
-  charPens,
-  ecmBackgroundColors,
-  ecmSlot,
-  setSlotColor,
-  slotColor,
-} from './char-pens'
-import { CharsetSheet } from './charset-sheet'
 import { ZenMode, ZenPens } from '../zen-mode'
 import { RunExportDialog } from '../run-export-dialog'
 import { CharsetExportPanel } from '../chars-export'
-import { EmulatorOverlay } from '@/emulator/emulator-overlay'
-import { charsetViewerPrg } from '@/emulator/charmap-viewer'
-import { safeFileName } from '@/platform/save-file'
-import type { CharSlot } from './char-pens'
+import { setSlotColor, slotColor } from './char-pens'
+import { CharDataColumn, CharMemoryNote, DATA_W, MEM_H } from './char-data'
+import { CharNumberField, CharPreview, EcmBackgrounds } from './char-panels'
+import { CharsetPanel } from './charset-panel'
+import { CharsetToolRail } from './charset-tool-rail'
+import { useCharTools } from './use-char-tools'
 import type { GridView } from '../view'
-
-import type { Charset, CharsetMode, PetsciiSet } from '@/c64/charset'
-import type { PixelMode } from '@/c64/bitmap'
-import type { IndexedImage } from '@/c64/render'
+import type { Charset, CharsetMode } from '@/c64/charset'
 import type { Project } from '@/c64/project'
 import type { ProjectSession, SaveStatus as Status } from '@/storage/session'
 
-type Tool = 'draw' | 'erase' | 'fill'
-
-/** Char copied with "Copy", kept for the app session (works across charsets). */
-let clipboard: { bytes: Uint8Array; color: number } | null = null
 /** Last selected char per charset. */
 const lastSelected = new Map<string, number>()
 
-const DATA_W = 60
-/** Room under the grid for the memory note and .byte line. */
-const MEM_H = 64
-const hex2 = (n: number) => '$' + n.toString(16).toUpperCase().padStart(2, '0')
-const hex4 = (n: number) => '$' + n.toString(16).toUpperCase().padStart(4, '0')
-
+/** The Character Worksheet: one char of a charset at a time. */
 export function CharsetDesigner({
   session,
   project,
@@ -132,18 +69,14 @@ export function CharsetDesigner({
   const palette = usePalette()
   const history = useAssetHistory(session, 'charsets', charset.id, charset)
   useUndoShortcuts(history)
+  const { change } = history
   const count = charCount(charset.mode)
   const [selectedRaw, setSelected] = useState(
     () => lastSelected.get(charset.id) ?? 0,
   )
   const selected = Math.min(selectedRaw, count - 1)
-  const [tool, setTool] = useState<Tool>('draw')
-  const [penByMode, setPenByMode] = useState<Record<PixelMode, number>>({
-    hires: 1,
-    multicolor: 3,
-  })
-  /** An ECM background chosen for recolouring (pens 0 covers all four). */
-  const [ecmTarget, setEcmTarget] = useState<number | null>(null)
+  const tools = useCharTools(charset, selected, history)
+  const { tool, pens, pen, penDef, target, targetName, limitColors } = tools
   const [asHex, setAsHex] = useState(true)
   const [swapping, setSwapping] = useState(false)
   const [zen, setZen] = useState(false)
@@ -153,10 +86,6 @@ export function CharsetDesigner({
     title: string
     joystick: boolean
   } | null>(null)
-  const [, setClipboardVersion] = useState(0)
-  const [confirm, setConfirm] = useState<
-    { kind: 'petscii'; set: PetsciiSet } | { kind: 'clear' } | null
-  >(null)
   const cell = useCellSize({
     columns: 8,
     rows: 8,
@@ -167,64 +96,12 @@ export function CharsetDesigner({
   })
   const [view, setView] = useState<GridView>(DEFAULT_VIEW)
   useEffect(() => setView(DEFAULT_VIEW), [cell.size])
-  const strokeId = useRef(0)
-  const beforeStroke = useRef<Charset | null>(null)
 
   useEffect(() => {
     lastSelected.set(charset.id, selected)
   }, [charset.id, selected])
 
-  const change = useCallback(
-    (fn: (cs: Charset) => Charset, group?: string) => history.change(fn, group),
-    [history],
-  )
-
-  const pixelMode = charPixelMode(charset, selected)
   const mcChar = isCharMulticolor(charset, selected)
-  const pens = charPens(charset, selected)
-  const pen = Math.min(penByMode[pixelMode], pens.length - 1)
-  const penDef = pens[pen]
-  const value = tool === 'erase' ? 0 : pen
-  const target: CharSlot | null =
-    charset.mode === 'ecm' && ecmTarget !== null
-      ? ecmSlot(ecmTarget)
-      : penDef.slot
-  const targetName =
-    target === null
-      ? ''
-      : target === 'char'
-        ? 'char colour'
-        : target === 'background'
-          ? 'background'
-          : target.startsWith('ecm')
-            ? `ECM background ${target.slice(3)}`
-            : `multicolour ${target.slice(-1)}`
-  const limitColors = target === 'char' && charset.mode === 'multicolor'
-
-  const paint = (x: number, y: number, start: boolean) => {
-    const group = `stroke-${strokeId.current}`
-    if (tool === 'fill') {
-      if (!start) return
-      change(
-        (cs) =>
-          setCharBytes(
-            cs,
-            selected,
-            floodFill(
-              getCharBytes(cs, selected),
-              CHAR_SHAPE,
-              charPixelMode(cs, selected),
-              x,
-              y,
-              value,
-            ),
-          ),
-        group,
-      )
-      return
-    }
-    change((cs) => setCharPixel(cs, selected, x, y, value), group)
-  }
 
   const pick = (index: number) => {
     if (swapping) {
@@ -241,7 +118,6 @@ export function CharsetDesigner({
     () => [{ pixels: Int8Array.from(renderChar(charset, selected)) }],
     [charset, selected],
   )
-  const bgHex = palette.hex[charset.background]
   const renderGrid = (
     size: number,
     v: GridView,
@@ -250,36 +126,18 @@ export function CharsetDesigner({
     <PixelGrid
       width={8}
       height={8}
-      step={pixelMode === 'multicolor' ? 2 : 1}
+      step={tools.pixelMode === 'multicolor' ? 2 : 1}
       majorX={4}
       majorY={4}
       layers={gridLayers}
-      background={bgHex}
+      background={palette.hex[charset.background]}
       cell={size}
       view={v}
       onViewChange={onV}
       label={`Character ${selected} pixel grid, ${mcChar ? '4' : '8'} by 8`}
-      onStrokeStart={(x, y) => {
-        strokeId.current++
-        beforeStroke.current = charset
-        paint(x, y, true)
-      }}
-      onStrokeMove={(x, y) => paint(x, y, false)}
-      onStrokeEnd={history.endGroup}
-      onStrokeCancel={history.cancelGroup}
-      onDoubleTap={(x, y) => {
-        if (tool !== 'draw') return
-        // Clear the pixel, as one undo step with the first tap.
-        if (beforeStroke.current !== charset) history.undo()
-        change((cs) =>
-          getCharPixel(cs, selected, x, y) === 0
-            ? cs
-            : setCharPixel(cs, selected, x, y, 0),
-        )
-      }}
+      {...tools.gridHandlers}
     />
   )
-  const users = mapsUsingCharset(project, charset.id)
 
   return (
     <WorksheetLayout
@@ -335,7 +193,7 @@ export function CharsetDesigner({
         <div className="flex gap-2">
           <CharNumberField count={count} value={selected} onChange={pick} />
           <Field label="Hex" className="w-20">
-            <Input value={hex2(selected)} readOnly className="font-mono" />
+            <Input value={hex(selected)} readOnly className="font-mono" />
           </Field>
         </div>
         <div className="flex flex-col gap-[3px]">
@@ -351,7 +209,7 @@ export function CharsetDesigner({
               { value: 'ecm', label: 'ECM' },
             ]}
             onChange={(mode) => {
-              setEcmTarget(null)
+              tools.clearEcmTarget()
               change((cs) => setCharsetMode(cs, mode))
             }}
           />
@@ -375,23 +233,12 @@ export function CharsetDesigner({
             />
           </div>
         )}
-        <PensPanel
-          pens={pens}
-          pen={pen}
-          onPen={(v) => {
-            setPenByMode((p) => ({ ...p, [pixelMode]: v }))
-            setEcmTarget(null)
-            if (tool === 'erase') setTool('draw')
-          }}
-        />
+        <PensPanel pens={pens} pen={pen} onPen={tools.choosePen} />
         {charset.mode === 'ecm' && (
           <EcmBackgrounds
             charset={charset}
-            target={ecmTarget}
-            onTarget={(k) => {
-              setEcmTarget(k)
-              setPenByMode((p) => ({ ...p, hires: 0 }))
-            }}
+            target={tools.ecmTarget}
+            onTarget={tools.chooseEcmTarget}
           />
         )}
         <PaletteGrid
@@ -417,119 +264,26 @@ export function CharsetDesigner({
       {/* Middle: tool rail, grid, data bytes */}
       <div ref={cell.areaRef} className="flex min-w-0 flex-1 flex-col">
         <div className="flex min-h-0 flex-1 justify-center gap-3">
-          <div
-            role="toolbar"
-            aria-label="Drawing tools"
-            aria-orientation="vertical"
-            className="flex shrink-0 flex-col gap-1"
-            style={{ paddingTop: BIT_HEADER_H + 2 }}
-          >
-            <ToolButton
-              label="Draw (double-tap a pixel to clear it)"
-              pressed={tool === 'draw'}
-              onClick={() => setTool('draw')}
-            >
-              <Pencil />
-            </ToolButton>
-            <ToolButton
-              label="Erase"
-              pressed={tool === 'erase'}
-              onClick={() => setTool('erase')}
-            >
-              <Eraser />
-            </ToolButton>
-            <ToolButton
-              label="Fill"
-              pressed={tool === 'fill'}
-              onClick={() => setTool('fill')}
-            >
-              <PaintBucket />
-            </ToolButton>
-            <div aria-hidden="true" className="mx-1.5 my-1 h-px bg-rule-soft" />
-            <ToolButton
-              label="Flip horizontally"
-              onClick={() => change((cs) => flipCharHorizontal(cs, selected))}
-            >
-              <TrianglesCenterlineDashedVertical />
-            </ToolButton>
-            <ToolButton
-              label="Flip vertically"
-              onClick={() => change((cs) => flipCharVertical(cs, selected))}
-            >
-              <TrianglesCenterlineDashedHorizontal />
-            </ToolButton>
-            <ToolButton
-              label={mcChar ? 'Rotate (hires chars only)' : 'Rotate clockwise'}
-              disabled={mcChar}
-              onClick={() => change((cs) => rotateCharClockwise(cs, selected))}
-            >
-              <RotateCw />
-            </ToolButton>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <ToolButton label="Shift (wraps around)">
-                  <Move />
-                </ToolButton>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent side="right" align="start">
-                {(
-                  [
-                    ['Shift up', 0, -1, ArrowUp],
-                    ['Shift down', 0, 1, ArrowDown],
-                    ['Shift left', -1, 0, ArrowLeft],
-                    ['Shift right', 1, 0, ArrowRight],
-                  ] as const
-                ).map(([label, dx, dy, Icon]) => (
-                  <DropdownMenuItem
-                    key={label}
-                    onSelect={() =>
-                      change((cs) => shiftChar(cs, selected, dx, dy))
-                    }
-                  >
-                    <Icon aria-hidden="true" /> {label}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <ToolButton
-              label="Invert"
-              onClick={() => change((cs) => invertChar(cs, selected))}
-            >
-              <Contrast />
-            </ToolButton>
-            <ToolButton
-              label="Clear character"
-              onClick={() => change((cs) => clearChar(cs, selected))}
-            >
-              <Trash2 />
-            </ToolButton>
-            <div aria-hidden="true" className="mx-1.5 my-1 h-px bg-rule-soft" />
-            <ToolButton
-              label={
+          <CharsetToolRail
+            tool={tool}
+            onTool={tools.setTool}
+            multicolor={mcChar}
+            onTransform={(fn) => change((cs) => fn(cs, selected))}
+            zoom={view.zoom}
+            onZoom={() =>
+              setView(
                 view.zoom > 1
-                  ? 'Reset zoom (pinch to zoom)'
-                  : 'Zoom in (or pinch)'
-              }
-              pressed={view.zoom > 1}
-              onClick={() =>
-                setView(
-                  view.zoom > 1
-                    ? DEFAULT_VIEW
-                    : zoomAround(
-                        DEFAULT_VIEW,
-                        2,
-                        { x: 4 * cell.size, y: 4 * cell.size },
-                        8 * cell.size,
-                        8 * cell.size,
-                      ),
-                )
-              }
-            >
-              <span className="font-mono text-[11px] font-medium">
-                {zoomLabel(view.zoom)}
-              </span>
-            </ToolButton>
-          </div>
+                  ? DEFAULT_VIEW
+                  : zoomAround(
+                      DEFAULT_VIEW,
+                      2,
+                      { x: 4 * cell.size, y: 4 * cell.size },
+                      8 * cell.size,
+                      8 * cell.size,
+                    ),
+              )
+            }
+          />
 
           <div ref={cell.slotRef} className="flex min-h-0 flex-col">
             <div className="flex gap-3">
@@ -542,152 +296,28 @@ export function CharsetDesigner({
                   </div>
                 </div>
               </div>
-
-              {/* DATA: one byte per row */}
-              {/* Tap anywhere on the bytes to switch decimal / hex (see
-                  docs/DESIGN.md: desktop may get a switch and typed edits). */}
-              <button
-                type="button"
-                onClick={() => setAsHex((h) => !h)}
-                aria-label={`Character data bytes in ${asHex ? 'hex' : 'decimal'}; tap to show ${asHex ? 'decimal' : 'hex'}`}
-                title="Tap to switch decimal / hex"
-                className="flex shrink-0 cursor-pointer flex-col self-start rounded-md"
-                style={{ width: DATA_W }}
-              >
-                <div
-                  className="flex w-full items-end justify-center text-[11px] leading-[14px] tracking-[0.08em] text-muted-foreground"
-                  style={{ height: BIT_HEADER_H }}
-                >
-                  DATA
-                </div>
-                <div className="flex w-full flex-col pt-[2px]">
-                  {[...bytes].map((b, row) => (
-                    <div
-                      key={row}
-                      className="flex items-center"
-                      style={{ height: cell.size }}
-                    >
-                      <div
-                        className={cn(
-                          'flex w-full items-center justify-center rounded-md border border-data-box font-mono text-sm',
-                          b === 0 ? 'text-data-zero' : 'text-foreground',
-                        )}
-                        style={{ height: Math.min(cell.size - 8, 34) }}
-                      >
-                        {asHex ? hex2(b) : b}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </button>
+              <CharDataColumn
+                bytes={bytes}
+                cell={cell.size}
+                asHex={asHex}
+                onToggleHex={() => setAsHex((h) => !h)}
+              />
             </div>
-            <div
-              className="mt-2 flex flex-col gap-1"
-              style={{ marginLeft: ROW_NUMBERS_W, height: MEM_H - 8 }}
-            >
-              <div className="flex items-center gap-2">
-                <span className="min-w-0 flex-1 text-[11px] leading-tight text-muted-foreground">
-                  Offset +{selected * 8} · {hex4(0x2000 + selected * 8)} with
-                  the set at $2000
-                </span>
-              </div>
-              <code className="font-mono text-xs whitespace-nowrap select-all">
-                .byte {[...bytes].map(hex2).join(',')}
-              </code>
-            </div>
+            <CharMemoryNote index={selected} bytes={bytes} />
           </div>
         </div>
       </div>
 
       {/* Right: the whole charset */}
-      <div className="flex w-[306px] shrink-0 flex-col gap-2 overflow-y-auto border-l border-rule-soft pl-3">
-        <span className="text-xs text-muted-foreground">
-          {users.length === 0
-            ? 'Charset · not used by a map yet'
-            : `Charset · used by ${users.map((m) => `“${m.name}”`).join(', ')}`}
-        </span>
-        <CharsetSheet
-          charset={charset}
-          selected={selected}
-          swapping={swapping}
-          onPick={pick}
-        />
-        <div className="mt-1 grid grid-cols-2 gap-1.5">
-          <Button
-            variant="outline"
-            onClick={() => {
-              clipboard = {
-                bytes: getCharBytes(charset, selected),
-                color: charset.colors[selected],
-              }
-              setClipboardVersion((v) => v + 1)
-            }}
-          >
-            <Copy aria-hidden="true" /> Copy
-          </Button>
-          <Button
-            variant="outline"
-            disabled={!clipboard}
-            onClick={() => {
-              const c = clipboard
-              if (!c) return
-              change((cs) => {
-                const next = setCharBytes(cs, selected, c.bytes)
-                const colors = next.colors.slice()
-                colors[selected] = c.color
-                return { ...next, colors }
-              })
-            }}
-          >
-            <ClipboardPaste aria-hidden="true" /> Paste
-          </Button>
-          <Button
-            variant="outline"
-            aria-pressed={swapping}
-            className={cn(
-              swapping &&
-                'border-primary bg-accent text-primary hover:bg-accent',
-            )}
-            onClick={() => setSwapping((s) => !s)}
-          >
-            <ArrowLeftRight aria-hidden="true" />
-            {swapping ? 'Pick target…' : 'Swap'}
-          </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline">
-                <Ellipsis aria-hidden="true" /> More
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem
-                onSelect={() => setConfirm({ kind: 'petscii', set: 'upper' })}
-              >
-                Load PETSCII: upper case + graphics
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onSelect={() => setConfirm({ kind: 'petscii', set: 'lower' })}
-              >
-                Load PETSCII: lower + upper case
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                variant="destructive"
-                onSelect={() => setConfirm({ kind: 'clear' })}
-              >
-                Clear all characters
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-        <p className="text-[11px] leading-snug text-muted-foreground">
-          {swapping
-            ? `Tap another character to swap it with ${hex2(selected)}. Maps keep their codes.`
-            : charset.mode === 'ecm'
-              ? 'ECM uses chars $00–$3F; screen code bits 7–6 pick the background.'
-              : 'Tap a character to edit it. Each char has its own colour.'}
-        </p>
-      </div>
+      <CharsetPanel
+        charset={charset}
+        users={mapsUsingCharset(project, charset.id)}
+        selected={selected}
+        swapping={swapping}
+        onSwapping={setSwapping}
+        onPick={pick}
+        onChange={change}
+      />
 
       {runExport && (
         <RunExportDialog
@@ -721,22 +351,18 @@ export function CharsetDesigner({
       )}
       {zen && (
         <ZenMode
-          title={`Char ${hex2(selected)}`}
+          title={`Char ${hex(selected)}`}
           columns={8}
           rows={8}
           renderGrid={renderGrid}
           tool={tool}
           // No Hand tool here (canPan is off).
-          onTool={(t) => t !== 'pan' && setTool(t)}
+          onTool={(t) => t !== 'pan' && tools.setTool(t)}
           side={
             <ZenPens
               pens={pens}
               pen={pen}
-              onPen={(v) => {
-                setPenByMode((p) => ({ ...p, [pixelMode]: v }))
-                setEcmTarget(null)
-                if (tool === 'erase') setTool('draw')
-              }}
+              onPen={tools.choosePen}
               colors={projectColors(project)}
               penColor={
                 penDef.slot ? slotColor(charset, selected, penDef.slot) : null
@@ -761,168 +387,6 @@ export function CharsetDesigner({
           onExit={() => setZen(false)}
         />
       )}
-      <ConfirmDialog
-        open={confirm !== null}
-        onOpenChange={(open) => !open && setConfirm(null)}
-        title={
-          confirm?.kind === 'clear'
-            ? 'Clear all characters?'
-            : 'Load the PETSCII characters?'
-        }
-        description={
-          confirm?.kind === 'clear'
-            ? 'Every character’s pixels are cleared. Colours and maps are kept. You can undo this.'
-            : 'Every character’s pixels are replaced with the C64’s built-in set. Colours and maps are kept. You can undo this.'
-        }
-        confirmLabel={confirm?.kind === 'clear' ? 'Clear all' : 'Load'}
-        onConfirm={() => {
-          const data =
-            confirm?.kind === 'petscii'
-              ? petsciiData(confirm.set)
-              : new Uint8Array(CHARSET_BYTES)
-          change((cs) => ({ ...cs, data }))
-          setConfirm(null)
-        }}
-      />
     </WorksheetLayout>
-  )
-}
-
-/** Character number: type decimal or $hex to jump. */
-function CharNumberField({
-  count,
-  value,
-  onChange,
-}: {
-  count: number
-  value: number
-  onChange: (index: number) => void
-}) {
-  const [draft, setDraft] = useState<string | null>(null)
-  return (
-    <Field label="Character number" className="flex-1">
-      <Input
-        inputMode="numeric"
-        className="font-mono"
-        value={draft ?? String(value)}
-        onFocus={(e) => e.target.select()}
-        onChange={(e) => {
-          setDraft(e.target.value)
-          const text = e.target.value.trim()
-          const n = text.startsWith('$')
-            ? parseInt(text.slice(1), 16)
-            : Number(text)
-          if (text !== '' && Number.isInteger(n) && n >= 0 && n < count)
-            onChange(n)
-        }}
-        onBlur={() => setDraft(null)}
-      />
-    </Field>
-  )
-}
-
-/** ECM: the four backgrounds, each recolourable. */
-function EcmBackgrounds({
-  charset,
-  target,
-  onTarget,
-}: {
-  charset: Charset
-  target: number | null
-  onTarget: (k: number) => void
-}) {
-  const palette = usePalette()
-  return (
-    <div className="flex flex-col gap-1">
-      <div className="text-xs text-muted-foreground">
-        ECM backgrounds · screen code bits 7–6
-      </div>
-      <div className="grid grid-cols-4 gap-1">
-        {ecmBackgroundColors(charset).map((c, k) => (
-          <button
-            key={k}
-            type="button"
-            aria-pressed={target === k}
-            aria-label={`ECM background ${k}, ${COLOR_NAMES[c]} ($D02${k + 1})`}
-            title={`$D02${k + 1}`}
-            onClick={() => onTarget(k)}
-            className={cn(
-              'flex h-9 items-center gap-1.5 rounded-lg border px-1.5 font-mono text-[11px]',
-              target === k
-                ? 'border-primary bg-accent ring-1 ring-primary ring-inset'
-                : 'border-rule-soft hover:bg-muted',
-            )}
-          >
-            <span
-              aria-hidden="true"
-              className="size-4 shrink-0 rounded-[4px] border border-rule"
-              style={{ background: palette.hex[c] }}
-            />
-            B{k}
-          </button>
-        ))}
-      </div>
-    </div>
-  )
-}
-
-/** The char tiled on the screen, or in ECM on each of the four backgrounds. */
-function CharPreview({ charset, index }: { charset: Charset; index: number }) {
-  const palette = usePalette()
-  if (charset.mode === 'ecm') {
-    return (
-      <div className="flex flex-col gap-1">
-        <div className="text-xs text-muted-foreground">
-          Screen codes using this char
-        </div>
-        <div className="grid grid-cols-4 gap-1.5">
-          {[0, 1, 2, 3].map((k) => {
-            const code = (k << 6) | index
-            return (
-              <div key={k} className="flex flex-col items-center gap-0.5">
-                <IndexedCanvas
-                  image={{
-                    width: 8,
-                    height: 8,
-                    pixels: Int8Array.from(renderChar(charset, index, k)),
-                  }}
-                  label={`Screen code ${hex2(code)}`}
-                  className="w-full rounded-[3px]"
-                />
-                <span className="font-mono text-[10px] text-muted-foreground">
-                  {hex2(code)}
-                </span>
-              </div>
-            )
-          })}
-        </div>
-      </div>
-    )
-  }
-  const char = renderChar(charset, index)
-  const image: IndexedImage = {
-    width: 48,
-    height: 16,
-    pixels: new Int8Array(48 * 16),
-  }
-  for (let y = 0; y < 16; y++) {
-    for (let x = 0; x < 48; x++) {
-      image.pixels[y * 48 + x] = char[(y % 8) * 8 + (x % 8)]
-    }
-  }
-  return (
-    <div className="flex flex-col gap-1">
-      <div className="text-xs text-muted-foreground">Preview · tiled</div>
-      <div
-        className="rounded-lg border-[5px]"
-        style={{ borderColor: palette.hex[14] }}
-      >
-        <IndexedCanvas
-          image={image}
-          label="Character tiled"
-          className="w-full"
-        />
-      </div>
-    </div>
   )
 }

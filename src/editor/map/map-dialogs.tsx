@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/dialog'
 import { CharsetSheet } from '../charset/charset-sheet'
 import { CharIcon } from './map-brush'
-import { hex } from './map-format'
+import { hex } from '../hex'
 import { ScreenPresets } from './map-size'
 import type { Charmap } from '@/c64/charmap'
 import type { Charset } from '@/c64/charset'

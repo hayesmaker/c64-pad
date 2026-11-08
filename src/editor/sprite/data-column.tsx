@@ -1,8 +1,7 @@
 import { SPRITE_HEIGHT } from '@/c64/sprite'
 import { cn } from '@/lib/utils'
+import { hex } from '../hex'
 import type { Sprite } from '@/c64/sprite'
-
-const hex = (n: number) => '$' + n.toString(16).toUpperCase().padStart(2, '0')
 
 /** The sprite's bytes, three per row, aligned with the grid rows (row height = cell). */
 export function DataColumn({

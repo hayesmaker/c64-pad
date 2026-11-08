@@ -1,7 +1,7 @@
 import { decodeEcm } from '@/c64/charmap'
 import { charColor, charCount } from '@/c64/charset'
 import { COLOR_NAMES } from '@/c64/palette'
-import { hex } from './map-format'
+import { hex } from '../hex'
 import type { Charmap } from '@/c64/charmap'
 import type { Charset } from '@/c64/charset'
 

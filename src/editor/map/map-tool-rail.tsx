@@ -9,7 +9,7 @@ import {
 } from 'lucide-react'
 import { ToolButton, zoomLabel } from '../grid-parts'
 import { CharIcon } from './map-brush'
-import { hex } from './map-format'
+import { hex } from '../hex'
 import { COL_HEADER_H } from './map-rulers'
 import type { Charmap } from '@/c64/charmap'
 import type { Charset } from '@/c64/charset'

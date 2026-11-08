@@ -8,7 +8,7 @@ import { usePalette } from '@/components/c64/palette-context'
 import { cn } from '@/lib/utils'
 import { CharsetSheet } from '../charset/charset-sheet'
 import { ecmBackgroundColors } from '../charset/char-pens'
-import { hex } from './map-format'
+import { hex } from '../hex'
 import type { Charmap, Region } from '@/c64/charmap'
 import type { Charset } from '@/c64/charset'
 
