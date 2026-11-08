@@ -34,7 +34,12 @@ export function PaletteSelect({
 }) {
   return (
     <Select value={value} onValueChange={(v) => isPaletteId(v) && onChange(v)}>
-      <SelectTrigger id={id} className="h-auto min-h-[38px] w-full bg-paper">
+      {/* Name over a swatch strip: taller than the trigger's fixed 40 px, so
+          let it grow, with even padding round the strip. */}
+      <SelectTrigger
+        id={id}
+        className="w-full bg-paper py-2 data-[size=default]:h-auto"
+      >
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
