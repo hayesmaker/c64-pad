@@ -113,6 +113,8 @@ See `PLAN.md` → _Decisions_ for the reasoning behind these.
 - [ ] Printable blank worksheets (sprite, character, screen): print stylesheet and/or PDF export rendered from the editor components
 - [x] Dark mode (follows the device setting; an in-app switch is later)
 - [ ] Optional: CharPad tiles/blocks layer
+- [ ] Char materials (CharPad convention): a 0-15 attribute per char (solid, ladder, hazard, …) with editable names per charset; set in the charset editor, shown as an overlay in the map editor; written to the high nibble of the `.ctm` char attribute byte (currently 0), as a materials table in `.bin` / KickAss exports, and imported from Aseprite tile properties
+- [ ] Move / copy chars between charsets in a project, renumbering the screen codes in maps that use them (see `docs/aseprite-import.md` § 2.5)
 - [ ] New worksheet: **Multi-Sprites**, a compositor for entities bigger than one sprite (e.g. a 2×2 boss). Arrange sprites from a set on a shared canvas with positions/offsets; supports overlays and animations (frames advance together); its own edge tab; Run shows it in the viewer; export positions with the sprite data
 - [ ] Publish to deployed backend (auth, server functions, sharing)
 - [ ] Remote KickAssembler build service (containerised, CORS PRG URLs); "Build on server" option for custom asm templates; enables "Open in c64-ready" from app builds

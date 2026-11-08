@@ -185,20 +185,23 @@ Pure functions:
   | Close to a palette, not exact                                                                 | Convert to the nearest colours, and show the worst colour distance. Offer to switch to the best-matching palette. |
   | Nothing close                                                                                 | Warn, convert to the nearest project colours, and list the colours that had to be guessed.                        |
 
-- **Step 3, targets:**
-  - **Charset:** new charset (default; named after the file) or replace an existing one. Replacing warns which maps use it.
-  - **Map:** new screen map (default) using that charset, replace an existing map, or none (tiles only).
+- **Step 3, what gets added:** an import only **adds**; it never overwrites existing chars or screens.
+  - **Charset:** always a new charset at the end of "Character sets", named after the file (e.g. "island1_round4"; "island1_round4 2" if that name is taken).
+  - **Map:** a new screen map at the end of "Screen maps", using the new charset and named the same way. You can untick it to import the tiles only.
   - Tilemap layer picker, if there's more than one.
   - Background / MC1 / MC2, already set from the validator. Changing them re-runs the fit check.
 - **Import:**
-  - One `update((p) => …)`: optional `setProjectPalette`, then add or replace the charset and map.
-  - `checkIntegrity` runs as usual. The Project Worksheet has no undo, so the dialog should make clear what will be added or replaced before Import.
+  - One `update((p) => …)`: optional `setProjectPalette`, then `addAsset` for the charset and the map.
+  - `checkIntegrity` runs as usual. Nothing existing is changed apart from the optional palette switch, so the lack of undo on the Project Worksheet matters less: delete the new assets to back out.
 
 ### 2.5 Later (not in the first pass)
 
-- Import into free slots of an existing charset (needs screen codes renumbered).
+- **Move or copy chars between charsets** in the project (e.g. merge an imported charset into an existing one). Needs:
+  - picking target slots (free ones, or chosen ones), carrying each char's colour, and checking the two charsets' modes and bg/MC registers agree, or warning;
+  - renumbering screen codes in every map that uses the moved chars, and optionally pointing those maps at the target charset;
+  - probably its own tool in the charset editor rather than part of the importer. Once it exists, "import into an existing charset" is import-then-move.
 - 16×16 (or larger) tilesets as 2×2 char metatiles, like CharPad tiles / blocks.
-- Somewhere to store tile properties (e.g. "solid") and carry them into the CharPad export.
+- Map Aseprite tile properties (e.g. "solid") to char **materials** once C64-Pad has them (see TODO: char materials). Rainbow Islands tags solid tiles in Aseprite, and its own build tool moves them to the end of the charset so the game can treat every char from a "solid" index up as solid. With materials plus moving chars, C64-Pad could do the same: "sort solid chars to the end", renumbering the maps, and export the first solid index as a constant.
 - Use the Aseprite "Background" layer's main colour as the background colour.
 - Import from the charset and map editors too.
 - Optional cropping of offset maps to the cel.
