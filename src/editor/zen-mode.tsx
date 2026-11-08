@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   ChevronLeft,
   ChevronRight,
@@ -20,6 +20,7 @@ import { zoomLabel } from './grid-parts'
 import type { ReactNode } from 'react'
 import type { GridView } from './view'
 import { penSwatch } from './pens-panel'
+import { useElementSize } from './use-element-size'
 import type { PenDef } from './pens-panel'
 import type { C64Color } from '@/c64/palette'
 
@@ -101,18 +102,7 @@ export function ZenMode({
   onNext?: () => void
   onExit: () => void
 }) {
-  const [box, setBox] = useState({ width: 0, height: 0 })
-  const areaRef = useRef<HTMLDivElement>(null)
-  useLayoutEffect(() => {
-    const el = areaRef.current
-    if (!el) return
-    const measure = () =>
-      setBox({ width: el.clientWidth, height: el.clientHeight })
-    measure()
-    const ro = new ResizeObserver(measure)
-    ro.observe(el)
-    return () => ro.disconnect()
-  }, [])
+  const [areaRef, box] = useElementSize()
   const cell = Math.max(
     4,
     Math.floor(
