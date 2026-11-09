@@ -1,4 +1,5 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { charCount, renderChar } from '@/c64/charset'
 import { usePalette } from '@/components/c64/palette-context'
 import { cssVar, useColorScheme } from '@/lib/theme'
@@ -21,6 +22,7 @@ export function CharsetSheet({
   pitch = 17,
   background,
   marked,
+  magnify = false,
 }: {
   charset: Charset
   selected: number
@@ -33,6 +35,12 @@ export function CharsetSheet({
   background?: number
   /** Chars outlined as chosen (multi-select), besides `selected`. */
   marked?: ReadonlySet<number>
+  /**
+   * Pen and touch: pressing shows a magnifier over the chars round the tip;
+   * slide to the one you want and lift to pick it (lift off the grid to
+   * cancel). The mouse picks on click as usual.
+   */
+  magnify?: boolean
 }) {
   const palette = usePalette()
   const PITCH = pitch
@@ -98,12 +106,32 @@ export function CharsetSheet({
     marked,
   ])
 
-  const pick = (e: React.PointerEvent<HTMLCanvasElement>) => {
+  const [loupe, setLoupe] = useState<Loupe | null>(null)
+
+  /** The char under a pointer, or -1 off the grid. */
+  const charAt = (e: React.PointerEvent<HTMLCanvasElement>) => {
     const rect = e.currentTarget.getBoundingClientRect()
     const col = Math.floor((e.clientX - rect.left) / PITCH)
     const row = Math.floor((e.clientY - rect.top) / PITCH)
     const index = row * COLUMNS + col
-    if (col >= 0 && col < COLUMNS && row >= 0 && index < count) onPick(index)
+    return col >= 0 && col < COLUMNS && row >= 0 && index < count ? index : -1
+  }
+  const track = (e: React.PointerEvent<HTMLCanvasElement>) =>
+    setLoupe({ index: charAt(e), x: e.clientX, y: e.clientY })
+
+  const onPointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (!magnify || e.pointerType === 'mouse') {
+      const index = charAt(e)
+      if (index >= 0) onPick(index)
+      return
+    }
+    try {
+      // Keep getting moves when the tip slides off the grid.
+      e.currentTarget.setPointerCapture(e.pointerId)
+    } catch {
+      // A pointer that can't be captured still works over the grid.
+    }
+    track(e)
   }
 
   return (
@@ -139,7 +167,17 @@ export function CharsetSheet({
           ref={canvasRef}
           role="img"
           aria-label={`Characters in ${charset.name}; character ${selected} selected`}
-          onPointerDown={pick}
+          onPointerDown={onPointerDown}
+          onPointerMove={(e) => {
+            if (loupe) track(e)
+          }}
+          onPointerUp={(e) => {
+            if (!loupe) return
+            const index = charAt(e)
+            setLoupe(null)
+            if (index >= 0) onPick(index)
+          }}
+          onPointerCancel={() => setLoupe(null)}
           tabIndex={0}
           onKeyDown={(e) => {
             const step = {
@@ -162,6 +200,111 @@ export function CharsetSheet({
           }}
         />
       </div>
+      {loupe &&
+        createPortal(
+          <Magnifier
+            charset={charset}
+            count={count}
+            background={background}
+            loupe={loupe}
+          />,
+          document.body,
+        )}
+    </div>
+  )
+}
+
+interface Loupe {
+  /** The char under the tip (-1: off the grid). */
+  index: number
+  x: number
+  y: number
+}
+
+const SPAN = 5 // chars across and down
+const BIG = 40 // px per char
+const GAP = 28 // px between the tip and the magnifier
+
+/** The chars round the tip, big, floating above it (below near the top). */
+function Magnifier({
+  charset,
+  count,
+  background,
+  loupe,
+}: {
+  charset: Charset
+  count: number
+  background?: number
+  loupe: Loupe
+}) {
+  const palette = usePalette()
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const size = SPAN * BIG
+  const centre = loupe.index
+
+  useEffect(() => {
+    const canvas = canvasRef.current
+    const ctx = canvas?.getContext('2d')
+    if (!canvas || !ctx) return
+    const dpr = window.devicePixelRatio || 1
+    canvas.width = Math.round(size * dpr)
+    canvas.height = Math.round(size * dpr)
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+    ctx.fillStyle = cssVar('--muted') || '#ddd'
+    ctx.fillRect(0, 0, size, size)
+    if (centre < 0) return
+    const half = Math.floor(SPAN / 2)
+    const col0 = (centre % COLUMNS) - half
+    const row0 = Math.floor(centre / COLUMNS) - half
+    const px = (BIG - 2) / 8
+    for (let r = 0; r < SPAN; r++) {
+      for (let c = 0; c < SPAN; c++) {
+        const col = col0 + c
+        const i = (row0 + r) * COLUMNS + col
+        if (col < 0 || col >= COLUMNS || row0 + r < 0 || i >= count) continue
+        const pixels = renderChar(charset, i, background)
+        for (let y = 0; y < 8; y++) {
+          for (let x = 0; x < 8; x++) {
+            ctx.fillStyle = palette.hex[pixels[y * 8 + x]]
+            ctx.fillRect(c * BIG + 1 + x * px, r * BIG + 1 + y * px, px, px)
+          }
+        }
+      }
+    }
+    // White inside black: visible on any C64 colour.
+    const at = half * BIG
+    ctx.lineWidth = 2
+    ctx.strokeStyle = '#000'
+    ctx.strokeRect(at + 1, at + 1, BIG - 2, BIG - 2)
+    ctx.strokeStyle = '#fff'
+    ctx.strokeRect(at + 3, at + 3, BIG - 6, BIG - 6)
+  }, [charset, count, background, centre, palette, size])
+
+  const boxH = size + 22
+  const above = loupe.y - GAP - boxH
+  const top = above >= 8 ? above : loupe.y + GAP
+  const left = Math.min(
+    Math.max(8, loupe.x - size / 2),
+    window.innerWidth - size - 8,
+  )
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      className="pointer-events-none fixed z-50 flex flex-col overflow-hidden rounded-lg border border-rule bg-card shadow-lg"
+      style={{ left, top }}
+    >
+      <canvas
+        ref={canvasRef}
+        aria-hidden="true"
+        className="block"
+        style={{ width: size, height: size }}
+      />
+      <span className="text-center font-mono text-xs leading-[22px]">
+        {centre >= 0
+          ? `$${centre.toString(16).toUpperCase().padStart(2, '0')} · ${centre}`
+          : 'Lift here to cancel'}
+      </span>
     </div>
   )
 }

@@ -81,6 +81,7 @@ export function BrushPicker({
           charset={charset}
           selected={sheetSelected}
           pitch={13}
+          magnify
           background={ecm ? ecmBg : 0}
           onPick={onPickChar}
         />

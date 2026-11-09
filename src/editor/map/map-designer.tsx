@@ -195,7 +195,7 @@ export function MapDesigner({
           </ToolButton>
         </>
       }
-      tabs={<EdgeTabs tabs={editorTabs(project, 'maps')} />}
+      tabs={<EdgeTabs tabs={editorTabs(project, 'maps', map.id)} />}
       className="flex gap-3 px-4 py-3"
     >
       {/* Left: map settings, brush, characters */}

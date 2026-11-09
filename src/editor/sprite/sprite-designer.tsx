@@ -195,7 +195,7 @@ export function SpriteDesigner({
           </ToolButton>
         </>
       }
-      tabs={<EdgeTabs tabs={editorTabs(project, 'sprites')} />}
+      tabs={<EdgeTabs tabs={editorTabs(project, 'sprites', set.id)} />}
       className="flex gap-4 px-4 py-3"
     >
       {/* Left: sprite details, pens, palette, preview */}

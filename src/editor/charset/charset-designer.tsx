@@ -191,7 +191,7 @@ export function CharsetDesigner({
           </ToolButton>
         </>
       }
-      tabs={<EdgeTabs tabs={editorTabs(project, 'charsets')} />}
+      tabs={<EdgeTabs tabs={editorTabs(project, 'charsets', charset.id)} />}
       className="flex gap-4 px-4 py-3"
     >
       {/* Left: char details, mode, pens, palette, preview */}
