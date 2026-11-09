@@ -123,6 +123,10 @@ See `PLAN.md` → _Decisions_ for the reasoning behind these.
 - [x] Getting around big maps on the Screen worksheet: a Navigator (thumbnail of the whole map with the visible part boxed; tap / drag to jump; worksheet and Zen mode), Shift + wheel pans sideways, Alt + wheel pans up / down
 - [x] Hand tool on the map tool rail and in map Zen mode: one finger / the mouse drags the map
 - [ ] Maybe: arrow keys / PgUp / PgDn step one screen (40 × 25)
+- [ ] Maybe, needs more testing: **stylus calibration**. On the tablet (RedMagic Astra 2) the stylus reports about 7–8 px right and 1–2 px down of the tip, the same at both corners of the char picker (measured 2026-11-09). That puts most taps on the next 13 px char; the big Screen cells hide it. The stylus arrives as `pointerType: 'touch'` with no tilt, and its contact size was 0 (to check: do fingers report a size, so the correction can skip them?). Idea: a “Calibrate stylus” screen (tap a few target centres; the average offset is kept per device, outside project data), applied by every drawing surface (`gestures.ts`, `charset-sheet.tsx`, the navigator) to stylus-like contacts only
+- [x] Side tabs follow what you're editing: CHARS from a screen opens its charset, SCREEN from a charset opens a screen using it, otherwise the last one opened
+- [x] Char magnifier on the Screen worksheet's char picker (pen / touch): slide to a char and lift; the highlight is sticky against wobble and lift skid
+- [x] The Screen worksheet reopens each map at its last zoom and scroll (kept per device)
 - [x] PNG tracing paper (Sprite and Screen worksheets): load a reference image per sprite or map; crop, 1:1 / fit / stretch / custom size, 9-point anchor, nudge, opacity, over all or under empty cells, show/hide. Kept on the device (not in project files)
 
 ### M10: Project palettes + Aseprite import
