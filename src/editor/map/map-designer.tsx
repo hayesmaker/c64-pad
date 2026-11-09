@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Maximize2, MonitorPlay, Redo2, Undo2 } from 'lucide-react'
 import { copyRegion, fillRect, resizeCharmap, setMapBlank } from '@/c64/charmap'
 import { WorksheetLayout } from '@/components/worksheet/worksheet-layout'
@@ -12,6 +12,7 @@ import { safeFileName } from '@/platform/save-file'
 import { useAssetHistory } from '../asset-history'
 import { ToolButton, useUndoShortcuts } from '../grid-parts'
 import { DEFAULT_VIEW, clampViewTo, zoomAroundIn } from '../view'
+import { loadMapView, saveMapView } from './stored-view'
 import { ZenMode } from '../zen-mode'
 import { TracingPanel } from '../tracing/tracing-panel'
 import { TracingButtons } from '../tracing/tracing-buttons'
@@ -91,7 +92,9 @@ export function MapDesigner({
       ),
     ),
   )
-  const [viewState, setView] = useState<GridView>(DEFAULT_VIEW)
+  // Reopens at the zoom and scroll it was left at.
+  const [viewState, setView] = useState<GridView>(() => loadMapView(map.id))
+  useEffect(() => saveMapView(map.id, viewState), [map.id, viewState])
   const bounds = mapBounds(map, cell, frame)
   const view = clampViewTo(viewState, bounds)
   const size = cell * view.zoom
