@@ -100,6 +100,24 @@ export function MapDesigner({
   const size = cell * view.zoom
   const { selection } = edit
 
+  // The navigator fades while painting, so strokes show through it.
+  const [painting, setPainting] = useState(false)
+  const strokeHandlers = {
+    ...edit.canvasHandlers,
+    onStrokeStart: (x: number, y: number) => {
+      setPainting(true)
+      edit.canvasHandlers.onStrokeStart(x, y)
+    },
+    onStrokeEnd: () => {
+      setPainting(false)
+      edit.canvasHandlers.onStrokeEnd()
+    },
+    onStrokeCancel: () => {
+      setPainting(false)
+      edit.canvasHandlers.onStrokeCancel()
+    },
+  }
+
   const renderCanvas = (
     v: GridView,
     onV: (next: GridView) => void,
@@ -119,9 +137,10 @@ export function MapDesigner({
         selection={selection}
         tracing={trace.grid}
         pan={edit.tool === 'pan'}
-        {...edit.canvasHandlers}
+        {...strokeHandlers}
       />
       <MapNavigator
+        faded={painting}
         map={map}
         charset={charset}
         view={v}

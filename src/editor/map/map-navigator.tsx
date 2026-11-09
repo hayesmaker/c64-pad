@@ -1,3 +1,4 @@
+import { cn } from '@/lib/utils'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { MapIcon, Minus } from 'lucide-react'
 import { usePalette } from '@/components/c64/palette-context'
@@ -98,6 +99,7 @@ export function MapNavigator({
   bounds,
   onViewChange,
   tracing,
+  faded = false,
 }: {
   map: Charmap
   charset: Charset
@@ -105,6 +107,8 @@ export function MapNavigator({
   bounds: ViewBounds
   onViewChange: (view: GridView) => void
   tracing?: GridTracing | null
+  /** See-through and untouchable (while painting under it). */
+  faded?: boolean
 }) {
   const [open, setOpen] = useState(true)
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -199,7 +203,10 @@ export function MapNavigator({
         aria-label="Show the map navigator"
         title="Navigator"
         onClick={() => setOpen(true)}
-        className="absolute right-2 bottom-2 flex size-9 items-center justify-center rounded-lg border border-rule bg-paper/90 text-foreground shadow-[0_4px_16px_var(--shadow)] hover:bg-muted [&_svg]:size-4"
+        className={cn(
+          fade(faded),
+          'absolute right-2 bottom-2 flex size-9 items-center justify-center rounded-lg border border-rule bg-paper/90 text-foreground shadow-[0_4px_16px_var(--shadow)] hover:bg-muted [&_svg]:size-4',
+        )}
       >
         <MapIcon />
       </button>
@@ -220,7 +227,12 @@ export function MapNavigator({
   }
 
   return (
-    <div className="absolute right-2 bottom-2 flex flex-col gap-1 rounded-lg border border-rule bg-paper/90 p-1 shadow-[0_4px_16px_var(--shadow)]">
+    <div
+      className={cn(
+        fade(faded),
+        'absolute right-2 bottom-2 flex flex-col gap-1 rounded-lg border border-rule bg-paper/90 p-1 shadow-[0_4px_16px_var(--shadow)]',
+      )}
+    >
       <div className="flex items-center justify-between pl-1">
         <span className="text-[11px] text-muted-foreground">Navigator</span>
         <button
@@ -282,3 +294,9 @@ export function MapNavigator({
     </div>
   )
 }
+
+const fade = (faded: boolean) =>
+  cn(
+    'transition-opacity duration-150',
+    faded && 'pointer-events-none opacity-20',
+  )

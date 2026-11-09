@@ -41,3 +41,37 @@ test('the Screen page reopens at the zoom and scroll it was left at', async ({
   await expect(zoom).toHaveText(zoomed!)
   expect(await map.screenshot()).toEqual(before)
 })
+
+test('the navigator fades while painting, so strokes show through', async ({
+  page,
+}) => {
+  await createProject(page, 'Fade')
+  await page
+    .locator('input[type="file"]')
+    .setInputFiles(asepriteFixture('island-8-1_test'))
+  const dialog = page.getByRole('dialog', { name: 'Import Aseprite file' })
+  await dialog.getByRole('button', { name: 'Import' }).click()
+  await expect(dialog).toBeHidden()
+  await page
+    .getByRole('link', { name: 'island-8-1_test', exact: true })
+    .last()
+    .click()
+
+  const navigator = page
+    .getByRole('slider', { name: /Map navigator/ })
+    .locator('..')
+  await expect(navigator).toHaveCSS('pointer-events', 'auto')
+
+  const nav = (await navigator.boundingBox())!
+  // Start left of the navigator and paint into it.
+  await page.mouse.move(nav.x - 20, nav.y + nav.height / 2)
+  await page.mouse.down()
+  await expect(navigator).toHaveCSS('pointer-events', 'none')
+  await expect(navigator).toHaveCSS('opacity', '0.2')
+  await page.mouse.move(nav.x + nav.width / 2, nav.y + nav.height / 2, {
+    steps: 5,
+  })
+  await page.mouse.up()
+  await expect(navigator).toHaveCSS('opacity', '1')
+  await expect(navigator).toHaveCSS('pointer-events', 'auto')
+})
