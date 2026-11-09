@@ -116,8 +116,23 @@ export function CharsetSheet({
     const index = row * COLUMNS + col
     return col >= 0 && col < COLUMNS && row >= 0 && index < count ? index : -1
   }
-  const track = (e: React.PointerEvent<HTMLCanvasElement>) =>
-    setLoupe({ index: charAt(e), x: e.clientX, y: e.clientY })
+  /**
+   * Follow the tip. The highlighted char stays until the tip is STICKY px
+   * into another, so wobble (and the skid as a stylus lifts) can't flip it
+   * to a neighbour.
+   */
+  const track = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    let index = charAt(e)
+    const held = loupe?.index ?? -1
+    if (held >= 0 && index !== held) {
+      const rect = e.currentTarget.getBoundingClientRect()
+      const x = e.clientX - rect.left - (held % COLUMNS) * PITCH
+      const y = e.clientY - rect.top - Math.floor(held / COLUMNS) * PITCH
+      const near = (v: number) => v > -STICKY && v < PITCH + STICKY
+      if (near(x) && near(y)) index = held
+    }
+    setLoupe({ index, x: e.clientX, y: e.clientY })
+  }
 
   const onPointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
     if (!magnify || e.pointerType === 'mouse') {
@@ -171,9 +186,10 @@ export function CharsetSheet({
           onPointerMove={(e) => {
             if (loupe) track(e)
           }}
-          onPointerUp={(e) => {
+          onPointerUp={() => {
             if (!loupe) return
-            const index = charAt(e)
+            // The char the magnifier shows, not where the lift skidded to.
+            const { index } = loupe
             setLoupe(null)
             if (index >= 0) onPick(index)
           }}
@@ -221,6 +237,7 @@ interface Loupe {
   y: number
 }
 
+const STICKY = 3 // px a tip must go into a neighbour to move to it
 const SPAN = 5 // chars across and down
 const BIG = 40 // px per char
 const GAP = 28 // px between the tip and the magnifier

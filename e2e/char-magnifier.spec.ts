@@ -3,13 +3,19 @@ import { createProject } from './helpers'
 import type { Locator } from '@playwright/test'
 
 /** A pen event at a char (col, row) of a 13 px sheet. */
-async function pen(sheet: Locator, type: string, col: number, row: number) {
+async function pen(
+  sheet: Locator,
+  type: string,
+  col: number,
+  row: number,
+  dx = 0,
+) {
   const box = (await sheet.boundingBox())!
   await sheet.dispatchEvent(type, {
     pointerType: 'pen',
     pointerId: 2,
     isPrimary: true,
-    clientX: box.x + col * 13 + 6,
+    clientX: box.x + col * 13 + 6 + dx,
     clientY: box.y + row * 13 + 6,
   })
 }
@@ -30,10 +36,24 @@ test('the pen magnifies the char sheet and picks where it lifts', async ({
   await expect(magnifier).toHaveCount(0)
   await expect(page.getByRole('img', { name: 'Brush: char $24' })).toBeVisible()
 
+  // Wobble just into the next char, then a skid to the right as the pen
+  // lifts: still the char the magnifier showed.
+  await pen(sheet, 'pointerdown', 5, 3)
+  await pen(sheet, 'pointermove', 5, 3, 8) // 1 px into $36
+  await expect(magnifier).toContainText('$35 · 53')
+  await pen(sheet, 'pointerup', 5, 3, 12)
+  await expect(page.getByRole('img', { name: 'Brush: char $35' })).toBeVisible()
+  // Further in, it moves on.
+  await pen(sheet, 'pointerdown', 5, 3)
+  await pen(sheet, 'pointermove', 6, 3)
+  await expect(magnifier).toContainText('$36 · 54')
+  await pen(sheet, 'pointerup', 6, 3)
+  await expect(page.getByRole('img', { name: 'Brush: char $36' })).toBeVisible()
+
   // Lifting off the grid cancels.
   await pen(sheet, 'pointerdown', 2, 0)
   await pen(sheet, 'pointermove', 20, 0)
   await expect(magnifier).toContainText('Lift here to cancel')
   await pen(sheet, 'pointerup', 20, 0)
-  await expect(page.getByRole('img', { name: 'Brush: char $24' })).toBeVisible()
+  await expect(page.getByRole('img', { name: 'Brush: char $36' })).toBeVisible()
 })
