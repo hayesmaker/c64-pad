@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { CHAR_SHAPE, floodFill } from '@/c64/bitmap'
 import {
   charPixelMode,
@@ -17,6 +17,12 @@ import type { PixelTool } from '../pixel-tool-rail'
 
 export type CharsetHistory = ReturnType<typeof useAssetHistory<'charsets'>>
 
+/** Each charset's last pens, so leaving and coming back keeps them. */
+const lastPens = new Map<
+  string,
+  { penByMode: Record<PixelMode, number>; ecmTarget: number | null }
+>()
+
 /**
  * The Character Worksheet's drawing state for the selected char: tool, pen
  * (remembered per pixel mode), the colour slot the palette edits, and what a
@@ -28,12 +34,16 @@ export function useCharTools(
   history: CharsetHistory,
 ) {
   const [tool, setTool] = useState<PixelTool>('draw')
-  const [penByMode, setPenByMode] = useState<Record<PixelMode, number>>({
-    hires: 1,
-    multicolor: 3,
-  })
+  const [penByMode, setPenByMode] = useState<Record<PixelMode, number>>(
+    () => lastPens.get(charset.id)?.penByMode ?? { hires: 1, multicolor: 3 },
+  )
   /** An ECM background chosen for recolouring (pen 0 covers all four). */
-  const [ecmTarget, setEcmTarget] = useState<number | null>(null)
+  const [ecmTarget, setEcmTarget] = useState<number | null>(
+    () => lastPens.get(charset.id)?.ecmTarget ?? null,
+  )
+  useEffect(() => {
+    lastPens.set(charset.id, { penByMode, ecmTarget })
+  }, [charset.id, penByMode, ecmTarget])
   const strokeId = useRef(0)
   const beforeStroke = useRef<Charset | null>(null)
 
