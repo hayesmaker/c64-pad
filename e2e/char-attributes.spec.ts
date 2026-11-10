@@ -7,19 +7,23 @@ test('chars get attributes, named per charset, shown on request', async ({
   await createProject(page, 'Attributes')
   await page.getByRole('link', { name: 'Charset 1' }).click()
 
-  // Name attribute 1.
-  await page.getByRole('button', { name: 'Name the attributes' }).click()
-  await page
-    .getByRole('textbox', { name: 'Name of attribute 1', exact: true })
-    .fill('Solid')
-  await page.getByRole('button', { name: 'Save' }).click()
-
-  // Give char 0 attribute 1.
   const select = page.getByRole('combobox', {
     name: 'Attribute of character 0',
   })
+  // Nothing to name while the char has no attribute.
+  await expect(
+    page.getByRole('button', { name: 'Name this attribute (pick one first)' }),
+  ).toBeDisabled()
+
+  // Give char 0 attribute 1, then name it.
   await select.click()
-  await page.getByRole('option', { name: /Solid/ }).click()
+  await page.getByRole('option', { name: 'Unnamed' }).first().click()
+  await expect(select).toContainText('Unnamed')
+  await page.getByRole('button', { name: 'Name attribute 1' }).click()
+  await page
+    .getByRole('textbox', { name: 'Name (empty to clear)' })
+    .fill('Solid')
+  await page.getByRole('button', { name: 'Save' }).click()
   await expect(select).toContainText('Solid')
 
   // The overlay toggle.
@@ -30,9 +34,12 @@ test('chars get attributes, named per charset, shown on request', async ({
   await show.click()
   await expect(show).toHaveAttribute('aria-pressed', 'true')
 
-  // Undo takes the attribute back off, redo puts it back.
+  // Undo takes the name off, then the attribute; redo puts both back.
+  await page.getByRole('button', { name: 'Undo' }).click()
+  await expect(select).toContainText('Unnamed')
   await page.getByRole('button', { name: 'Undo' }).click()
   await expect(select).toContainText('None')
+  await page.getByRole('button', { name: 'Redo' }).click()
   await page.getByRole('button', { name: 'Redo' }).click()
   await expect(select).toContainText('Solid')
 

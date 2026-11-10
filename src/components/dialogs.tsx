@@ -30,6 +30,9 @@ export function PromptDialog({
   initialValue = '',
   submitLabel = 'Save',
   onSubmit,
+  allowEmpty = false,
+  placeholder,
+  maxLength,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -38,6 +41,10 @@ export function PromptDialog({
   initialValue?: string
   submitLabel?: string
   onSubmit: (value: string) => void
+  /** Accept an empty value (e.g. to clear a name). */
+  allowEmpty?: boolean
+  placeholder?: string
+  maxLength?: number
 }) {
   const [value, setValue] = useState(initialValue)
   useEffect(() => {
@@ -52,7 +59,7 @@ export function PromptDialog({
           onSubmit={(e) => {
             e.preventDefault()
             const trimmed = value.trim()
-            if (!trimmed) return
+            if (!trimmed && !allowEmpty) return
             onSubmit(trimmed)
             onOpenChange(false)
           }}
@@ -64,6 +71,8 @@ export function PromptDialog({
             <Input
               value={value}
               onChange={(e) => setValue(e.target.value)}
+              placeholder={placeholder}
+              maxLength={maxLength}
               autoFocus
             />
           </Field>
@@ -75,7 +84,7 @@ export function PromptDialog({
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={!value.trim()}>
+            <Button type="submit" disabled={!allowEmpty && !value.trim()}>
               {submitLabel}
             </Button>
           </DialogFooter>
