@@ -2,13 +2,16 @@ import { useMemo, useState } from 'react'
 import { Download } from 'lucide-react'
 import { renderCharsetSheet } from '@/c64/render'
 import {
+  exportCharAttributes,
   exportCharColors,
   exportCharpadCtm,
   exportCharsetBin,
   exportCharsetKickAss,
+  exportMapAttributes,
   exportMapBin,
   exportMapColors,
   exportMapKickAss,
+  hasAttributes,
   renderMapImage,
 } from '@/export/chars'
 import { IndexedCanvas } from '@/components/c64/indexed-canvas'
@@ -133,7 +136,7 @@ export function CharsetExportPanel({
   charset: Charset
   onClose: () => void
 }) {
-  type Format = 'chars' | 'colours' | 'asm' | 'png'
+  type Format = 'chars' | 'colours' | 'attributes' | 'asm' | 'png'
   const [format, setFormat] = useState<Format>('chars')
   const [scale, setScale] = useState(4)
   const palette = usePalette().id
@@ -150,7 +153,9 @@ export function CharsetExportPanel({
     chars: `The charset as the VIC reads it, 8 bytes per char${charset.mode === 'ecm' ? ' (ECM: the 64 shapes)' : ''}. Load it on a $800 boundary.`,
     colours:
       'Colour RAM value for each screen code 0-255 (multicolour chars have bit 3 set): a lookup table for filling $D800.',
-    asm: 'KickAssembler source: register values, the charset and its colours.',
+    attributes:
+      'Attribute (0-15, 0 = none) for each screen code 0-255: a lookup table for game code (solid, ladder, …).',
+    asm: `KickAssembler source: register values, the charset and its colours${hasAttributes(charset) ? ', attributes and attribute names' : ''}.`,
     png: 'An image of the whole charset, 16 chars per row.',
   }
   const outputs: Record<Format, Output> = {
@@ -162,6 +167,11 @@ export function CharsetExportPanel({
     colours: {
       extension: '-colours.bin',
       data: () => exportCharColors(charset),
+      size: bytes(256),
+    },
+    attributes: {
+      extension: '-attributes.bin',
+      data: () => exportCharAttributes(charset),
       size: bytes(256),
     },
     asm: {
@@ -185,7 +195,8 @@ export function CharsetExportPanel({
         value={format}
         options={[
           { value: 'chars', label: 'Chars .bin' },
-          { value: 'colours', label: 'Colours .bin' },
+          { value: 'colours', label: 'Colours' },
+          { value: 'attributes', label: 'Attributes' },
           { value: 'asm', label: 'KickAss' },
           { value: 'png', label: 'PNG' },
         ]}
@@ -231,10 +242,13 @@ export function MapExportPanel({
   charset: Charset
   onClose: () => void
 }) {
-  type Format = 'map' | 'colours' | 'asm' | 'ctm' | 'png'
+  type Format = 'map' | 'colours' | 'attributes' | 'asm' | 'ctm' | 'png'
   const [format, setFormat] = useState<Format>('map')
   const [withColours, setWithColours] = useState(true)
   const [withCharset, setWithCharset] = useState(true)
+  const [withAttributes, setWithAttributes] = useState(() =>
+    hasAttributes(charset),
+  )
   const maxScale = Math.max(
     1,
     Math.min(
@@ -254,10 +268,19 @@ export function MapExportPanel({
         ? exportMapKickAss(map, charset, {
             projectName: project.name,
             colours: withColours,
+            attributes: withAttributes,
             charset: withCharset,
           })
         : '',
-    [format, map, charset, project.name, withColours, withCharset],
+    [
+      format,
+      map,
+      charset,
+      project.name,
+      withColours,
+      withAttributes,
+      withCharset,
+    ],
   )
   const ctm = useMemo(
     () => (format === 'ctm' ? exportCharpadCtm(map, charset) : null),
@@ -268,8 +291,10 @@ export function MapExportPanel({
     map: `Screen codes, one byte per cell, row by row (${map.width} per row).`,
     colours:
       'Colour RAM for every cell, from each char’s colour. Copy a screen’s worth to $D800.',
-    asm: 'KickAssembler source: the map’s size and rows, with its colour RAM and charset if you like.',
-    ctm: 'A CharPad project (.ctm version 7) with the charset, a colour per char and this map. Opens in CharPad 2.8 and later.',
+    attributes:
+      'Attribute (0-15, 0 = none) for every cell, from each char’s attribute, row by row like the map.',
+    asm: 'KickAssembler source: the map’s size and rows, with its colour RAM, attributes and charset if you like.',
+    ctm: 'A CharPad project (.ctm version 7) with the charset, a colour and material (attribute) per char and this map. Opens in CharPad 2.8 and later.',
     png: 'An image of the whole map.',
   }
   const outputs: Record<Format, Output | null> = {
@@ -281,6 +306,11 @@ export function MapExportPanel({
     colours: {
       extension: '-colours.bin',
       data: () => exportMapColors(map, charset),
+      size: bytes(cells),
+    },
+    attributes: {
+      extension: '-attributes.bin',
+      data: () => exportMapAttributes(map, charset),
       size: bytes(cells),
     },
     asm: {
@@ -310,6 +340,7 @@ export function MapExportPanel({
         options={[
           { value: 'map', label: 'Map .bin' },
           { value: 'colours', label: 'Colours' },
+          { value: 'attributes', label: 'Attributes' },
           { value: 'asm', label: 'KickAss' },
           { value: 'ctm', label: 'CharPad' },
           { value: 'png', label: 'PNG' },
@@ -327,6 +358,15 @@ export function MapExportPanel({
                 onChange={(e) => setWithColours(e.target.checked)}
               />
               Colour RAM per cell
+            </label>
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                className="size-4 accent-primary"
+                checked={withAttributes}
+                onChange={(e) => setWithAttributes(e.target.checked)}
+              />
+              Attributes per cell
             </label>
             <label className="flex items-center gap-2">
               <input

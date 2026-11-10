@@ -1,6 +1,12 @@
 import { encodeTile } from '@/c64/char-fit'
 import { createCharmap } from '@/c64/charmap'
-import { CHARSET_BYTES, CHAR_BYTES, createCharset } from '@/c64/charset'
+import {
+  CHARSET_BYTES,
+  CHARSET_SIZE,
+  CHAR_BYTES,
+  createCharset,
+} from '@/c64/charset'
+import { tileAttributes } from './attributes'
 import { TILE_SIZE, mapSize } from './validate'
 import type { Charmap } from '@/c64/charmap'
 import type { Charset } from '@/c64/charset'
@@ -22,6 +28,7 @@ export function buildCharset(
   name: string,
   colours: Pick<ColourReport, 'tiles'>,
   fit: CharsetFit,
+  tileUserData: ReadonlyArray<string> = [],
 ): Charset {
   const data = new Uint8Array(CHARSET_BYTES)
   const blank = createCharset()
@@ -39,11 +46,18 @@ export function buildCharset(
     // Unused chars: hires, in a colour multicolour mode can show.
     for (let i = colours.tiles.length; i < colors.length; i++) colors[i] &= 7
   }
+  const tagged = tileAttributes(tileUserData)
+  const attributes = new Uint8Array(CHARSET_SIZE)
+  tagged.values.forEach((v, i) => {
+    if (i < colours.tiles.length && i < CHARSET_SIZE) attributes[i] = v
+  })
   return createCharset({
     name,
     mode: fit.mode,
     data,
     colors,
+    attributes,
+    attributeNames: tagged.names,
     background: fit.background,
     multicolor1: fit.multicolor1,
     multicolor2: fit.multicolor2,

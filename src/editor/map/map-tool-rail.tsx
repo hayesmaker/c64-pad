@@ -6,6 +6,7 @@ import {
   PaintBucket,
   Pencil,
   Pipette,
+  Tags,
 } from 'lucide-react'
 import { ToolButton, zoomLabel } from '../grid-parts'
 import { CharIcon } from './map-brush'
@@ -33,6 +34,8 @@ export function MapToolRail({
   onBlank,
   showGrid,
   onToggleGrid,
+  showAttributes,
+  onToggleAttributes,
   zoom,
   onZoom,
 }: {
@@ -44,6 +47,8 @@ export function MapToolRail({
   onBlank: () => void
   showGrid: boolean
   onToggleGrid: () => void
+  showAttributes: boolean
+  onToggleAttributes: () => void
   zoom: number
   /** Zoom in, or reset when zoomed. */
   onZoom: () => void
@@ -75,6 +80,13 @@ export function MapToolRail({
       <div aria-hidden="true" className="mx-1.5 my-1 h-px bg-rule-soft" />
       <ToolButton label="Grid lines" pressed={showGrid} onClick={onToggleGrid}>
         <Grid3x3 />
+      </ToolButton>
+      <ToolButton
+        label="Char attributes (shown over the map)"
+        pressed={showAttributes}
+        onClick={onToggleAttributes}
+      >
+        <Tags />
       </ToolButton>
       <ToolButton
         label={zoom !== 1 ? 'Reset zoom (pinch to zoom)' : 'Zoom in (or pinch)'}

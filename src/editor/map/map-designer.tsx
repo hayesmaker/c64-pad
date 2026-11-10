@@ -22,6 +22,7 @@ import { MapExportPanel } from '../chars-export'
 import { useElementSize } from '../use-element-size'
 import { MapCanvas, mapBounds } from './map-canvas'
 import { MapNavigator } from './map-navigator'
+import { useShowAttributes } from '../attribute-overlay'
 import { BrushPicker } from './map-brush'
 import { BlankCharDialog, ResizeDialog } from './map-dialogs'
 import { Readout } from './map-readout'
@@ -60,6 +61,7 @@ export function MapDesigner({
   useUndoShortcuts(history)
   const edit = useMapStrokes(map, charset.mode === 'ecm', history)
   const [showGrid, setShowGrid] = useState(true)
+  const [showAttributes, setShowAttributes] = useShowAttributes('map')
   const [resizing, setResizing] = useState(false)
   const [zen, setZen] = useState(false)
   const [runExport, setRunExport] = useState(false)
@@ -133,6 +135,7 @@ export function MapDesigner({
         view={v}
         onViewChange={onV}
         showGrid={showGrid}
+        showAttributes={showAttributes}
         hover={edit.footprint}
         selection={selection}
         tracing={trace.grid}
@@ -159,6 +162,7 @@ export function MapDesigner({
       ecmBg={edit.ecmBg}
       onEcmBg={edit.chooseEcmBg}
       onPickChar={edit.pickChar}
+      showAttributes={showAttributes}
     />
   )
 
@@ -285,6 +289,8 @@ export function MapDesigner({
         onBlank={() => setBlankOpen(true)}
         showGrid={showGrid}
         onToggleGrid={() => setShowGrid((g) => !g)}
+        showAttributes={showAttributes}
+        onToggleAttributes={() => setShowAttributes(!showAttributes)}
         zoom={view.zoom}
         onZoom={() =>
           setView(

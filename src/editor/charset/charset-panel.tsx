@@ -17,12 +17,18 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
 import { hex } from '../hex'
+import { useShowAttributes } from '../attribute-overlay'
+import { CharAttributeControls } from './char-attributes'
 import { CharsetSheet } from './charset-sheet'
 import type { Charmap } from '@/c64/charmap'
 import type { Charset, PetsciiSet } from '@/c64/charset'
 
 /** Char copied with "Copy", kept for the app session (works across charsets). */
-let clipboard: { bytes: Uint8Array; color: number } | null = null
+let clipboard: {
+  bytes: Uint8Array
+  color: number
+  attribute: number
+} | null = null
 
 /**
  * The whole charset to pick from, with copy / paste / swap and the whole-set
@@ -49,6 +55,7 @@ export function CharsetPanel({
   onChange: (fn: (cs: Charset) => Charset) => void
 }) {
   const [, setClipboardVersion] = useState(0)
+  const [showAttributes, setShowAttributes] = useShowAttributes('chars')
   const [confirm, setConfirm] = useState<
     { kind: 'petscii'; set: PetsciiSet } | { kind: 'clear' } | null
   >(null)
@@ -65,6 +72,7 @@ export function CharsetPanel({
         selected={selected}
         swapping={swapping}
         onPick={onPick}
+        showAttributes={showAttributes}
       />
       <div className="mt-1 grid grid-cols-2 gap-1.5">
         <Button
@@ -73,6 +81,7 @@ export function CharsetPanel({
             clipboard = {
               bytes: getCharBytes(charset, selected),
               color: charset.colors[selected],
+              attribute: charset.attributes[selected],
             }
             setClipboardVersion((v) => v + 1)
           }}
@@ -89,7 +98,9 @@ export function CharsetPanel({
               const next = setCharBytes(cs, selected, c.bytes)
               const colors = next.colors.slice()
               colors[selected] = c.color
-              return { ...next, colors }
+              const attributes = next.attributes.slice()
+              attributes[selected] = c.attribute
+              return { ...next, colors, attributes }
             })
           }}
         >
@@ -133,6 +144,13 @@ export function CharsetPanel({
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+      <CharAttributeControls
+        charset={charset}
+        selected={selected}
+        show={showAttributes}
+        onShow={setShowAttributes}
+        onChange={onChange}
+      />
       <p className="text-[11px] leading-snug text-muted-foreground">
         {swapping
           ? `Tap another character to swap it with ${hex(selected)}. Maps keep their codes.`
@@ -150,8 +168,8 @@ export function CharsetPanel({
         }
         description={
           confirm?.kind === 'clear'
-            ? 'Every character’s pixels are cleared. Colours and maps are kept. You can undo this.'
-            : 'Every character’s pixels are replaced with the C64’s built-in set. Colours and maps are kept. You can undo this.'
+            ? 'Every character’s pixels are cleared. Colours, attributes and maps are kept. You can undo this.'
+            : 'Every character’s pixels are replaced with the C64’s built-in set. Colours, attributes and maps are kept. You can undo this.'
         }
         confirmLabel={confirm?.kind === 'clear' ? 'Clear all' : 'Load'}
         onConfirm={() => {

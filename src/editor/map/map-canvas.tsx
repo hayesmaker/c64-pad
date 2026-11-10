@@ -5,6 +5,7 @@ import { usePalette } from '@/components/c64/palette-context'
 import { cn } from '@/lib/utils'
 import { useGridGestures } from '../gestures'
 import { clampViewTo, zoomAroundIn } from '../view'
+import { drawAttribute } from '../attribute-overlay'
 import { drawTracing } from '../tracing/placement'
 import type { GridTracing } from '../tracing/placement'
 import type { StrokeHandlers } from '../gestures'
@@ -93,6 +94,7 @@ export function MapCanvas({
   view,
   onViewChange,
   showGrid,
+  showAttributes = false,
   hover,
   selection,
   tracing,
@@ -108,6 +110,8 @@ export function MapCanvas({
   view: GridView
   onViewChange: (view: GridView) => void
   showGrid: boolean
+  /** Draw each cell's char attribute over it. */
+  showAttributes?: boolean
   /** Highlighted cells under the pointer (the brush footprint). */
   hover: CellRect | null
   selection: CellRect | null
@@ -186,6 +190,20 @@ export function MapCanvas({
 
     if (tracing?.layer === 'over') traceAt(tracing)
 
+    if (showAttributes) {
+      const ecm = charset.mode === 'ecm'
+      for (let y = y0; y < y1; y++) {
+        const top = px(y, view.y)
+        for (let x = x0; x < x1; x++) {
+          const code = map.cells[y * map.width + x]
+          const value = charset.attributes[ecm ? code & 63 : code]
+          if (value === 0) continue
+          const left = px(x, view.x)
+          drawAttribute(ctx, left, top, px(x + 1, view.x) - left, value)
+        }
+      }
+    }
+
     const right = px(x1, view.x)
     const bottom = px(y1, view.y)
     const vline = (x: number, color: string, w: number) => {
@@ -257,10 +275,13 @@ export function MapCanvas({
     frameW,
     frameH,
     showGrid,
+    showAttributes,
     hover,
     selection,
     tracing,
     charset.background,
+    charset.mode,
+    charset.attributes,
     palette,
   ])
 

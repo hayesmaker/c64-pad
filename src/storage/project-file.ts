@@ -71,7 +71,9 @@ export function migrateProject(raw: unknown): Project {
     )
   }
   // v1 → v2: projects gained a display palette; v1 always showed Colodore,
-  // which validateProject fills in. Future: if (version < 3) raw = ...
+  // which validateProject fills in.
+  // v2 → v3: charsets gained char attributes and their names; createCharset
+  // gives v2 charsets none (all 0, unnamed).
   return validateProject(raw as unknown as Project)
 }
 

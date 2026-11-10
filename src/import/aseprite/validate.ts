@@ -1,6 +1,7 @@
 import { MAX_MAP_SIZE } from '@/c64/charmap'
 import { CHARSET_SIZE } from '@/c64/charset'
 import { matchPalette, nearestColor } from '@/c64/palette'
+import { tileAttributes } from './attributes'
 import type { C64Color, PaletteId, PaletteMatch } from '@/c64/palette'
 import type {
   AseCel,
@@ -16,6 +17,7 @@ export const TILE_SIZE = 8
 // ---------------------------------------------------------------- structure
 
 /** A tilemap layer with its cel (frame 1) and tileset: one importable map. */
+
 export interface TilemapSource {
   readonly layer: AseLayer
   readonly cel: AseCel
@@ -152,13 +154,10 @@ export function checkStructure(
   if (doc.frames > 1) {
     warnings.push(`Only frame 1 is imported (the file has ${doc.frames}).`)
   }
-  const tagged = new Map<string, Array<number>>()
-  tileset.tileUserData.forEach((text, i) => {
-    if (text) tagged.set(text, [...(tagged.get(text) ?? []), i])
-  })
-  for (const [text, tiles] of tagged) {
+  const { dropped } = tileAttributes(tileset.tileUserData)
+  if (dropped.length > 0) {
     warnings.push(
-      `Tile properties aren't imported yet: ${plural(tiles.length, 'tile')} tagged “${text}” (${tiles.length === 1 ? 'tile' : 'tiles'} ${tiles.join(', ')}).`,
+      `Only 15 char attributes fit, so these tile tags aren't imported: ${dropped.map((t) => `“${t}”`).join(', ')}.`,
     )
   }
 

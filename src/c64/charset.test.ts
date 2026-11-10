@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest'
 import { ModelError } from './errors'
 import {
   CHARSET_BYTES,
+  attributeLabel,
+  charAttribute,
   charColor,
   charCount,
   charPixelColors,
@@ -13,6 +15,8 @@ import {
   isCharMulticolor,
   renderChar,
   rotateCharClockwise,
+  setAttributeName,
+  setCharAttribute,
   setCharBytes,
   setCharColor,
   setCharMulticolor,
@@ -183,5 +187,57 @@ describe('petsciiData', () => {
     expect([...petsciiData('lower').subarray(8, 16)]).toEqual([
       0x00, 0x00, 0x3c, 0x06, 0x3e, 0x66, 0x3e, 0x00,
     ])
+  })
+})
+
+describe('char attributes', () => {
+  it('start at 0 (none) and unnamed', () => {
+    const cs = createCharset()
+    expect(cs.attributes).toHaveLength(256)
+    expect([...cs.attributes].every((a) => a === 0)).toBe(true)
+    expect(cs.attributeNames).toEqual(Array(16).fill(''))
+    expect(attributeLabel(cs, 0)).toBe('None')
+    expect(attributeLabel(cs, 10)).toBe('A')
+  })
+
+  it('sets 0-15 per char and rejects anything else', () => {
+    const cs = setCharAttribute(createCharset(), 7, 15)
+    expect(charAttribute(cs, 7)).toBe(15)
+    expect(setCharAttribute(cs, 7, 15)).toBe(cs)
+    expect(() => setCharAttribute(cs, 7, 16)).toThrow(RangeError)
+    expect(() => setCharAttribute(cs, 7, -1)).toThrow(RangeError)
+    expect(() =>
+      setCharAttribute(createCharset({ mode: 'ecm' }), 64, 1),
+    ).toThrow(RangeError)
+    expect(() =>
+      createCharset({ attributes: new Uint8Array(256).fill(16) }),
+    ).toThrow(RangeError)
+  })
+
+  it('names attributes 1-15, trimmed and capped', () => {
+    let cs = setAttributeName(createCharset(), 1, '  Solid ')
+    cs = setAttributeName(cs, 2, 'x'.repeat(40))
+    expect(attributeLabel(cs, 1)).toBe('Solid')
+    expect(cs.attributeNames[2]).toHaveLength(24)
+    expect(() => setAttributeName(cs, 0, 'Air')).toThrow(ModelError)
+    // Hand-edited files: short or junk name lists are evened out.
+    const odd = createCharset({ attributeNames: ['zero', 'One'] })
+    expect(odd.attributeNames).toHaveLength(16)
+    expect(odd.attributeNames.slice(0, 3)).toEqual(['', 'One', ''])
+  })
+
+  it('travel with copied and swapped chars', () => {
+    let cs = setCharAttribute(createCharset(), 1, 4)
+    cs = setCharAttribute(cs, 2, 9)
+    expect(charAttribute(copyChar(cs, 1, 5), 5)).toBe(4)
+    const swapped = swapChars(cs, 1, 2)
+    expect([charAttribute(swapped, 1), charAttribute(swapped, 2)]).toEqual([
+      9, 4,
+    ])
+  })
+
+  it('are kept when the mode changes', () => {
+    const cs = setCharAttribute(createCharset(), 3, 6)
+    expect(charAttribute(setCharsetMode(cs, 'multicolor'), 3)).toBe(6)
   })
 })

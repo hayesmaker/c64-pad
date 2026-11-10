@@ -20,6 +20,7 @@ export function BrushPicker({
   ecmBg,
   onEcmBg,
   onPickChar,
+  showAttributes = false,
 }: {
   map: Charmap
   charset: Charset
@@ -27,6 +28,8 @@ export function BrushPicker({
   ecmBg: number
   onEcmBg: (background: number) => void
   onPickChar: (char: number) => void
+  /** Draw char attributes over the sheet. */
+  showAttributes?: boolean
 }) {
   const palette = usePalette()
   const ecm = charset.mode === 'ecm'
@@ -84,6 +87,7 @@ export function BrushPicker({
           magnify
           background={ecm ? ecmBg : 0}
           onPick={onPickChar}
+          showAttributes={showAttributes}
         />
       </div>
     </>

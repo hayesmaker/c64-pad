@@ -10,7 +10,7 @@ import type { C64Color, PaletteId } from './palette'
 import type { SpriteSet } from './sprite-set'
 
 /** Bump when the stored shape changes; persistence migrates older versions. */
-export const PROJECT_VERSION = 2
+export const PROJECT_VERSION = 3
 
 /** The unit of saving and export: holds any number of sprite sets, charsets and maps. */
 export interface Project {

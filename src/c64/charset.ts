@@ -22,6 +22,14 @@ export const CHARSET_SIZE = 256
 export const CHARSET_BYTES = CHAR_BYTES * CHARSET_SIZE // 2048
 
 /**
+ * Char attributes (CharPad's "materials"): a 0-15 value per char for game
+ * logic (solid, ladder, hazard, …). 0 means none. Each charset can name the
+ * values 1-15; `attributeNames[0]` is always ''.
+ */
+export const ATTRIBUTE_COUNT = 16
+export const MAX_ATTRIBUTE_NAME = 24
+
+/**
  * Text modes:
  * - hires: 8×8, 1bpp; per-char colour 0-15.
  * - multicolor: per-char colour bit 3 set (8-15) = multicolour char, drawn
@@ -41,6 +49,10 @@ export interface Charset {
   readonly data: Uint8Array
   /** Colour RAM value per char (colouring is per char, not per map cell). */
   readonly colors: Uint8Array
+  /** Attribute 0-15 per char (0 = none). */
+  readonly attributes: Uint8Array
+  /** Names of attributes 0-15 ('' = unnamed; 0 is always ''). */
+  readonly attributeNames: ReadonlyArray<string>
   readonly background: C64Color
   readonly multicolor1: C64Color
   readonly multicolor2: C64Color
@@ -61,6 +73,9 @@ export function createCharset(init: Partial<Charset> = {}): Charset {
     multicolor2: 12,
     ecmBackgrounds: [2, 5, 7],
     ...init,
+    // Projects from before attributes (format 2) have none.
+    attributes: init.attributes ?? new Uint8Array(CHARSET_SIZE),
+    attributeNames: normaliseNames(init.attributeNames),
   }
   if (charset.data.length !== CHARSET_BYTES) {
     throw new RangeError(`Charset data must be ${CHARSET_BYTES} bytes`)
@@ -69,8 +84,29 @@ export function createCharset(init: Partial<Charset> = {}): Charset {
     throw new RangeError(`Charset colours must have ${CHARSET_SIZE} entries`)
   }
   charset.colors.forEach((c) => assertC64Color(c, 'Char colour'))
+  if (charset.attributes.length !== CHARSET_SIZE) {
+    throw new RangeError(`Charset attributes must have ${CHARSET_SIZE} entries`)
+  }
+  charset.attributes.forEach((a) => assertAttribute(a))
   checkRegisters(charset)
   return charset
+}
+
+function normaliseNames(names: unknown): Array<string> {
+  const list = Array.isArray(names) ? names : []
+  return Array.from({ length: ATTRIBUTE_COUNT }, (_, v) =>
+    v === 0
+      ? ''
+      : String(list[v] ?? '')
+          .trim()
+          .slice(0, MAX_ATTRIBUTE_NAME),
+  )
+}
+
+function assertAttribute(value: number) {
+  if (!Number.isInteger(value) || value < 0 || value >= ATTRIBUTE_COUNT) {
+    throw new RangeError(`Char attribute ${value} outside 0-15`)
+  }
 }
 
 function checkRegisters(cs: Charset) {
@@ -144,6 +180,44 @@ export function setCharMulticolor(
   const colors = cs.colors.slice()
   colors[index] = (cs.colors[index] & 7) | (on ? 8 : 0)
   return { ...cs, colors }
+}
+
+/** The char's attribute, 0-15 (0 = none). */
+export function charAttribute(cs: Charset, index: number): number {
+  checkIndex(cs, index)
+  return cs.attributes[index]
+}
+
+export function setCharAttribute(
+  cs: Charset,
+  index: number,
+  value: number,
+): Charset {
+  checkIndex(cs, index)
+  assertAttribute(value)
+  if (cs.attributes[index] === value) return cs
+  const attributes = cs.attributes.slice()
+  attributes[index] = value
+  return { ...cs, attributes }
+}
+
+/** Name attribute 1-15 ('' clears the name). */
+export function setAttributeName(
+  cs: Charset,
+  value: number,
+  name: string,
+): Charset {
+  assertAttribute(value)
+  if (value === 0) throw new ModelError('Attribute 0 means none')
+  const attributeNames = cs.attributeNames.slice()
+  attributeNames[value] = name.trim().slice(0, MAX_ATTRIBUTE_NAME)
+  return { ...cs, attributeNames }
+}
+
+/** "None", the attribute's name, or its number in hex ("A") if unnamed. */
+export function attributeLabel(cs: Charset, value: number): string {
+  if (value === 0) return 'None'
+  return cs.attributeNames[value] || value.toString(16).toUpperCase()
 }
 
 /**
@@ -272,16 +346,21 @@ export function rotateCharClockwise(cs: Charset, index: number): Charset {
   return setCharBytes(cs, index, out)
 }
 
-/** Copy char `from` (pixels and colour) onto char `to`. */
+/** Copy char `from` (pixels, colour and attribute) onto char `to`. */
 export function copyChar(cs: Charset, from: number, to: number): Charset {
   checkIndex(cs, to)
   const next = setCharBytes(cs, to, getCharBytes(cs, from))
   const colors = next.colors.slice()
   colors[to] = cs.colors[from]
-  return { ...next, colors }
+  const attributes = next.attributes.slice()
+  attributes[to] = cs.attributes[from]
+  return { ...next, colors, attributes }
 }
 
-/** Swap two chars (pixels and colours). Maps referencing them are not changed. */
+/**
+ * Swap two chars (pixels, colours and attributes). Maps referencing them are
+ * not changed.
+ */
 export function swapChars(cs: Charset, a: number, b: number): Charset {
   const bytesA = getCharBytes(cs, a)
   const bytesB = getCharBytes(cs, b)
@@ -289,7 +368,10 @@ export function swapChars(cs: Charset, a: number, b: number): Charset {
   const colors = cs.colors.slice()
   colors[a] = cs.colors[b]
   colors[b] = cs.colors[a]
-  return { ...next, colors }
+  const attributes = cs.attributes.slice()
+  attributes[a] = cs.attributes[b]
+  attributes[b] = cs.attributes[a]
+  return { ...next, colors, attributes }
 }
 
 /** C64 colour for each pixel value of the char; `ecmBackground` 0-3 in ECM. */

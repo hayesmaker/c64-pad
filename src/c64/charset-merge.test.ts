@@ -11,6 +11,8 @@ import { createCharmap } from './charmap'
 import {
   createCharset,
   renderChar,
+  setAttributeName,
+  setCharAttribute,
   setCharBytes,
   setCharColor,
 } from './charset'
@@ -113,6 +115,32 @@ describe('planCharMerge', () => {
     expect(plan.problems).toEqual([
       { char: 1, problem: expect.stringMatching(/Orange/) },
     ])
+  })
+})
+
+describe('attributes', () => {
+  it('copied chars keep their attribute; names fill gaps or warn', () => {
+    let a = charsetWith('A', { 1: 0xff, 2: 0xf0 })
+    a = setCharAttribute(setCharAttribute(a, 1, 3), 2, 4)
+    a = setAttributeName(setAttributeName(a, 3, 'Ladder'), 4, 'Spikes')
+    const b = setAttributeName(charsetWith('B', { 1: 0x81 }), 4, 'Lava')
+    const plan = planCharMerge(twoCharsets(a, b), a.id, b.id, [1, 2])
+    const [m1, m2] = plan.moves
+    expect(plan.merged.attributes[m1.to]).toBe(3)
+    expect(plan.merged.attributes[m2.to]).toBe(4)
+    expect(plan.merged.attributeNames[3]).toBe('Ladder')
+    expect(plan.merged.attributeNames[4]).toBe('Lava')
+    expect(plan.warnings.some((w) => w.includes('Spikes'))).toBe(true)
+  })
+
+  it('only reuses a matching char with the same attribute', () => {
+    const a = setCharAttribute(charsetWith('A', { 1: 0x3c }), 1, 2)
+    const b = charsetWith('B', { 9: 0x3c })
+    const plan = planCharMerge(twoCharsets(a, b), a.id, b.id, [1])
+    expect(plan.moves[0].reused).toBe(false)
+    const same = setCharAttribute(b, 9, 2)
+    const plan2 = planCharMerge(twoCharsets(a, same), a.id, same.id, [1])
+    expect(plan2.moves[0]).toEqual({ from: 1, to: 9, reused: true })
   })
 })
 

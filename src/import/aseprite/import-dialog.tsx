@@ -28,6 +28,7 @@ import {
 import { Segmented } from '@/editor/segmented'
 import { CheckLine, Note, ReportSection } from '@/components/report'
 import { ColorMenuGrid } from '@/components/c64/color-menu-grid'
+import { tileAttributes } from './attributes'
 import { baseName, buildCharset, buildMap, uniqueName } from './convert'
 import { analyseColours, checkStructure, fitCharset, mapSize } from './validate'
 import type { C64Color } from '@/c64/palette'
@@ -166,6 +167,7 @@ function ImportBody({
         uniqueName(base, next.charsets),
         colours,
         fit,
+        source.tileset.tileUserData,
       )
       next = addAsset(next, 'charsets', charset)
       if (addMap) {
@@ -210,6 +212,7 @@ function ImportBody({
             </SelectContent>
           </Select>
         )}
+        {source && <TagNote tileUserData={source.tileset.tileUserData} />}
         {structure.warnings.length > 0 && (
           <ul className="flex flex-col gap-1">
             {structure.warnings.map((w) => (
@@ -436,4 +439,19 @@ function RegisterPicker({
       </DropdownMenuContent>
     </DropdownMenu>
   )
+}
+
+/** Which tile tags become which char attributes. */
+function TagNote({ tileUserData }: { tileUserData: ReadonlyArray<string> }) {
+  const { values, names } = tileAttributes(tileUserData)
+  const counts = new Map<number, number>()
+  values.forEach((v) => v && counts.set(v, (counts.get(v) ?? 0) + 1))
+  if (counts.size === 0) return null
+  const parts = [...counts.keys()]
+    .sort((a, b) => a - b)
+    .map((v) => {
+      const n = counts.get(v) ?? 0
+      return `${names[v] ? `“${names[v]}” → ` : ''}${v} (${n} tile${n === 1 ? '' : 's'})`
+    })
+  return <p>Tile tags become char attributes: {parts.join(', ')}.</p>
 }

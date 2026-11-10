@@ -32,7 +32,6 @@ describe('checkStructure', () => {
     const { structure } = await load('island-8-1_test')
     expect(structure.warnings).toEqual([
       'Image layers aren’t imported: “Background”.'.replace('’', "'"),
-      "Tile properties aren't imported yet: 1 tile tagged “solid” (tile 3).",
     ])
   })
 
@@ -156,6 +155,20 @@ describe('buildCharset / buildMap', () => {
       expect(colours.tiles.some((_, i) => isCharMulticolor(cs, i))).toBe(true)
     },
   )
+
+  it('turns tile tags into char attributes', async () => {
+    const { colours, fit, structure } = await load('island-8-1_test')
+    const cs = buildCharset(
+      'Test',
+      colours,
+      fit,
+      structure.source!.tileset.tileUserData,
+    )
+    // Tile 3 is tagged “solid” in the fixture.
+    expect(cs.attributes[3]).toBe(1)
+    expect(cs.attributeNames[1]).toBe('solid')
+    expect([...cs.attributes].filter(Boolean)).toEqual([1])
+  })
 
   it('places an offset tilemap on the whole canvas', async () => {
     const { doc, structure } = await load('island-8-1_test')

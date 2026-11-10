@@ -53,6 +53,46 @@ export function exportCharColors(cs: Charset): Uint8Array {
   return out
 }
 
+/**
+ * Attribute (0-15) for each screen code 0-255, as a lookup table like the
+ * colours; in ECM a code uses the attribute of its shape (code & 63).
+ */
+export function exportCharAttributes(cs: Charset): Uint8Array {
+  const out = new Uint8Array(256)
+  for (let code = 0; code < 256; code++) {
+    out[code] = cs.attributes[cs.mode === 'ecm' ? code & 63 : code] & 0x0f
+  }
+  return out
+}
+
+/** Whether any usable char has an attribute or any attribute is named. */
+export function hasAttributes(cs: Charset): boolean {
+  return (
+    cs.attributes.subarray(0, charCount(cs.mode)).some((a) => a !== 0) ||
+    cs.attributeNames.some(Boolean)
+  )
+}
+
+/** Attribute per map cell, one byte each, row by row like the map. */
+export function exportMapAttributes(map: Charmap, cs: Charset): Uint8Array {
+  const table = exportCharAttributes(cs)
+  return map.cells.map((code) => table[code])
+}
+
+/** `.label`s for the named attributes (`<prefix>_attr_<name> = n`). */
+function attributeLabels(cs: Charset, prefix: string): Array<string> {
+  const taken = new Set<string>()
+  const lines: Array<string> = []
+  cs.attributeNames.forEach((name, v) => {
+    if (v === 0 || !name) return
+    let label = `${prefix}_attr_${asmLabel(name, String(v)).replace(/^_/, '')}`
+    if (taken.has(label)) label = `${label}_${v}`
+    taken.add(label)
+    lines.push(`.label ${label} = ${v}  // ${name.replace(/[\r\n]/g, ' ')}`)
+  })
+  return lines
+}
+
 /** Screen codes, one byte per cell, left to right then top to bottom. */
 export function exportMapBin(map: Charmap): Uint8Array {
   return map.cells.slice()
@@ -116,6 +156,15 @@ function charsetSource(cs: Charset, prefix: string): Array<string> {
     `${prefix}_colours:`,
     ...byteLines(exportCharColors(cs), 16, (i) => `${hex2(i * 16)}-`),
   )
+  if (hasAttributes(cs)) {
+    lines.push(
+      '',
+      '// Attribute (0-15, 0 = none) per screen code',
+      ...attributeLabels(cs, prefix),
+      `${prefix}_attributes:`,
+      ...byteLines(exportCharAttributes(cs), 16, (i) => `${hex2(i * 16)}-`),
+    )
+  }
   return lines
 }
 
@@ -142,8 +191,15 @@ export function exportMapKickAss(
   {
     projectName,
     colours = true,
+    attributes = false,
     charset = true,
-  }: { projectName: string; colours?: boolean; charset?: boolean },
+  }: {
+    projectName: string
+    colours?: boolean
+    /** Attribute per cell (from each char's attribute). */
+    attributes?: boolean
+    charset?: boolean
+  },
 ): string {
   const prefix = asmLabel(map.name, 'map')
   const perLine = Math.min(map.width, 40)
@@ -167,6 +223,14 @@ export function exportMapKickAss(
       '// Colour RAM per cell (copy a screen of it to $D800)',
       `${prefix}_colours:`,
       ...byteLines(exportMapColors(map, cs), perLine, rowNote),
+    )
+  }
+  if (attributes) {
+    lines.push(
+      '',
+      '// Attribute (0-15, 0 = none) per cell',
+      `${prefix}_attributes:`,
+      ...byteLines(exportMapAttributes(map, cs), perLine, rowNote),
     )
   }
   if (charset)
@@ -193,6 +257,7 @@ export function exportCharpadCtm(
     )
   }
   const colours = exportCharColors(cs)
+  const attributes = exportCharAttributes(cs)
   const header = [
     ...[0x43, 0x54, 0x4d], // "CTM"
     7,
@@ -210,8 +275,8 @@ export function exportCharpadCtm(
     blocks.push([0xda, 0xb0 | blocks.length, ...data])
   // Chars: count - 1 (word), then 8 bytes each. All 256, as CharPad keeps them.
   block([0xff, 0x00, ...cs.data])
-  // Attribute per char: material (high nibble, 0) and colour (low nibble).
-  block([...colours])
+  // Attribute per char: material (high nibble) and colour (low nibble).
+  block([...colours].map((c, i) => (attributes[i] << 4) | c))
   // Map: width, height (words), then a word per cell.
   const cells: Array<number> = []
   for (const code of map.cells) cells.push(code, 0)

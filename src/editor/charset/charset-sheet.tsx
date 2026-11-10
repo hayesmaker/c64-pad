@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { charCount, renderChar } from '@/c64/charset'
 import { usePalette } from '@/components/c64/palette-context'
 import { cssVar, useColorScheme } from '@/lib/theme'
+import { drawAttribute } from '../attribute-overlay'
 import type { Charset } from '@/c64/charset'
 
 const COLUMNS = 16
@@ -23,6 +24,7 @@ export function CharsetSheet({
   background,
   marked,
   magnify = false,
+  showAttributes = false,
 }: {
   charset: Charset
   selected: number
@@ -41,6 +43,8 @@ export function CharsetSheet({
    * cancel). The mouse picks on click as usual.
    */
   magnify?: boolean
+  /** Draw each char's attribute over it. */
+  showAttributes?: boolean
 }) {
   const palette = usePalette()
   const PITCH = pitch
@@ -70,6 +74,9 @@ export function CharsetSheet({
           ctx.fillStyle = palette.hex[pixels[y * 8 + x]]
           ctx.fillRect(ox + x * SCALE, oy + y * SCALE, SCALE, SCALE)
         }
+      }
+      if (showAttributes) {
+        drawAttribute(ctx, ox, oy, PITCH - 1, charset.attributes[i])
       }
     }
     const primary = cssVar('--primary') || '#2e2c9b'
@@ -104,6 +111,7 @@ export function CharsetSheet({
     scheme,
     palette,
     marked,
+    showAttributes,
   ])
 
   const [loupe, setLoupe] = useState<Loupe | null>(null)
@@ -223,6 +231,7 @@ export function CharsetSheet({
             count={count}
             background={background}
             loupe={loupe}
+            showAttributes={showAttributes}
           />,
           document.body,
         )}
@@ -248,11 +257,13 @@ function Magnifier({
   count,
   background,
   loupe,
+  showAttributes,
 }: {
   charset: Charset
   count: number
   background?: number
   loupe: Loupe
+  showAttributes: boolean
 }) {
   const palette = usePalette()
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -286,6 +297,15 @@ function Magnifier({
             ctx.fillRect(c * BIG + 1 + x * px, r * BIG + 1 + y * px, px, px)
           }
         }
+        if (showAttributes) {
+          drawAttribute(
+            ctx,
+            c * BIG + 1,
+            r * BIG + 1,
+            BIG - 2,
+            charset.attributes[i],
+          )
+        }
       }
     }
     // White inside black: visible on any C64 colour.
@@ -295,7 +315,7 @@ function Magnifier({
     ctx.strokeRect(at + 1, at + 1, BIG - 2, BIG - 2)
     ctx.strokeStyle = '#fff'
     ctx.strokeRect(at + 3, at + 3, BIG - 6, BIG - 6)
-  }, [charset, count, background, centre, palette, size])
+  }, [charset, count, background, centre, palette, size, showAttributes])
 
   const boxH = size + 22
   const above = loupe.y - GAP - boxH

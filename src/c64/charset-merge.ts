@@ -18,7 +18,9 @@ import type { Project } from './project'
  * map of the base uses. Each added char is re-fitted to the base's mode and
  * background / MC1 / MC2, keeping its colours wherever those registers
  * allow; its background pixels stay background. A char the base already has
- * (after fitting) is reused instead of added.
+ * (after fitting, with the same attribute) is reused instead of added.
+ * Copied chars keep their attribute; the source's attribute names fill in
+ * names the base hasn't set.
  */
 
 export function isCharEmpty(cs: Charset, index: number): boolean {
@@ -77,15 +79,24 @@ function fitToTarget(
   })
 }
 
-/** Same look: same pixels and colour (an empty char is background whatever its colour). */
+/**
+ * Same char: same pixels, colour (an empty char is background whatever its
+ * colour) and attribute.
+ */
 function sameChar(
   aBytes: Uint8Array,
   aColor: number,
+  aAttribute: number,
   bBytes: Uint8Array,
   bColor: number,
+  bAttribute: number,
 ) {
   const empty = aBytes.every((b) => b === 0)
-  return aBytes.every((b, i) => b === bBytes[i]) && (empty || aColor === bColor)
+  return (
+    aBytes.every((b, i) => b === bBytes[i]) &&
+    (empty || aColor === bColor) &&
+    aAttribute === bAttribute
+  )
 }
 
 export interface CharMove {
@@ -150,6 +161,7 @@ export function planCharMerge(
 
   const data = target.data.slice()
   const colors = target.colors.slice()
+  const attributes = target.attributes.slice()
   const charAt = (i: number) =>
     data.subarray(i * CHAR_BYTES, (i + 1) * CHAR_BYTES)
   const moves: Array<CharMove> = []
@@ -158,8 +170,9 @@ export function planCharMerge(
   const fitted = fitToTarget(source, target, selection)
   for (const [k, from] of selection.entries()) {
     const { bytes, color: value, problem } = fitted[k]
+    const attribute = source.attributes[from]
     const same = occupied.find((i) =>
-      sameChar(bytes, value, charAt(i), colors[i]),
+      sameChar(bytes, value, attribute, charAt(i), colors[i], attributes[i]),
     )
     if (same !== undefined) {
       moves.push({ from, to: same, reused: true })
@@ -175,6 +188,7 @@ export function planCharMerge(
     const to = free[nextFree++]
     data.set(bytes, to * CHAR_BYTES)
     colors[to] = value
+    attributes[to] = attribute
     occupied.push(to)
     moves.push({ from, to, reused: false })
     if (problem) problems.push({ char: from, problem })
@@ -188,7 +202,28 @@ export function planCharMerge(
     )
   }
 
-  const merged: Charset = { ...target, data, colors }
+  const attributeNames = target.attributeNames.slice()
+  const copied = new Set(
+    moves.filter((m) => !m.reused).map((m) => source.attributes[m.from]),
+  )
+  for (const v of copied) {
+    const name = source.attributeNames[v]
+    if (!v || !name) continue
+    if (!attributeNames[v]) attributeNames[v] = name
+    else if (attributeNames[v] !== name) {
+      warnings.push(
+        `Attribute ${v}: “${source.name}” calls it “${name}”, “${target.name}” calls it “${attributeNames[v]}”. Copied chars keep the number ${v}, named “${attributeNames[v]}”.`,
+      )
+    }
+  }
+
+  const merged: Charset = {
+    ...target,
+    data,
+    colors,
+    attributes,
+    attributeNames,
+  }
   return {
     ...base,
     merged,
