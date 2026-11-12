@@ -23,7 +23,7 @@ import {
   saveCharTracing,
 } from '../tracing/char-tracing'
 import { hex } from '../hex'
-import { useToast } from '@/components/toast'
+import { showToast } from '@/components/toast'
 import { RunExportDialog } from '../run-export-dialog'
 import { MapExportPanel } from '../chars-export'
 import { useElementSize } from '../use-element-size'
@@ -69,7 +69,6 @@ export function MapDesigner({
   const ecm = charset.mode === 'ecm'
   // Pin tool: the brush's chars trace from the tapped cells on the
   // Character Worksheet.
-  const toast = useToast()
   const edit = useMapStrokes(map, ecm, history, (x, y, brush) => {
     const { prefs, pinned } = pinBrush(
       loadCharTracing(charset.id),
@@ -80,7 +79,7 @@ export function MapDesigner({
       ecm,
     )
     saveCharTracing(charset.id, prefs)
-    toast.show(
+    showToast(
       pinned.length === 0
         ? 'Nothing pinned: the brush is only the Blank Char'
         : `Pinned ${pinned.map((c) => hex(c)).join(', ')} at column ${x}, row ${y}`,
@@ -468,7 +467,6 @@ export function MapDesigner({
           }}
         />
       )}
-      {toast.element}
     </WorksheetLayout>
   )
 }

@@ -7,6 +7,7 @@ import {
   setCharBytes,
 } from '@/c64/charset'
 import { ConfirmDialog } from '@/components/dialogs'
+import { showToast } from '@/components/toast'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -84,6 +85,7 @@ export function CharsetPanel({
               attribute: charset.attributes[selected],
             }
             setClipboardVersion((v) => v + 1)
+            showToast(`Char ${hex(selected)} copied`)
           }}
         >
           <Copy aria-hidden="true" /> Copy

@@ -1,30 +1,46 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Check } from 'lucide-react'
 
 /**
- * A short message at the bottom of the screen that goes away by itself.
- * `show` again replaces it and restarts the timer.
+ * Short messages at the bottom of the screen that go away by themselves:
+ * call `showToast` from anywhere; the one `<Toaster />` in the root shows
+ * it. A new message replaces the last and restarts the timer.
  */
-export function useToast(duration = 2200) {
-  const [toast, setToast] = useState<{ id: number; message: string } | null>(
-    null,
-  )
-  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
-  const show = useCallback(
-    (message: string) => {
-      clearTimeout(timer.current)
-      setToast((t) => ({ id: (t?.id ?? 0) + 1, message }))
-      timer.current = setTimeout(() => setToast(null), duration)
-    },
-    [duration],
-  )
-  useEffect(() => () => clearTimeout(timer.current), [])
+interface Toast {
+  id: number
+  message: string
+}
 
-  const element = (
+let current: Toast | null = null
+let nextId = 1
+let timer: ReturnType<typeof setTimeout> | undefined
+const listeners = new Set<(t: Toast | null) => void>()
+
+const publish = (t: Toast | null) => {
+  current = t
+  for (const l of listeners) l(t)
+}
+
+export function showToast(message: string, duration = 2200) {
+  clearTimeout(timer)
+  publish({ id: nextId++, message })
+  timer = setTimeout(() => publish(null), duration)
+}
+
+export function Toaster() {
+  const [toast, setToast] = useState<Toast | null>(current)
+  useEffect(() => {
+    listeners.add(setToast)
+    return () => {
+      listeners.delete(setToast)
+    }
+  }, [])
+
+  return (
     <div
       role="status"
       aria-live="polite"
-      className="pointer-events-none fixed inset-x-0 bottom-6 z-50 flex justify-center px-4"
+      className="pointer-events-none fixed inset-x-0 bottom-6 z-[100] flex justify-center px-4"
     >
       {toast && (
         <div
@@ -37,5 +53,4 @@ export function useToast(duration = 2200) {
       )}
     </div>
   )
-  return { show, element }
 }

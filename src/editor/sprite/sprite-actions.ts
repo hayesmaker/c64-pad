@@ -8,6 +8,7 @@ import {
   setOverlay,
 } from '@/c64/sprite-set'
 import { ModelError } from '@/c64/errors'
+import { showToast } from '@/components/toast'
 import type { Sprite } from '@/c64/sprite'
 import type { SpriteSet } from '@/c64/sprite-set'
 import type { StripActions } from './sprite-strip'
@@ -48,6 +49,7 @@ export function spriteStripActions({
     },
     copy: () => {
       clipboard = { data: selected.data.slice(), mode: selected.mode }
+      showToast('Sprite pixels copied')
     },
     paste: clipboard
       ? () => {
