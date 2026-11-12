@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Expand, Plus } from 'lucide-react'
+import { Expand, Plus, X } from 'lucide-react'
 import { MAX_MAP_SIZE, resizeCharmap } from '@/c64/charmap'
 import { switchMapCharset } from '@/c64/charset-match'
 import { Note } from '@/components/report'
@@ -116,34 +116,50 @@ export function MapSettings({
   )
 }
 
-/** What to do with a finished selection. */
+/**
+ * What to do with a finished selection: a bar floating over the map's
+ * bottom-left corner, so it's in view however long the side panel is.
+ */
 export function SelectionActions({
   selection,
   onUseAsBrush,
   onClear,
+  onDeselect,
 }: {
   selection: CellRect
   onUseAsBrush: () => void
   onClear: () => void
+  onDeselect: () => void
 }) {
   return (
-    <div className="flex flex-col gap-1">
-      <span className="text-xs text-muted-foreground">
-        Selection · {selection.width}×{selection.height} at x {selection.x}, y{' '}
-        {selection.y}
+    <div
+      role="toolbar"
+      aria-label="Selection"
+      className="absolute bottom-2 left-2 flex animate-in items-center gap-1.5 rounded-lg border border-rule bg-paper/95 p-1 pl-2.5 shadow-[0_4px_16px_var(--shadow)] duration-150 fade-in slide-in-from-bottom-1"
+    >
+      <span className="font-mono text-[11px] whitespace-nowrap text-muted-foreground">
+        {selection.width}×{selection.height} at {selection.x},{selection.y}
       </span>
-      <div className="grid grid-cols-2 gap-1.5">
-        <Button
-          variant="outline"
-          className="border-primary bg-accent text-primary hover:bg-accent"
-          onClick={onUseAsBrush}
-        >
-          Use as brush
-        </Button>
-        <Button variant="outline" onClick={onClear}>
-          Clear area
-        </Button>
-      </div>
+      <Button size="sm" className="whitespace-nowrap" onClick={onUseAsBrush}>
+        Use as brush
+      </Button>
+      <Button
+        size="sm"
+        variant="outline"
+        className="whitespace-nowrap"
+        onClick={onClear}
+      >
+        Clear area
+      </Button>
+      <Button
+        size="icon"
+        variant="ghost"
+        className="size-8"
+        aria-label="Deselect"
+        onClick={onDeselect}
+      >
+        <X aria-hidden="true" />
+      </Button>
     </div>
   )
 }

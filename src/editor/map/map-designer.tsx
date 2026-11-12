@@ -162,11 +162,48 @@ export function MapDesigner({
     },
   }
 
+  const selectionActions = selection &&
+    !edit.stroking &&
+    edit.tool === 'select' && (
+      <SelectionActions
+        selection={selection}
+        onUseAsBrush={() => {
+          edit.setBrush(
+            copyRegion(
+              map,
+              selection.x,
+              selection.y,
+              selection.width,
+              selection.height,
+            ),
+          )
+          edit.setSelection(null)
+          edit.setTool('paint')
+        }}
+        onClear={() => {
+          history.change((m) =>
+            fillRect(
+              m,
+              selection.x,
+              selection.y,
+              selection.width,
+              selection.height,
+              m.blank,
+            ),
+          )
+          edit.setSelection(null)
+        }}
+        onDeselect={() => edit.setSelection(null)}
+      />
+    )
+
   const renderCanvas = (
     v: GridView,
     onV: (next: GridView) => void,
     canvasCell: number,
     canvasFrame: { width: number; height: number },
+    /** Over the map: the worksheet's selection bar (not in Zen mode). */
+    overlay?: React.ReactNode,
   ) => (
     <div className="relative">
       <MapCanvas
@@ -193,6 +230,7 @@ export function MapDesigner({
         onViewChange={onV}
         tracing={trace.grid}
       />
+      {overlay}
     </div>
   )
 
@@ -289,37 +327,6 @@ export function MapDesigner({
             />
             {brushPicker}
             {edit.tool === 'pin' && <PinNote traced={!!trace.tracing} />}
-            {selection && !edit.stroking && edit.tool === 'select' && (
-              <SelectionActions
-                selection={selection}
-                onUseAsBrush={() => {
-                  edit.setBrush(
-                    copyRegion(
-                      map,
-                      selection.x,
-                      selection.y,
-                      selection.width,
-                      selection.height,
-                    ),
-                  )
-                  edit.setSelection(null)
-                  edit.setTool('paint')
-                }}
-                onClear={() => {
-                  history.change((m) =>
-                    fillRect(
-                      m,
-                      selection.x,
-                      selection.y,
-                      selection.width,
-                      selection.height,
-                      m.blank,
-                    ),
-                  )
-                  edit.setSelection(null)
-                }}
-              />
-            )}
           </>
         )}
       </div>
@@ -369,7 +376,7 @@ export function MapDesigner({
                   active={edit.cursor?.[1] ?? null}
                 />
                 <div className="h-fit rounded-[2px] border-2 border-grid-frame">
-                  {renderCanvas(view, setView, cell, frame)}
+                  {renderCanvas(view, setView, cell, frame, selectionActions)}
                 </div>
               </div>
             </>
