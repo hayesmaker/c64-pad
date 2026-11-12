@@ -40,9 +40,10 @@ test('the Character Worksheet traces chars from the screen tracing', async ({
   // Pin it to column 10, row 3 as well.
   await page.getByRole('button', { name: /^Pin for char tracing/ }).click()
   await at(10, 3)
-  await expect(page.getByRole('status')).toContainText(
-    'Pinned $01 at column 10, row 3',
-  )
+  // A toast confirms it, then goes.
+  const toast = page.getByText('Pinned $01 at column 10, row 3')
+  await expect(toast).toBeVisible()
+  await expect(toast).toBeHidden({ timeout: 5000 })
 
   await page.getByRole('link', { name: 'CHARS' }).click()
   await page.getByLabel('Character number').fill('1')
@@ -50,8 +51,11 @@ test('the Character Worksheet traces chars from the screen tracing', async ({
   const where = panel.getByLabel(/^Column/)
   // The pin first, then where the char is placed.
   await expect(where).toHaveAttribute('aria-label', 'Column 10, row 3, 1 of 2')
-  const pin = panel.getByRole('button', { name: /^Unpin/ })
-  await expect(pin).toHaveAttribute('aria-pressed', 'true')
+  await expect(
+    panel.getByRole('button', { name: 'Pinned to this place' }),
+  ).toHaveAttribute('aria-pressed', 'true')
+  await expect(panel).toContainText('Pinned to Map 1 · 10,3')
+  const removePin = panel.getByRole('button', { name: 'Remove pin' })
   await panel.getByRole('button', { name: 'Next place' }).click()
   await expect(where).toHaveAttribute('aria-label', 'Column 2, row 1, 2 of 2')
 
@@ -68,7 +72,8 @@ test('the Character Worksheet traces chars from the screen tracing', async ({
   await page.reload()
   await page.getByLabel('Character number').fill('1')
   await expect(where).toHaveAttribute('aria-label', 'Column 10, row 3, 1 of 2')
-  await pin.click()
+  await removePin.click()
+  await expect(removePin).toBeHidden()
   await expect(where).toHaveAttribute('aria-label', 'Column 2, row 1, 1 of 1')
 
   // A char that isn't on the screen says how to get it there.

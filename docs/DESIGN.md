@@ -80,7 +80,8 @@ through). The cell is the char's **pin**, if it has one, else each place the
 char is painted on a traced screen using this charset (Blank Char cells
 skipped), stepped through with ‹ ›. The Screen Worksheet's **Pin** tool pins
 the brush char to the tapped cell (a block brush pins each of its chars), so
-a char can be drawn before it's placed. Pins, opacity and over / under are
+a char can be drawn before it's placed; a toast confirms each pin, and the
+Character Worksheet's tracing box shows the pin with a Remove pin button. Pins, opacity and over / under are
 kept per charset in localStorage on the device.
 
 ## Getting around a big map

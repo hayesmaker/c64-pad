@@ -8,7 +8,11 @@ import {
 } from './char-tracing'
 import { DEFAULT_TRACING, placeTracing } from './placement'
 import type { Charmap } from '@/c64/charmap'
-import type { CharTraceSource, CharTracingPrefs } from './char-tracing'
+import type {
+  CharTraceSource,
+  CharTraceSpot,
+  CharTracingPrefs,
+} from './char-tracing'
 import type { GridTracing, TracingSettings } from './placement'
 
 interface MapImage {
@@ -83,7 +87,7 @@ export function useCharTracing(
     () => maps.filter((m) => images.has(m.id)),
     [maps, images],
   )
-  const pin = prefs.pins[char]
+  const pin = prefs.pins[char] as CharTraceSpot | undefined
   const sources = useMemo<Array<CharTraceSource>>(
     () => traceSources(traced, char, ecm, pin),
     [traced, char, ecm, pin],
@@ -129,6 +133,9 @@ export function useCharTracing(
       setIndex(
         sources.length ? (index + by + sources.length) % sources.length : 0,
       ),
+    /** The char's pin (even if its screen has no tracing now). */
+    pin: pin ?? null,
+    pinMap: pin ? (maps.find((m) => m.id === pin.mapId) ?? null) : null,
     /** Pin the char to the source shown now, or unpin it. */
     setPinned: (on: boolean) => {
       // A new pin is listed first: stay on it.

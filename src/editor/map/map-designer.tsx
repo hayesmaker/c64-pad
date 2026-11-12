@@ -23,6 +23,7 @@ import {
   saveCharTracing,
 } from '../tracing/char-tracing'
 import { hex } from '../hex'
+import { useToast } from '@/components/toast'
 import { RunExportDialog } from '../run-export-dialog'
 import { MapExportPanel } from '../chars-export'
 import { useElementSize } from '../use-element-size'
@@ -68,11 +69,7 @@ export function MapDesigner({
   const ecm = charset.mode === 'ecm'
   // Pin tool: the brush's chars trace from the tapped cells on the
   // Character Worksheet.
-  const [lastPin, setLastPin] = useState<{
-    chars: Array<number>
-    x: number
-    y: number
-  } | null>(null)
+  const toast = useToast()
   const edit = useMapStrokes(map, ecm, history, (x, y, brush) => {
     const { prefs, pinned } = pinBrush(
       loadCharTracing(charset.id),
@@ -83,7 +80,11 @@ export function MapDesigner({
       ecm,
     )
     saveCharTracing(charset.id, prefs)
-    setLastPin({ chars: pinned, x, y })
+    toast.show(
+      pinned.length === 0
+        ? 'Nothing pinned: the brush is only the Blank Char'
+        : `Pinned ${pinned.map((c) => hex(c)).join(', ')} at column ${x}, row ${y}`,
+    )
   })
   const [showGrid, setShowGrid] = useState(true)
   const [showAttributes, setShowAttributes] = useShowAttributes('map')
@@ -271,9 +272,7 @@ export function MapDesigner({
               onResize={() => setResizing(true)}
             />
             {brushPicker}
-            {edit.tool === 'pin' && (
-              <PinNote traced={!!trace.tracing} last={lastPin} />
-            )}
+            {edit.tool === 'pin' && <PinNote traced={!!trace.tracing} />}
             {selection && !edit.stroking && edit.tool === 'select' && (
               <SelectionActions
                 selection={selection}
@@ -469,30 +468,18 @@ export function MapDesigner({
           }}
         />
       )}
+      {toast.element}
     </WorksheetLayout>
   )
 }
 
-/** What the Pin tool does, and what the last tap pinned. */
-function PinNote({
-  traced,
-  last,
-}: {
-  traced: boolean
-  last: { chars: Array<number>; x: number; y: number } | null
-}) {
+/** What the Pin tool does (each pin is confirmed by a toast). */
+function PinNote({ traced }: { traced: boolean }) {
   return (
-    <p
-      role="status"
-      className="rounded-lg bg-muted px-2 py-1.5 text-[11px] leading-snug"
-    >
-      {!traced
-        ? 'This screen has no tracing paper yet: load an image first, then pin chars to it.'
-        : !last
-          ? 'Tap a cell to pin the brush char there: the Character Worksheet then shows the tracing under that cell when you draw it. A block brush pins each of its chars.'
-          : last.chars.length === 0
-            ? 'Nothing pinned: the brush is only the Blank Char.'
-            : `Pinned ${last.chars.map((c) => hex(c)).join(', ')} at column ${last.x}, row ${last.y}. Open the Character Worksheet to draw ${last.chars.length > 1 ? 'them' : 'it'} over the tracing.`}
+    <p className="rounded-lg bg-muted px-2 py-1.5 text-[11px] leading-snug">
+      {traced
+        ? 'Tap a cell to pin the brush char there: the Character Worksheet then shows the tracing under that cell when you draw it. A block brush pins each of its chars.'
+        : 'This screen has no tracing paper yet: load an image first, then pin chars to it.'}
     </p>
   )
 }

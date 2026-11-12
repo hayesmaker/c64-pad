@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, Eye, EyeOff, Pin } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Eye, EyeOff, Pin, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Segmented } from '../segmented'
 import type { useCharTracing } from './use-char-tracing'
@@ -17,6 +17,7 @@ export function CharTracingPanel({
 }) {
   const { prefs, setPrefs, sources, index, source, sourceMap, tracedMaps } =
     trace
+  const { pin, pinMap } = trace
 
   return (
     <section
@@ -40,6 +41,28 @@ export function CharTracingPanel({
           </button>
         )}
       </div>
+
+      {pin && (
+        <div className="flex flex-col gap-1 rounded-md bg-muted p-1 text-[11px] leading-tight">
+          <div className="flex items-center gap-1.5 px-1 pt-0.5">
+            <Pin aria-hidden="true" className="size-3.5 shrink-0" />
+            <span className="min-w-0 truncate">
+              Pinned to {pinMap?.name ?? 'a removed screen'} ·{' '}
+              <span className="font-mono">
+                {pin.x},{pin.y}
+              </span>
+            </span>
+          </div>
+          <button
+            type="button"
+            className="flex h-8 items-center justify-center gap-1 rounded-md border border-rule-soft bg-background px-2 text-xs hover:bg-accent [&_svg]:size-3.5"
+            onClick={() => trace.setPinned(false)}
+          >
+            <X aria-hidden="true" />
+            Remove pin
+          </button>
+        </div>
+      )}
 
       {!source ? (
         <p className="text-[11px] leading-snug text-muted-foreground">
@@ -84,16 +107,17 @@ export function CharTracingPanel({
               aria-pressed={source.pinned}
               aria-label={
                 source.pinned
-                  ? 'Unpin: trace from where the char is placed'
+                  ? 'Pinned to this place'
                   : 'Pin the char to this place'
               }
-              title={source.pinned ? 'Pinned' : 'Pin here'}
+              title={source.pinned ? 'Pinned here' : 'Pin here'}
+              disabled={source.pinned}
               className={cn(
                 iconButton,
                 source.pinned &&
-                  'bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground',
+                  'bg-primary text-primary-foreground disabled:opacity-100 disabled:hover:bg-primary',
               )}
-              onClick={() => trace.setPinned(!source.pinned)}
+              onClick={() => trace.setPinned(true)}
             >
               <Pin />
             </button>
