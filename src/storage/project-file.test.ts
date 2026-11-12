@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { setAttributeName, setCharAttribute } from '@/c64/charset'
-import { createProject } from '@/c64/project'
+import { PROJECT_VERSION, createProject } from '@/c64/project'
 import { setSpritePixel } from '@/c64/sprite'
 import { updateSprite } from '@/c64/sprite-set'
 import {
@@ -38,7 +38,7 @@ describe('.c64pad files', () => {
     json.project.version = 1
     delete json.project.palette
     const v1 = importProjectFile(JSON.stringify(json))
-    expect(v1.version).toBe(3)
+    expect(v1.version).toBe(PROJECT_VERSION)
     expect(v1.palette).toBe('colodore')
     json.project.palette = 'made-up'
     expect(importProjectFile(JSON.stringify(json)).palette).toBe('colodore')
@@ -63,7 +63,7 @@ describe('.c64pad files', () => {
     delete json.project.charsets[0].attributes
     delete json.project.charsets[0].attributeNames
     const v2 = importProjectFile(JSON.stringify(json))
-    expect(v2.version).toBe(3)
+    expect(v2.version).toBe(PROJECT_VERSION)
     expect([...v2.charsets[0].attributes].every((a) => a === 0)).toBe(true)
     expect(v2.charsets[0].attributeNames).toHaveLength(16)
     expect(v2.charsets[0].attributeNames.every((n) => n === '')).toBe(true)

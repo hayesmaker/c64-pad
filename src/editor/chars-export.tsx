@@ -4,13 +4,16 @@ import { renderCharsetSheet } from '@/c64/render'
 import {
   exportCharAttributes,
   exportCharColors,
+  exportCharScreenColors,
   exportCharpadCtm,
   exportCharsetBin,
+  exportKoala,
   exportCharsetKickAss,
   exportMapAttributes,
   exportMapBin,
   exportMapColors,
   exportMapKickAss,
+  exportMapScreenRam,
   hasAttributes,
   renderMapImage,
 } from '@/export/chars'
@@ -136,8 +139,9 @@ export function CharsetExportPanel({
   charset: Charset
   onClose: () => void
 }) {
-  type Format = 'chars' | 'colours' | 'attributes' | 'asm' | 'png'
+  type Format = 'chars' | 'colours' | 'screen' | 'attributes' | 'asm' | 'png'
   const [format, setFormat] = useState<Format>('chars')
+  const bitmap = charset.mode === 'bitmap'
   const [scale, setScale] = useState(4)
   const palette = usePalette().id
   const sheet = useMemo(() => renderCharsetSheet(charset), [charset])
@@ -151,8 +155,11 @@ export function CharsetExportPanel({
   const charsBin = exportCharsetBin(charset)
   const about: Record<Format, string> = {
     chars: `The charset as the VIC reads it, 8 bytes per char${charset.mode === 'ecm' ? ' (ECM: the 64 shapes)' : ''}. Load it on a $800 boundary.`,
-    colours:
-      'Colour RAM value for each screen code 0-255 (multicolour chars have bit 3 set): a lookup table for filling $D800.',
+    colours: bitmap
+      ? 'Colour RAM value (the colour of 11) for each tile 0-255: a lookup table for filling $D800.'
+      : 'Colour RAM value for each screen code 0-255 (multicolour chars have bit 3 set): a lookup table for filling $D800.',
+    screen:
+      'Screen RAM value for each tile 0-255: the colour of 01 in the high nibble, of 10 in the low one.',
     attributes:
       'Attribute (0-15, 0 = none) for each screen code 0-255: a lookup table for game code (solid, ladder, …).',
     asm: `KickAssembler source: register values, the charset and its colours${hasAttributes(charset) ? ', attributes and attribute names' : ''}.`,
@@ -167,6 +174,11 @@ export function CharsetExportPanel({
     colours: {
       extension: '-colours.bin',
       data: () => exportCharColors(charset),
+      size: bytes(256),
+    },
+    screen: {
+      extension: '-screen.bin',
+      data: () => exportCharScreenColors(charset),
       size: bytes(256),
     },
     attributes: {
@@ -196,6 +208,7 @@ export function CharsetExportPanel({
         options={[
           { value: 'chars', label: 'Chars .bin' },
           { value: 'colours', label: 'Colours' },
+          ...(bitmap ? [{ value: 'screen' as const, label: 'Screen' }] : []),
           { value: 'attributes', label: 'Attributes' },
           { value: 'asm', label: 'KickAss' },
           { value: 'png', label: 'PNG' },
@@ -235,15 +248,28 @@ export function MapExportPanel({
   project,
   map,
   charset,
+  start,
   onClose,
 }: {
   project: Project
   map: Charmap
   charset: Charset
+  /** Bitmap: the screen a Koala picture shows (its top-left cell). */
+  start?: { x: number; y: number }
   onClose: () => void
 }) {
-  type Format = 'map' | 'colours' | 'attributes' | 'asm' | 'ctm' | 'png'
+  type Format =
+    | 'map'
+    | 'colours'
+    | 'screen'
+    | 'koala'
+    | 'attributes'
+    | 'asm'
+    | 'ctm'
+    | 'png'
   const [format, setFormat] = useState<Format>('map')
+  const bitmap = charset.mode === 'bitmap'
+  const big = map.width > 40 || map.height > 25
   const [withColours, setWithColours] = useState(true)
   const [withCharset, setWithCharset] = useState(true)
   const [withAttributes, setWithAttributes] = useState(() =>
@@ -288,9 +314,15 @@ export function MapExportPanel({
   )
   const cells = map.width * map.height
   const about: Record<Format, string> = {
-    map: `Screen codes, one byte per cell, row by row (${map.width} per row).`,
-    colours:
-      'Colour RAM for every cell, from each char’s colour. Copy a screen’s worth to $D800.',
+    map: bitmap
+      ? `Tile (char) numbers, one byte per cell, row by row (${map.width} per row).`
+      : `Screen codes, one byte per cell, row by row (${map.width} per row).`,
+    colours: bitmap
+      ? 'Colour RAM (the colour of 11) for every cell, its own or its tile’s. Copy a screen’s worth to $D800.'
+      : 'Colour RAM for every cell, from each char’s colour. Copy a screen’s worth to $D800.',
+    screen:
+      'Screen RAM for every cell, its own colours or its tile’s: 01 in the high nibble, 10 in the low one.',
+    koala: `A Koala Painter picture (.kla, 10003 bytes): bitmap, screen and colour RAM${big ? ` of the screen in view (from column ${start?.x ?? 0}, row ${start?.y ?? 0})` : ''}.`,
     attributes:
       'Attribute (0-15, 0 = none) for every cell, from each char’s attribute, row by row like the map.',
     asm: 'KickAssembler source: the map’s size and rows, with its colour RAM, attributes and charset if you like.',
@@ -307,6 +339,16 @@ export function MapExportPanel({
       extension: '-colours.bin',
       data: () => exportMapColors(map, charset),
       size: bytes(cells),
+    },
+    screen: {
+      extension: '-screen.bin',
+      data: () => exportMapScreenRam(map, charset),
+      size: bytes(cells),
+    },
+    koala: {
+      extension: '.kla',
+      data: () => exportKoala(map, charset, start),
+      size: bytes(10003),
     },
     attributes: {
       extension: '-attributes.bin',
@@ -338,8 +380,14 @@ export function MapExportPanel({
         label="Format"
         value={format}
         options={[
-          { value: 'map', label: 'Map .bin' },
+          { value: 'map', label: bitmap ? 'Map' : 'Map .bin' },
           { value: 'colours', label: 'Colours' },
+          ...(bitmap
+            ? [
+                { value: 'screen' as const, label: 'Screen' },
+                { value: 'koala' as const, label: 'Koala' },
+              ]
+            : []),
           { value: 'attributes', label: 'Attributes' },
           { value: 'asm', label: 'KickAss' },
           { value: 'ctm', label: 'CharPad' },
@@ -357,7 +405,7 @@ export function MapExportPanel({
                 checked={withColours}
                 onChange={(e) => setWithColours(e.target.checked)}
               />
-              Colour RAM per cell
+              {bitmap ? 'Colour & screen RAM per cell' : 'Colour RAM per cell'}
             </label>
             <label className="flex items-center gap-2">
               <input

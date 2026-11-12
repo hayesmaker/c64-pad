@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef } from 'react'
 import { decodeEcm } from '@/c64/charmap'
-import { renderChar } from '@/c64/charset'
+import { renderChar, renderCharIn } from '@/c64/charset'
+import { cellPixelColors } from '@/c64/render'
 import { usePalette } from '@/components/c64/palette-context'
 import { cn } from '@/lib/utils'
 import { useGridGestures } from '../gestures'
@@ -82,6 +83,35 @@ export function charAtlas(
 }
 
 /**
+ * Bitmap cells with colours of their own, each drawn once (8 × 8) and kept
+ * by tile and colours.
+ */
+function ownColoursCache(charset: Charset, rgb: ReadonlyArray<Rgb>) {
+  const cache = new Map<string, HTMLCanvasElement>()
+  return (code: number, colors: ReadonlyArray<number>) => {
+    const key = `${code}:${colors.join(',')}`
+    let canvas = cache.get(key)
+    if (!canvas) {
+      canvas = document.createElement('canvas')
+      canvas.width = 8
+      canvas.height = 8
+      const ctx = canvas.getContext('2d')
+      if (ctx) {
+        const image = ctx.createImageData(8, 8)
+        const pixels = renderCharIn(charset, code, colors)
+        for (let i = 0; i < 64; i++) {
+          const [r, g, b] = rgb[pixels[i]]
+          image.data.set([r, g, b, 255], i * 4)
+        }
+        ctx.putImageData(image, 0, 0)
+      }
+      cache.set(key, canvas)
+    }
+    return canvas
+  }
+}
+
+/**
  * The map on a canvas, drawn with its charset. Only visible cells are drawn,
  * so large maps (up to 1024 × 1024) stay fast. One pointer uses the tool; two
  * fingers pinch-zoom and pan.
@@ -126,6 +156,10 @@ export function MapCanvas({
   const palette = usePalette()
   const atlas = useMemo(
     () => charAtlas(charset, palette.rgb),
+    [charset, palette.rgb],
+  )
+  const ownColours = useMemo(
+    () => ownColoursCache(charset, palette.rgb),
     [charset, palette.rgb],
   )
 
@@ -174,6 +208,17 @@ export function MapCanvas({
         const left = px(x, view.x)
         const code = map.cells[y * map.width + x]
         if (under && code === map.blank) continue
+        const own = cellPixelColors(map, charset, y * map.width + x)
+        if (own) {
+          ctx.drawImage(
+            ownColours(code, own),
+            left,
+            top,
+            px(x + 1, view.x) - left,
+            h,
+          )
+          continue
+        }
         ctx.drawImage(
           atlas,
           code * 8,
@@ -269,7 +314,9 @@ export function MapCanvas({
     }
   }, [
     map,
+    charset,
     atlas,
+    ownColours,
     cell,
     view,
     frameW,

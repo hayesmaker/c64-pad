@@ -9,7 +9,7 @@ OUT=src/emulator/stubs
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
 mkdir -p "$OUT"
-for name in sprite-viewer charmap-viewer; do
+for name in sprite-viewer charmap-viewer bitmap-viewer; do
   java -jar "$KICKASS" "stubs/$name.asm" -o "$TMP/$name.prg" -odir "$TMP" >/dev/null
   node -e '
     const fs = require("node:fs")

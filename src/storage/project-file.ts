@@ -74,6 +74,8 @@ export function migrateProject(raw: unknown): Project {
   // which validateProject fills in.
   // v2 → v3: charsets gained char attributes and their names; createCharset
   // gives v2 charsets none (all 0, unnamed).
+  // v3 → v4: bitmap mode. Charsets gained screen colours per char (the MC
+  // colours by default) and maps colours per cell (none).
   return validateProject(raw as unknown as Project)
 }
 

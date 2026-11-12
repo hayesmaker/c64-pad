@@ -158,7 +158,9 @@ export function CharsetPanel({
           ? `Tap another character to swap it with ${hex(selected)}. Maps keep their codes.`
           : charset.mode === 'ecm'
             ? 'ECM uses chars $00–$3F; screen code bits 7–6 pick the background.'
-            : 'Tap a character to edit it. Each char has its own colour.'}
+            : charset.mode === 'bitmap'
+              ? 'Tap a tile to edit it. Each tile has its own three colours.'
+              : 'Tap a character to edit it. Each char has its own colour.'}
       </p>
       <ConfirmDialog
         open={confirm !== null}

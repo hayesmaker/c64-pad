@@ -228,11 +228,14 @@ export function CharsetDesigner({
           </span>
           <Segmented<CharsetMode>
             label="Charset mode"
+            columns={2}
+            size="sm"
             value={charset.mode}
             options={[
               { value: 'hires', label: 'Hires' },
               { value: 'multicolor', label: 'Multicolour' },
               { value: 'ecm', label: 'ECM' },
+              { value: 'bitmap', label: 'Bitmap' },
             ]}
             onChange={(mode) => {
               tools.clearEcmTarget()
@@ -260,6 +263,12 @@ export function CharsetDesigner({
           </div>
         )}
         <PensPanel pens={pens} pen={pen} onPen={tools.choosePen} />
+        {charset.mode === 'bitmap' && (
+          <p className="text-[11px] leading-snug text-muted-foreground">
+            Multicolour bitmap: each char is a tile with its own three colours.
+            Screens can change them cell by cell.
+          </p>
+        )}
         {charset.mode === 'ecm' && (
           <EcmBackgrounds
             charset={charset}
@@ -365,7 +374,7 @@ export function CharsetDesigner({
       {runExport && (
         <RunExportDialog
           title={charset.name}
-          runSummary={`Shows all ${charset.mode === 'ecm' ? '256 screen codes (64 shapes on the 4 backgrounds)' : '256 characters'} of “${charset.name}” as a 16 × 16 grid, in ${charset.mode === 'ecm' ? 'ECM' : charset.mode === 'multicolor' ? 'multicolour' : 'hires'} mode with their own colours.`}
+          runSummary={`Shows all ${charset.mode === 'ecm' ? '256 screen codes (64 shapes on the 4 backgrounds)' : charset.mode === 'bitmap' ? '256 tiles' : '256 characters'} of “${charset.name}” as a 16 × 16 grid, in ${{ ecm: 'ECM', multicolor: 'multicolour', hires: 'hires', bitmap: 'multicolour bitmap' }[charset.mode]} mode with their own colours.`}
           onRun={() =>
             setRunning({
               prg: charsetViewerPrg(charset).prg,

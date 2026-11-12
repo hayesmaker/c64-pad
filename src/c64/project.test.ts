@@ -23,7 +23,7 @@ const now = new Date('2026-11-06T12:00:00Z')
 describe('project', () => {
   it('starts with a sprite set, a charset and a map using it', () => {
     const p = createProject({ name: 'Star Patrol' }, now)
-    expect(p.version).toBe(3)
+    expect(p.version).toBe(4)
     expect(p.palette).toBe('colodore')
     expect(p.dateDesigned).toBe('2026-11-06')
     expect([p.spriteSets.length, p.charsets.length, p.maps.length]).toEqual([

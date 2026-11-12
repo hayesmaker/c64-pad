@@ -1,6 +1,7 @@
 import { decodeEcm } from '@/c64/charmap'
 import { charColor, charCount } from '@/c64/charset'
 import { COLOR_NAMES } from '@/c64/palette'
+import { cellColorsOf, cellPixelColors } from '@/c64/render'
 import { hex } from '../hex'
 import type { Charmap } from '@/c64/charmap'
 import type { Charset } from '@/c64/charset'
@@ -41,6 +42,18 @@ export function Readout({
       ? `${55296 + off} (${hex(55296 + off, 4)})`
       : 'not on screen 0'
     items[4][1] = `${hex(code)} · ${color}`
+    if (charset.mode === 'bitmap') {
+      const i = y * map.width + x
+      const c = cellColorsOf(map, charset, i)
+      const own = cellPixelColors(map, charset, i) ? ' (cell)' : ''
+      items[4] = [
+        'Tile · 01 / 10 / 11',
+        `${hex(code)} · ${c
+          .slice(1)
+          .map((v) => COLOR_NAMES[v])
+          .join(' / ')}${own}`,
+      ]
+    }
   }
   return (
     <dl className="mt-2 ml-[26px] grid shrink-0 grid-flow-col grid-rows-2 gap-x-4 gap-y-0.5 text-xs">

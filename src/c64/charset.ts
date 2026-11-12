@@ -37,8 +37,13 @@ export const MAX_ATTRIBUTE_NAME = 24
  *   11 colour & 7. Bit 3 clear = hires char in colour 0-7.
  * - ecm: extended background colour; only 64 chars, the top two bits of the
  *   screen code pick one of four backgrounds ($D021-$D024).
+ * - bitmap: multicolour bitmap. Each char is a 4×8 tile copied into an 8×8
+ *   cell of the bitmap: 00 background ($D021), 01 screen RAM high nibble,
+ *   10 screen RAM low nibble, 11 colour RAM. Those three colours belong to
+ *   the cell; each char has its own (`screenColors`, `colors`), which a map
+ *   can override per cell.
  */
-export type CharsetMode = 'hires' | 'multicolor' | 'ecm'
+export type CharsetMode = 'hires' | 'multicolor' | 'ecm' | 'bitmap'
 
 export interface Charset {
   readonly id: string
@@ -49,6 +54,11 @@ export interface Charset {
   readonly data: Uint8Array
   /** Colour RAM value per char (colouring is per char, not per map cell). */
   readonly colors: Uint8Array
+  /**
+   * Bitmap mode: screen RAM value per char, colour of 01 in the high nibble
+   * and of 10 in the low one.
+   */
+  readonly screenColors: Uint8Array
   /** Attribute 0-15 per char (0 = none). */
   readonly attributes: Uint8Array
   /** Names of attributes 0-15 ('' = unnamed; 0 is always ''). */
@@ -75,6 +85,12 @@ export function createCharset(init: Partial<Charset> = {}): Charset {
     ...init,
     // Projects from before attributes (format 2) have none.
     attributes: init.attributes ?? new Uint8Array(CHARSET_SIZE),
+    // Projects from before bitmap mode (format 3): the default MC colours.
+    screenColors:
+      init.screenColors ??
+      new Uint8Array(CHARSET_SIZE).fill(
+        ((init.multicolor1 ?? 11) << 4) | (init.multicolor2 ?? 12),
+      ),
     attributeNames: normaliseNames(init.attributeNames),
   }
   if (charset.data.length !== CHARSET_BYTES) {
@@ -88,6 +104,11 @@ export function createCharset(init: Partial<Charset> = {}): Charset {
     throw new RangeError(`Charset attributes must have ${CHARSET_SIZE} entries`)
   }
   charset.attributes.forEach((a) => assertAttribute(a))
+  if (charset.screenColors.length !== CHARSET_SIZE) {
+    throw new RangeError(
+      `Charset screen colours must have ${CHARSET_SIZE} entries`,
+    )
+  }
   checkRegisters(charset)
   return charset
 }
@@ -130,7 +151,9 @@ function checkIndex(cs: Charset, index: number) {
 
 export function isCharMulticolor(cs: Charset, index: number): boolean {
   checkIndex(cs, index)
-  return cs.mode === 'multicolor' && cs.colors[index] >= 8
+  return (
+    cs.mode === 'bitmap' || (cs.mode === 'multicolor' && cs.colors[index] >= 8)
+  )
 }
 
 /** How this char's pixels are read. */
@@ -165,6 +188,33 @@ export function setCharColor(
   const colors = cs.colors.slice()
   colors[index] = value
   return { ...cs, colors }
+}
+
+/** Bitmap mode: the char's two screen RAM colours (pixel values 01, 10). */
+export function charScreenColors(
+  cs: Charset,
+  index: number,
+): [C64Color, C64Color] {
+  checkIndex(cs, index)
+  const v = cs.screenColors[index]
+  return [v >> 4, v & 15]
+}
+
+/** Set screen RAM colour 1 (01, high nibble) or 2 (10, low nibble). */
+export function setCharScreenColor(
+  cs: Charset,
+  index: number,
+  which: 1 | 2,
+  color: C64Color,
+): Charset {
+  checkIndex(cs, index)
+  assertC64Color(color, 'Screen colour')
+  const old = cs.screenColors[index]
+  const value = which === 1 ? (color << 4) | (old & 15) : (old & 0xf0) | color
+  if (value === old) return cs
+  const screenColors = cs.screenColors.slice()
+  screenColors[index] = value
+  return { ...cs, screenColors }
 }
 
 /** Turn a char's multicolour flag on or off (multicolour mode only). */
@@ -238,6 +288,14 @@ export function setCharsetMode(cs: Charset, mode: CharsetMode): Charset {
     ...cs,
     mode,
     colors: touchesMc ? cs.colors.map(visible) : cs.colors,
+    // Multicolour chars into bitmap keep their look: 01 and 10 were the
+    // shared multicolours.
+    screenColors:
+      mode === 'bitmap' && cs.mode === 'multicolor'
+        ? new Uint8Array(CHARSET_SIZE).fill(
+            (cs.multicolor1 << 4) | cs.multicolor2,
+          )
+        : cs.screenColors,
   }
 }
 
@@ -346,15 +404,17 @@ export function rotateCharClockwise(cs: Charset, index: number): Charset {
   return setCharBytes(cs, index, out)
 }
 
-/** Copy char `from` (pixels, colour and attribute) onto char `to`. */
+/** Copy char `from` (pixels, colours and attribute) onto char `to`. */
 export function copyChar(cs: Charset, from: number, to: number): Charset {
   checkIndex(cs, to)
   const next = setCharBytes(cs, to, getCharBytes(cs, from))
   const colors = next.colors.slice()
   colors[to] = cs.colors[from]
+  const screenColors = next.screenColors.slice()
+  screenColors[to] = cs.screenColors[from]
   const attributes = next.attributes.slice()
   attributes[to] = cs.attributes[from]
-  return { ...next, colors, attributes }
+  return { ...next, colors, screenColors, attributes }
 }
 
 /**
@@ -368,10 +428,13 @@ export function swapChars(cs: Charset, a: number, b: number): Charset {
   const colors = cs.colors.slice()
   colors[a] = cs.colors[b]
   colors[b] = cs.colors[a]
+  const screenColors = cs.screenColors.slice()
+  screenColors[a] = cs.screenColors[b]
+  screenColors[b] = cs.screenColors[a]
   const attributes = cs.attributes.slice()
   attributes[a] = cs.attributes[b]
   attributes[b] = cs.attributes[a]
-  return { ...next, colors, attributes }
+  return { ...next, colors, screenColors, attributes }
 }
 
 /** C64 colour for each pixel value of the char; `ecmBackground` 0-3 in ECM. */
@@ -384,6 +447,9 @@ export function charPixelColors(
     cs.mode === 'ecm' && ecmBackground > 0
       ? cs.ecmBackgrounds[ecmBackground - 1]
       : cs.background
+  if (cs.mode === 'bitmap') {
+    return [bg, ...charScreenColors(cs, index), charColor(cs, index)]
+  }
   if (isCharMulticolor(cs, index)) {
     return [bg, cs.multicolor1, cs.multicolor2, charColor(cs, index)]
   }
@@ -396,8 +462,16 @@ export function renderChar(
   index: number,
   ecmBackground = 0,
 ): Uint8Array {
+  return renderCharIn(cs, index, charPixelColors(cs, index, ecmBackground))
+}
+
+/** The char drawn with the given colour per pixel value (a bitmap cell's). */
+export function renderCharIn(
+  cs: Charset,
+  index: number,
+  colors: ReadonlyArray<C64Color>,
+): Uint8Array {
   const mode = charPixelMode(cs, index)
-  const colors = charPixelColors(cs, index, ecmBackground)
   const pixels = readPixels(getCharBytes(cs, index), CHAR_SHAPE, mode)
   const scale = mode === 'multicolor' ? 2 : 1
   const out = new Uint8Array(64)

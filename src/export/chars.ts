@@ -1,5 +1,6 @@
 import { CHAR_BYTES, charCount } from '@/c64/charset'
-import { renderCharmap } from '@/c64/render'
+import { SCREEN_HEIGHT, SCREEN_WIDTH } from '@/c64/charmap'
+import { cellColorsOf, renderCharmap } from '@/c64/render'
 import { asmLabel } from './sprites'
 import type { Charmap } from '@/c64/charmap'
 import type { Charset } from '@/c64/charset'
@@ -54,6 +55,14 @@ export function exportCharColors(cs: Charset): Uint8Array {
 }
 
 /**
+ * Bitmap mode: screen RAM value for each char 0-255 (colour of 01 in the
+ * high nibble, of 10 in the low one), a lookup table like the colours.
+ */
+export function exportCharScreenColors(cs: Charset): Uint8Array {
+  return cs.screenColors.slice()
+}
+
+/**
  * Attribute (0-15) for each screen code 0-255, as a lookup table like the
  * colours; in ECM a code uses the attribute of its shape (code & 63).
  */
@@ -98,10 +107,75 @@ export function exportMapBin(map: Charmap): Uint8Array {
   return map.cells.slice()
 }
 
-/** Colour RAM for every map cell (what goes to $D800 for a screen). */
+/**
+ * Colour RAM for every map cell (what goes to $D800 for a screen). In
+ * bitmap mode, with the colours set on cells.
+ */
 export function exportMapColors(map: Charmap, cs: Charset): Uint8Array {
+  if (cs.mode === 'bitmap') {
+    return map.cells.map((_, i) => cellColorsOf(map, cs, i)[3])
+  }
   const table = exportCharColors(cs)
   return map.cells.map((code) => table[code])
+}
+
+/**
+ * Bitmap mode: screen RAM for every map cell (colour of 01 in the high
+ * nibble, of 10 in the low one), with the colours set on cells.
+ */
+export function exportMapScreenRam(map: Charmap, cs: Charset): Uint8Array {
+  return map.cells.map((_, i) => {
+    const c = cellColorsOf(map, cs, i)
+    return (c[1] << 4) | c[2]
+  })
+}
+
+/** One screen of a bitmap map: 40 × 25 cells from `start` (clipped). */
+export function bitmapScreen(
+  map: Charmap,
+  cs: Charset,
+  start = { x: 0, y: 0 },
+): { bitmap: Uint8Array; screen: Uint8Array; colours: Uint8Array } {
+  const bitmap = new Uint8Array(SCREEN_WIDTH * SCREEN_HEIGHT * CHAR_BYTES)
+  const screen = new Uint8Array(SCREEN_WIDTH * SCREEN_HEIGHT)
+  const colours = new Uint8Array(SCREEN_WIDTH * SCREEN_HEIGHT)
+  const x0 = Math.max(0, Math.min(start.x, map.width - SCREEN_WIDTH))
+  const y0 = Math.max(0, Math.min(start.y, map.height - SCREEN_HEIGHT))
+  for (let y = 0; y < Math.min(SCREEN_HEIGHT, map.height); y++) {
+    for (let x = 0; x < Math.min(SCREEN_WIDTH, map.width); x++) {
+      const i = (y0 + y) * map.width + x0 + x
+      const o = y * SCREEN_WIDTH + x
+      const code = map.cells[i]
+      bitmap.set(
+        cs.data.subarray(code * CHAR_BYTES, (code + 1) * CHAR_BYTES),
+        o * CHAR_BYTES,
+      )
+      const c = cellColorsOf(map, cs, i)
+      screen[o] = (c[1] << 4) | c[2]
+      colours[o] = c[3]
+    }
+  }
+  return { bitmap, screen, colours }
+}
+
+/**
+ * A Koala Painter picture (load address $6000, bitmap, screen RAM, colour
+ * RAM, background): one screen of a bitmap map, from `start`.
+ */
+export function exportKoala(
+  map: Charmap,
+  cs: Charset,
+  start?: { x: number; y: number },
+): Uint8Array {
+  const { bitmap, screen, colours } = bitmapScreen(map, cs, start)
+  const out = new Uint8Array(2 + 8000 + 1000 + 1000 + 1)
+  out[0] = 0x00
+  out[1] = 0x60
+  out.set(bitmap, 2)
+  out.set(screen, 8002)
+  out.set(colours, 9002)
+  out[10002] = cs.background
+  return out
 }
 
 function byteLines(
@@ -123,6 +197,7 @@ const MODE_NAME = {
   hires: 'hires',
   multicolor: 'multicolour',
   ecm: 'ECM (extended background colour)',
+  bitmap: 'multicolour bitmap',
 } as const
 
 function charsetSource(cs: Charset, prefix: string): Array<string> {
@@ -131,6 +206,12 @@ function charsetSource(cs: Charset, prefix: string): Array<string> {
     `// Charset "${cs.name}", ${MODE_NAME[cs.mode]}`,
     `.label ${prefix}_d021 = ${r.d021}  // background`,
   ]
+  if (cs.mode === 'bitmap') {
+    lines.push(
+      '// Bitmap: each char is an 8-byte tile for a cell of the bitmap;',
+      '// 01 = screen RAM high nibble, 10 = low nibble, 11 = colour RAM.',
+    )
+  }
   if (cs.mode === 'multicolor') {
     lines.push(
       `.label ${prefix}_d022 = ${r.d022}  // multicolour 1`,
@@ -156,6 +237,14 @@ function charsetSource(cs: Charset, prefix: string): Array<string> {
     `${prefix}_colours:`,
     ...byteLines(exportCharColors(cs), 16, (i) => `${hex2(i * 16)}-`),
   )
+  if (cs.mode === 'bitmap') {
+    lines.push(
+      '',
+      '// Screen RAM value per char (01 high nibble, 10 low nibble)',
+      `${prefix}_screen:`,
+      ...byteLines(exportCharScreenColors(cs), 16, (i) => `${hex2(i * 16)}-`),
+    )
+  }
   if (hasAttributes(cs)) {
     lines.push(
       '',
@@ -224,6 +313,14 @@ export function exportMapKickAss(
       `${prefix}_colours:`,
       ...byteLines(exportMapColors(map, cs), perLine, rowNote),
     )
+    if (cs.mode === 'bitmap') {
+      lines.push(
+        '',
+        '// Screen RAM per cell: colours of 01 (high nibble) and 10 (low)',
+        `${prefix}_screen:`,
+        ...byteLines(exportMapScreenRam(map, cs), perLine, rowNote),
+      )
+    }
   }
   if (attributes) {
     lines.push(
@@ -250,7 +347,12 @@ export function exportCharpadCtm(
 ): { bytes: Uint8Array; warnings: Array<string> } {
   const warnings: Array<string> = []
   const r = charsetRegisters(cs)
-  const displayMode = { hires: 0, multicolor: 1, ecm: 2 }[cs.mode]
+  const displayMode = { hires: 0, multicolor: 1, ecm: 2, bitmap: 1 }[cs.mode]
+  if (cs.mode === 'bitmap') {
+    warnings.push(
+      'CharPad has no bitmap mode: saved as multicolour chars, without the screen RAM colours.',
+    )
+  }
   if (cs.mode === 'ecm') {
     warnings.push(
       'ECM needs CharPad 2.8 or later (Free 2.86 opens ECM as hires).',

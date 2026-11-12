@@ -7,18 +7,29 @@ export function Segmented<TValue extends string>({
   options,
   onChange,
   size = 'md',
+  columns,
 }: {
   label: string
   value: TValue
   options: ReadonlyArray<{ value: TValue; label: string }>
   onChange: (value: TValue) => void
   size?: 'sm' | 'md'
+  /** Lay the options out in rows of this many (default: one row). */
+  columns?: number
 }) {
   return (
     <div
       role="group"
       aria-label={label}
-      className="flex gap-[3px] rounded-[10px] border border-rule p-[3px]"
+      className={cn(
+        'gap-[3px] rounded-[10px] border border-rule p-[3px]',
+        columns ? 'grid' : 'flex',
+      )}
+      style={
+        columns
+          ? { gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }
+          : undefined
+      }
     >
       {options.map((o) => (
         <button

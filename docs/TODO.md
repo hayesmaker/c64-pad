@@ -129,6 +129,8 @@ See `PLAN.md` → _Decisions_ for the reasoning behind these.
 - [x] The Screen worksheet reopens each map at its last zoom and scroll (kept per device)
 - [x] PNG tracing paper (Sprite and Screen worksheets): load a reference image per sprite or map; crop, 1:1 / fit / stretch / custom size, 9-point anchor, nudge, opacity, over all or under empty cells, show/hide. Kept on the device (not in project files)
 - [x] Char tracing: the Character Worksheet shows the screen tracing under the selected char (where it's placed, or pinned with the Screen Worksheet's Pin tool); step through places, pin / unpin, opacity, over / under
+- [x] Multicolour bitmap mode (project format 4): a fourth charset mode where each char is a 4×8 tile with its own three colours (01 / 10 in screen RAM, 11 in colour RAM); the Screen Worksheet's Colour tool overrides them cell by cell. Exports screen RAM per char / cell and Koala `.kla` (the screen in view); Run uses a bitmap viewer stub that scrolls a cell at a time
+- [ ] Bitmap follow-ups: more than 256 tiles per bitmap map; blocks from a selection carrying their cell colours; cell colours in the Navigator thumbnail; Aseprite / Koala import into a bitmap charset
 
 ### M10: Project palettes + Aseprite import
 

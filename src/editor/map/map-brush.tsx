@@ -177,6 +177,7 @@ export function CharIcon({
           height: 1,
           cells: Uint8Array.of(code),
           blank: code,
+          cellColors: null,
         },
         charset,
         { x: 0, y: 0, width: 1, height: 1 },

@@ -60,12 +60,16 @@ export function useCharTools(
     target === null
       ? ''
       : target === 'char'
-        ? 'char colour'
-        : target === 'background'
-          ? 'background'
-          : target.startsWith('ecm')
-            ? `ECM background ${target.slice(3)}`
-            : `multicolour ${target.slice(-1)}`
+        ? charset.mode === 'bitmap'
+          ? 'colour RAM'
+          : 'char colour'
+        : target.startsWith('screen')
+          ? `screen colour ${target.slice(-1)}`
+          : target === 'background'
+            ? 'background'
+            : target.startsWith('ecm')
+              ? `ECM background ${target.slice(3)}`
+              : `multicolour ${target.slice(-1)}`
 
   const paint = (x: number, y: number, start: boolean) => {
     const group = `stroke-${strokeId.current}`

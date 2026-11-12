@@ -1,7 +1,9 @@
 import {
   charColor,
+  charScreenColors,
   isCharMulticolor,
   setCharColor,
+  setCharScreenColor,
   setCharsetRegisters,
 } from '@/c64/charset'
 import { COLOR_NAMES } from '@/c64/palette'
@@ -15,6 +17,8 @@ export type CharSlot =
   | 'multicolor1'
   | 'multicolor2'
   | 'char'
+  | 'screen1'
+  | 'screen2'
   | 'ecm1'
   | 'ecm2'
   | 'ecm3'
@@ -38,6 +42,10 @@ export function slotColor(cs: Charset, index: number, slot: CharSlot) {
       return cs.multicolor2
     case 'char':
       return charColor(cs, index)
+    case 'screen1':
+      return charScreenColors(cs, index)[0]
+    case 'screen2':
+      return charScreenColors(cs, index)[1]
     default:
       return cs.ecmBackgrounds[Number(slot.slice(3)) - 1]
   }
@@ -79,6 +87,35 @@ export function charPens(cs: Charset, index: number): Array<PenDef<CharSlot>> {
     color: cs.background,
     slot: 'background',
   }
+  if (cs.mode === 'bitmap') {
+    const [s1, s2] = charScreenColors(cs, index)
+    return [
+      { ...background, code: '00' },
+      {
+        value: 1,
+        code: '01',
+        name: `Screen colour 1 · ${COLOR_NAMES[s1]}`,
+        sub: 'Screen RAM hi · per cell',
+        color: s1,
+        slot: 'screen1',
+      },
+      {
+        value: 2,
+        code: '10',
+        name: `Screen colour 2 · ${COLOR_NAMES[s2]}`,
+        sub: 'Screen RAM lo · per cell',
+        color: s2,
+        slot: 'screen2',
+      },
+      {
+        ...own,
+        value: 3,
+        code: '11',
+        name: `Colour RAM · ${COLOR_NAMES[cc]}`,
+        sub: 'Colour RAM · per cell',
+      },
+    ]
+  }
   if (!isCharMulticolor(cs, index)) return [background, own]
   return [
     { ...background, code: '00' },
@@ -112,6 +149,10 @@ export function setSlotColor(
   switch (slot) {
     case 'char':
       return setCharColor(cs, index, color)
+    case 'screen1':
+      return setCharScreenColor(cs, index, 1, color)
+    case 'screen2':
+      return setCharScreenColor(cs, index, 2, color)
     case 'background':
     case 'multicolor1':
     case 'multicolor2':

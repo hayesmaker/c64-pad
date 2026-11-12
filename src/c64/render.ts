@@ -1,5 +1,10 @@
-import { SCREEN_HEIGHT, SCREEN_WIDTH, decodeEcm } from './charmap'
-import { charCount, renderChar } from './charset'
+import {
+  CELL_COLOR_NONE,
+  SCREEN_HEIGHT,
+  SCREEN_WIDTH,
+  decodeEcm,
+} from './charmap'
+import { charCount, charPixelColors, renderChar, renderCharIn } from './charset'
 import type { Charmap } from './charmap'
 import type { Charset } from './charset'
 
@@ -36,6 +41,42 @@ export function renderCharsetSheet(
 }
 
 /**
+ * Bitmap mode: the cell's colour per pixel value (background, 01, 10, 11),
+ * its char's own with the map's cell colours over them. Null when the cell
+ * has no colours of its own (or the charset isn't bitmap).
+ */
+export function cellPixelColors(
+  map: Charmap,
+  cs: Charset,
+  index: number,
+): Array<number> | null {
+  const set = map.cellColors
+  if (cs.mode !== 'bitmap' || !set) return null
+  const o = index * 3
+  if (
+    set[o] === CELL_COLOR_NONE &&
+    set[o + 1] === CELL_COLOR_NONE &&
+    set[o + 2] === CELL_COLOR_NONE
+  )
+    return null
+  const colors = charPixelColors(cs, map.cells[index])
+  for (let k = 0; k < 3; k++)
+    if (set[o + k] !== CELL_COLOR_NONE) colors[k + 1] = set[o + k]
+  return colors
+}
+
+/** The cell's colours per pixel value, whether set on the cell or not. */
+export function cellColorsOf(
+  map: Charmap,
+  cs: Charset,
+  index: number,
+): Array<number> {
+  return (
+    cellPixelColors(map, cs, index) ?? charPixelColors(cs, map.cells[index])
+  )
+}
+
+/**
  * A window of the map drawn with its charset (default: the top-left screen).
  * Cells outside the map are left transparent.
  */
@@ -54,7 +95,8 @@ export function renderCharmap(
       const my = view.y + cy
       if (mx < 0 || my < 0 || mx >= map.width || my >= map.height) continue
       const code = map.cells[my * map.width + mx]
-      let char = cache.get(code)
+      const own = cellPixelColors(map, cs, my * map.width + mx)
+      let char = own ? renderCharIn(cs, code, own) : cache.get(code)
       if (!char) {
         char =
           cs.mode === 'ecm'

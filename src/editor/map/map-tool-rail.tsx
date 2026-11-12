@@ -4,6 +4,7 @@ import {
   Grid3x3,
   Hand,
   PaintBucket,
+  Palette,
   Pencil,
   Pin,
   Pipette,
@@ -21,6 +22,7 @@ const TOOLS = [
   ['paint', 'Paint with the brush (double-tap to undo a stamp)', Pencil],
   ['erase', 'Erase (writes the Blank Char)', Eraser],
   ['fill', 'Fill with the brush char', PaintBucket],
+  ['colour', 'Colour cells (bitmap): set a cell’s own colours', Palette],
   ['pick', 'Pick a char from the map', Pipette],
   ['select', 'Select an area', BoxSelect],
   ['pan', 'Hand: drag to move around the map', Hand],
@@ -67,7 +69,9 @@ export function MapToolRail({
       className="flex shrink-0 flex-col gap-1"
       style={{ paddingTop: COL_HEADER_H + 2 }}
     >
-      {TOOLS.map(([value, label, Icon]) => (
+      {TOOLS.filter(
+        ([value]) => value !== 'colour' || charset.mode === 'bitmap',
+      ).map(([value, label, Icon]) => (
         <ToolButton
           key={value}
           label={label}

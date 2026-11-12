@@ -46,6 +46,8 @@ start:
         lda #$7f
         sta $dc0d                   // no CIA interrupts: we own the machine
         lda $dc0d
+        lda #$36                    // BASIC ROM out: the map may lie under it
+        sta $01
         lda BORDER
         sta $d020
         lda BG

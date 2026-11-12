@@ -148,6 +148,9 @@ export function planCharMerge(
   if (source.mode === 'ecm' || target.mode === 'ecm') {
     return { ...base, error: "ECM charsets can't be merged yet" }
   }
+  if (source.mode === 'bitmap' || target.mode === 'bitmap') {
+    return { ...base, error: "Bitmap charsets can't be merged yet" }
+  }
 
   const count = charCount(target.mode)
   const reserved = codesUsedBy(mapsUsingCharset(project, targetId))

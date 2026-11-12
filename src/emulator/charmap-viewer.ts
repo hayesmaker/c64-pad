@@ -2,6 +2,7 @@ import { base64ToBytes } from '@/storage/bytes'
 import { charCount } from '@/c64/charset'
 import { charsetRegisters, exportCharColors } from '@/export/chars'
 import { charmapViewerPrg } from './stubs/charmap-viewer.gen'
+import { bitmapCharsetViewerPrg, bitmapMapViewerPrg } from './bitmap-viewer'
 import type { Charmap } from '@/c64/charmap'
 import type { Charset } from '@/c64/charset'
 import type { C64Color } from '@/c64/palette'
@@ -110,6 +111,8 @@ export function buildCharmapViewerPrg(
   cfg(OFFSET.d022, r.d022)
   cfg(OFFSET.d023, r.d023)
   cfg(OFFSET.d024, r.d024)
+  if (cs.mode === 'bitmap')
+    throw new RangeError('Bitmap mode has its own viewer')
   cfg(OFFSET.mode, { hires: 0, multicolor: 1, ecm: 2 }[cs.mode])
   word(OFFSET.mapWidth, width)
   cfg(OFFSET.viewWidth, viewW)
@@ -141,6 +144,7 @@ export function mapViewerPrg(
   cs: Charset,
   start?: { x: number; y: number },
 ) {
+  if (cs.mode === 'bitmap') return bitmapMapViewerPrg(map, cs, start)
   return buildCharmapViewerPrg(cs, {
     cells: map.cells,
     width: map.width,
@@ -152,6 +156,7 @@ export function mapViewerPrg(
 
 /** Run a charset: all 256 codes as a 16 × 16 grid in the middle. */
 export function charsetViewerPrg(cs: Charset) {
+  if (cs.mode === 'bitmap') return bitmapCharsetViewerPrg(cs)
   return buildCharmapViewerPrg(cs, {
     cells: Uint8Array.from({ length: 256 }, (_, i) => i),
     width: 16,

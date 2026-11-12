@@ -43,6 +43,7 @@ import {
 } from './map-rulers'
 import { MapSettings, SelectionActions } from './map-side-panel'
 import { MapToolRail } from './map-tool-rail'
+import { CellColourPanel } from './cell-colour-panel'
 import { useMapStrokes } from './use-map-strokes'
 import type { GridView } from '../view'
 import type { Charmap } from '@/c64/charmap'
@@ -69,6 +70,7 @@ export function MapDesigner({
   const history = useAssetHistory(session, 'maps', map.id, map)
   useUndoShortcuts(history)
   const ecm = charset.mode === 'ecm'
+  const bitmap = charset.mode === 'bitmap'
   // Pin tool: the brush's chars trace from the tapped cells on the
   // Character Worksheet.
   const edit = useMapStrokes(map, ecm, history, (x, y, brush) => {
@@ -95,6 +97,11 @@ export function MapDesigner({
   useEffect(() => {
     if (brushChar !== null) setSelectedChar(charset.id, brushChar)
   }, [charset.id, brushChar])
+  // The Colour tool is only for bitmap screens.
+  const colouring = bitmap && edit.tool === 'colour'
+  useEffect(() => {
+    if (!bitmap && edit.tool === 'colour') edit.setTool('paint')
+  })
   const [showGrid, setShowGrid] = useState(true)
   const [showAttributes, setShowAttributes] = useShowAttributes('map')
   const [resizing, setResizing] = useState(false)
@@ -325,7 +332,20 @@ export function MapDesigner({
               onChange={history.change}
               onResize={() => setResizing(true)}
             />
-            {brushPicker}
+            {colouring ? (
+              <CellColourPanel
+                slot={edit.cellColour.slot}
+                onSlot={(slot) =>
+                  edit.setCellColour({ ...edit.cellColour, slot })
+                }
+                colour={edit.cellColour.colour}
+                onColour={(colour) =>
+                  edit.setCellColour({ ...edit.cellColour, colour })
+                }
+              />
+            ) : (
+              brushPicker
+            )}
             {edit.tool === 'pin' && <PinNote traced={!!trace.tracing} />}
           </>
         )}
@@ -413,6 +433,7 @@ export function MapDesigner({
               project={project}
               map={map}
               charset={charset}
+              start={viewStart}
               onClose={() => setRunExport(false)}
             />
           }

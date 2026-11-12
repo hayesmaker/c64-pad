@@ -55,6 +55,7 @@ const MODE_LABEL: Record<CharsetMode, string> = {
   hires: 'Hires',
   multicolor: 'Multicolour',
   ecm: 'ECM',
+  bitmap: 'Multicolour bitmap',
 }
 
 type AssetRef = { kind: AssetKind; id: string; name: string }

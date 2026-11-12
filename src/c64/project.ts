@@ -10,7 +10,7 @@ import type { C64Color, PaletteId } from './palette'
 import type { SpriteSet } from './sprite-set'
 
 /** Bump when the stored shape changes; persistence migrates older versions. */
-export const PROJECT_VERSION = 3
+export const PROJECT_VERSION = 4
 
 /** The unit of saving and export: holds any number of sprite sets, charsets and maps. */
 export interface Project {
@@ -268,6 +268,8 @@ export function projectColors(project: Project): Array<C64Color> {
     used.add(cs.background)
     if (cs.mode === 'multicolor') used.add(cs.multicolor1).add(cs.multicolor2)
     if (cs.mode === 'ecm') cs.ecmBackgrounds.forEach((c) => used.add(c))
+    if (cs.mode === 'bitmap')
+      for (const v of cs.screenColors) used.add(v >> 4).add(v & 15)
     for (let i = 0; i < charCount(cs.mode); i++) used.add(charColor(cs, i))
   }
   return [...used].sort((a, b) => a - b)

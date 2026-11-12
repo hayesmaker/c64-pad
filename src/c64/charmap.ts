@@ -20,7 +20,16 @@ export interface Charmap {
   readonly cells: Uint8Array
   /** Screen code the eraser writes (and new cells get): $00 unless changed. */
   readonly blank: number
+  /**
+   * Bitmap mode: colours set on cells over their char's own, 3 per cell
+   * (pixel values 01, 10, 11), CELL_COLOR_NONE where the char's own shows.
+   * Null until a cell is recoloured.
+   */
+  readonly cellColors: Uint8Array | null
 }
+
+/** No colour set on the cell: the char's own shows. */
+export const CELL_COLOR_NONE = 0xff
 
 function checkSize(width: number, height: number) {
   for (const [label, v] of [
@@ -52,11 +61,24 @@ export function createCharmap(
     cells: new Uint8Array(width * height).fill(init.blank ?? 0),
     blank: 0,
     ...init,
+    // Maps from before bitmap mode (format 3) have none.
+    cellColors: init.cellColors ?? null,
     width,
     height,
   }
   if (map.cells.length !== width * height) {
     throw new RangeError(`Map cells must have ${width * height} entries`)
+  }
+  if (map.cellColors) {
+    if (map.cellColors.length !== width * height * 3) {
+      throw new RangeError(
+        `Map cell colours must have ${width * height * 3} entries`,
+      )
+    }
+    for (const c of map.cellColors) {
+      if (c > 15 && c !== CELL_COLOR_NONE)
+        throw new RangeError(`Cell colour ${c} outside 0-15`)
+    }
   }
   checkCode(map.blank)
   return map
@@ -109,7 +131,68 @@ export function resizeCharmap(
     )
     cells.set(row, y * width)
   }
-  return { ...map, width, height, cells }
+  let cellColors: Uint8Array | null = null
+  if (map.cellColors) {
+    cellColors = new Uint8Array(width * height * 3).fill(CELL_COLOR_NONE)
+    for (let y = 0; y < Math.min(height, map.height); y++) {
+      cellColors.set(
+        map.cellColors.subarray(
+          y * map.width * 3,
+          (y * map.width + Math.min(width, map.width)) * 3,
+        ),
+        y * width * 3,
+      )
+    }
+  }
+  return { ...map, width, height, cells, cellColors }
+}
+
+/** Which of a bitmap cell's colours: 1 (01), 2 (10) or 3 (11, colour RAM). */
+export type CellColorSlot = 1 | 2 | 3
+
+/** The colour set on a cell for the slot, or null for the char's own. */
+export function getCellColor(
+  map: Charmap,
+  x: number,
+  y: number,
+  slot: CellColorSlot,
+): number | null {
+  checkCoords(map, x, y)
+  const c = map.cellColors?.[(y * map.width + x) * 3 + slot - 1]
+  return c === undefined || c === CELL_COLOR_NONE ? null : c
+}
+
+/**
+ * Set a slot's colour on the cells of a rectangle (clipped to the map);
+ * null goes back to the char's own. Returns the same map when nothing changes.
+ */
+export function setCellColor(
+  map: Charmap,
+  x: number,
+  y: number,
+  slot: CellColorSlot,
+  color: number | null,
+  w = 1,
+  h = 1,
+): Charmap {
+  if (color !== null && (!Number.isInteger(color) || color < 0 || color > 15))
+    throw new RangeError(`Colour ${color} outside 0-15`)
+  if (color === null && !map.cellColors) return map
+  const { x0, y0, x1, y1 } = clip(map, x, y, w, h)
+  const value = color ?? CELL_COLOR_NONE
+  let out: Uint8Array | null = null
+  for (let yy = y0; yy < y1; yy++) {
+    for (let xx = x0; xx < x1; xx++) {
+      const i = (yy * map.width + xx) * 3 + slot - 1
+      const old = map.cellColors ? map.cellColors[i] : CELL_COLOR_NONE
+      if (old === value) continue
+      out ??=
+        map.cellColors?.slice() ??
+        new Uint8Array(map.width * map.height * 3).fill(CELL_COLOR_NONE)
+      out[i] = value
+    }
+  }
+  return out ? { ...map, cellColors: out } : map
 }
 
 export interface Region {

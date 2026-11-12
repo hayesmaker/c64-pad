@@ -5,14 +5,16 @@ import {
   floodFillMap,
   pasteRegion,
   setCell,
+  setCellColor,
 } from '@/c64/charmap'
-import type { Charmap, Region } from '@/c64/charmap'
+import type { CellColorSlot, Charmap, Region } from '@/c64/charmap'
+import type { C64Color } from '@/c64/palette'
 import type { useAssetHistory } from '../asset-history'
 import type { StrokeHandlers } from '../gestures'
 import type { CellRect } from './map-canvas'
 
 export type MapTool =
-  'paint' | 'erase' | 'fill' | 'pick' | 'select' | 'pan' | 'pin'
+  'paint' | 'erase' | 'fill' | 'pick' | 'select' | 'pan' | 'pin' | 'colour'
 
 export type MapHistory = ReturnType<typeof useAssetHistory<'maps'>>
 
@@ -25,6 +27,12 @@ export const singleBrush = (code: number): Region => ({
 
 /** Brush per map, kept while the app runs. */
 const lastBrush = new Map<string, Region>()
+
+/** The Colour tool's slot and colour (null: the char's own), app-wide. */
+let lastCellColour: { slot: CellColorSlot; colour: C64Color | null } = {
+  slot: 3,
+  colour: 1,
+}
 
 /**
  * The Screen Worksheet's editing state: tool, brush, ECM background, cursor
@@ -45,6 +53,13 @@ export function useMapStrokes(
     lastBrush.set(map.id, b)
     setBrushState(b)
   }
+  const [cellColour, setCellColourState] = useState(lastCellColour)
+  const setCellColour = (c: typeof lastCellColour) => {
+    lastCellColour = c
+    setCellColourState(c)
+  }
+  const recolour = (m: Charmap, x: number, y: number) =>
+    setCellColor(m, x, y, cellColour.slot, cellColour.colour)
   const [ecmBg, setEcmBgState] = useState(0)
   const [cursorState, setCursor] = useState<[number, number] | null>(null)
   const [hovering, setHovering] = useState(false)
@@ -110,6 +125,9 @@ export function useMapStrokes(
       case 'erase':
         history.change((m) => setCell(m, x, y, m.blank), group)
         return
+      case 'colour':
+        history.change((m) => recolour(m, x, y), group)
+        return
       case 'paint':
         history.change((m) => stampAt(m, x, y), group)
     }
@@ -129,6 +147,8 @@ export function useMapStrokes(
       })
     } else if (tool === 'erase') {
       history.change((m) => setCell(m, x, y, m.blank), s.group)
+    } else if (tool === 'colour') {
+      history.change((m) => recolour(m, x, y), s.group)
     } else if (tool === 'paint') {
       // Blocks tile on a grid from where the stroke started.
       const [ax, ay] = s.anchor
@@ -166,12 +186,15 @@ export function useMapStrokes(
       stroke.current = null
       history.cancelGroup()
     },
-    onDoubleTap: (x, y) => {
-      if (tool !== 'paint') return
-      // Undo what the first tap added; a single char clears to blank.
-      if (beforeStroke.current !== map) history.undo()
-      if (brushIsSingle) history.change((m) => setCell(m, x, y, m.blank))
-    },
+    // Only painting has a double-tap; other tools take both taps.
+    onDoubleTap:
+      tool !== 'paint'
+        ? undefined
+        : (x, y) => {
+            // Undo what the first tap added; a single char clears to blank.
+            if (beforeStroke.current !== map) history.undo()
+            if (brushIsSingle) history.change((m) => setCell(m, x, y, m.blank))
+          },
     onHover: (at, pointerType) => {
       // A finger has no hover: show the brush outline only for mouse / stylus.
       setHovering(!!at && pointerType !== 'touch')
@@ -189,6 +212,9 @@ export function useMapStrokes(
     setTool,
     brush,
     setBrush,
+    /** The Colour tool's slot and colour. */
+    cellColour,
+    setCellColour,
     ecmBg,
     /** Paint on another ECM background; a single-char brush follows it. */
     chooseEcmBg: (k: number) => {

@@ -98,6 +98,14 @@ zoom, two fingers to pan. The **Hand** tool (map tool rail and map Zen mode)
 makes one finger or the mouse drag the map instead of drawing; a second
 finger still pinches.
 
+## Multicolour bitmap
+
+A charset mode, not a new asset, so CHARS and SCREEN work as before. Each char is a tile: the 8 bytes copied into one 8 × 8 cell of the bitmap, read as 4 × 8 multicolour pixels. 00 is the background ($D021, the whole screen); 01 and 10 come from the cell's screen RAM byte (high and low nibble), 11 from its colour RAM. Every tile has its own three (`screenColors`, `colors`), set with its pens on the Character Worksheet.
+
+On a screen a cell can have colours of its own over its tile's (`cellColors`: three per cell, `0xff` = the tile's). The Colour tool (palette icon, bitmap screens only) sets one of the three on the cells you tap or drag over; "Char's own colour" takes them back. Painting tiles leaves cell colours where they are, so a recoloured area stays recoloured when you paint other tiles into it. The readout marks such cells "(cell)".
+
+Run builds the bitmap in the viewer stub (`stubs/bitmap-viewer.asm`): tiles at $4000, then tile, screen RAM and colour RAM per cell from $4800; it redraws the window tile by tile (a few frames per step) when the joystick scrolls.
+
 ## Components (`src/components/worksheet/`)
 
 - `WorksheetLayout`: desk, sheet, header (breadcrumbs, title, actions), optional tabs
