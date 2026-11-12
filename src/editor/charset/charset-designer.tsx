@@ -50,6 +50,7 @@ import { CharDataColumn, CharMemoryNote, DATA_W, MEM_H } from './char-data'
 import { CharNumberField, CharPreview, EcmBackgrounds } from './char-panels'
 import { CharsetPanel } from './charset-panel'
 import { useCharTools } from './use-char-tools'
+import { getSelectedChar, setSelectedChar } from './selected-char'
 import { CharTracingPanel } from '../tracing/char-tracing-panel'
 import { clearBackground } from '../tracing/char-tracing'
 import { useCharTracing } from '../tracing/use-char-tracing'
@@ -57,9 +58,6 @@ import type { GridView } from '../view'
 import type { Charset, CharsetMode } from '@/c64/charset'
 import type { Project } from '@/c64/project'
 import type { ProjectSession, SaveStatus as Status } from '@/storage/session'
-
-/** Last selected char per charset. */
-const lastSelected = new Map<string, number>()
 
 /** The Character Worksheet: one char of a charset at a time. */
 export function CharsetDesigner({
@@ -81,7 +79,7 @@ export function CharsetDesigner({
   const { change } = history
   const count = charCount(charset.mode)
   const [selectedRaw, setSelected] = useState(
-    () => lastSelected.get(charset.id) ?? 0,
+    () => getSelectedChar(charset.id) ?? 0,
   )
   const selected = Math.min(selectedRaw, count - 1)
   const tools = useCharTools(charset, selected, history)
@@ -107,7 +105,7 @@ export function CharsetDesigner({
   useEffect(() => setView(DEFAULT_VIEW), [cell.size])
 
   useEffect(() => {
-    lastSelected.set(charset.id, selected)
+    setSelectedChar(charset.id, selected)
   }, [charset.id, selected])
 
   const mcChar = isCharMulticolor(charset, selected)

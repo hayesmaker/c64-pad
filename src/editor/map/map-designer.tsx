@@ -17,7 +17,9 @@ import { ZenMode } from '../zen-mode'
 import { TracingPanel } from '../tracing/tracing-panel'
 import { TracingButtons } from '../tracing/tracing-buttons'
 import { useGridTracing } from '../tracing/use-tracing'
+import { setSelectedChar } from '../charset/selected-char'
 import {
+  charOfCode,
   loadCharTracing,
   pinBrush,
   saveCharTracing,
@@ -85,6 +87,14 @@ export function MapDesigner({
         : `Pinned ${pinned.map((c) => hex(c)).join(', ')} at column ${x}, row ${y}`,
     )
   })
+  // CHARS opens on the char being painted with (a single-char brush).
+  const brushChar =
+    edit.brush.width === 1 && edit.brush.height === 1
+      ? charOfCode(edit.brush.cells[0], ecm)
+      : null
+  useEffect(() => {
+    if (brushChar !== null) setSelectedChar(charset.id, brushChar)
+  }, [charset.id, brushChar])
   const [showGrid, setShowGrid] = useState(true)
   const [showAttributes, setShowAttributes] = useShowAttributes('map')
   const [resizing, setResizing] = useState(false)
