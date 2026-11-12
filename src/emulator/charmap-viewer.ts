@@ -36,6 +36,8 @@ const OFFSET = {
   maxScrollY: 16,
   fillCode: 18,
   fillColour: 19,
+  startX: 20,
+  startY: 22,
 } as const
 
 export interface CharmapView {
@@ -48,6 +50,8 @@ export interface CharmapView {
   /** Screen code around a small map; default the first empty char. */
   fillCode?: number
   border?: C64Color
+  /** Map column and row at the top left of the screen to start with. */
+  start?: { x: number; y: number }
 }
 
 /** First char with no pixels set, else 0. */
@@ -58,20 +62,30 @@ function emptyChar(cs: Charset): number {
   return 0
 }
 
+const clamp = (n: number, max: number) =>
+  Math.max(0, Math.min(max, Math.round(n)))
+
 /**
  * Make a runnable PRG: the viewer stub with the charset, its colours and the
- * map. Maps too big for memory keep their first rows (`rows` says how many).
+ * map, starting at `view.start`. Maps too big for memory keep `rows` rows
+ * from `firstRow`, centred on the start screen.
  */
 export function buildCharmapViewerPrg(
   cs: Charset,
   view: CharmapView,
-): { prg: Uint8Array; rows: number } {
+): { prg: Uint8Array; rows: number; firstRow: number } {
   const { width } = view
   const rows = Math.min(
     view.height,
     Math.floor(CHARMAP_VIEWER.MAP_MAX_BYTES / width),
   )
   if (rows < 1) throw new RangeError('The map is too wide for the viewer')
+  const startY = clamp(view.start?.y ?? 0, view.height - 1)
+  // Rows kept round the start screen, so it scrolls both ways from there.
+  const firstRow = clamp(
+    startY - (rows - Math.min(SCREEN_H, rows)) / 2,
+    view.height - rows,
+  )
 
   const stub = base64ToBytes(charmapViewerPrg)
   const end = CHARMAP_VIEWER.MAP + width * rows
@@ -104,22 +118,35 @@ export function buildCharmapViewerPrg(
   cfg(OFFSET.offsetY, view.centre ? (SCREEN_H - viewH) >> 1 : 0)
   word(OFFSET.maxScrollX, width - viewW)
   word(OFFSET.maxScrollY, rows - viewH)
+  word(OFFSET.startX, clamp(view.start?.x ?? 0, width - viewW))
+  word(OFFSET.startY, clamp(startY - firstRow, rows - viewH))
   cfg(OFFSET.fillCode, fillCode)
   cfg(OFFSET.fillColour, colours[fillCode])
 
   prg.set(colours, at(CHARMAP_VIEWER.COLOURS))
   prg.set(cs.data, at(CHARMAP_VIEWER.CHARSET))
-  prg.set(view.cells.subarray(0, width * rows), at(CHARMAP_VIEWER.MAP))
-  return { prg, rows }
+  prg.set(
+    view.cells.subarray(firstRow * width, (firstRow + rows) * width),
+    at(CHARMAP_VIEWER.MAP),
+  )
+  return { prg, rows, firstRow }
 }
 
-/** Run a map: its top-left screen, scrolling with joystick port 2. */
-export function mapViewerPrg(map: Charmap, cs: Charset) {
+/**
+ * Run a map: the screen at `start` (map column and row at its top left;
+ * default the top-left screen), scrolling with joystick port 2.
+ */
+export function mapViewerPrg(
+  map: Charmap,
+  cs: Charset,
+  start?: { x: number; y: number },
+) {
   return buildCharmapViewerPrg(cs, {
     cells: map.cells,
     width: map.width,
     height: map.height,
     fillCode: map.blank,
+    start,
   })
 }
 

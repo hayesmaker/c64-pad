@@ -136,6 +136,13 @@ export function MapDesigner({
   const view = clampViewTo(viewState, bounds)
   const size = cell * view.zoom
   const { selection } = edit
+  // Where Run starts: the C64 screen (40 × 25) at the same place in its
+  // scroll range as the view is in its own. So the first or last screen
+  // when scrolled to an edge, and holding (or held by) what's in view.
+  const viewStart = {
+    x: runStart(-view.x, bounds.frameW, size, map.width, 40),
+    y: runStart(-view.y, bounds.frameH, size, map.height, 25),
+  }
 
   // The navigator fades while painting, so strokes show through it.
   const [painting, setPainting] = useState(false)
@@ -377,15 +384,19 @@ export function MapDesigner({
           runSummary={
             map.width <= 40 && map.height <= 25
               ? `Shows “${map.name}” on the C64 screen.`
-              : `Shows the top-left screen of “${map.name}” (${map.width} × ${map.height}); scroll with the arrow keys or the on-screen arrows (joystick port 2).`
+              : `Shows the screen of “${map.name}” (${map.width} × ${map.height}) in view on the worksheet; scroll with the arrow keys or the on-screen arrows (joystick port 2).`
           }
           onRun={() => {
-            const { prg, rows } = mapViewerPrg(map, charset)
+            const { prg, rows, firstRow } = mapViewerPrg(
+              map,
+              charset,
+              viewStart,
+            )
             setRunning({
               prg,
               title:
                 rows < map.height
-                  ? `${map.name} · first ${rows} rows (C64 memory)`
+                  ? `${map.name} · rows ${firstRow}–${firstRow + rows - 1} (C64 memory)`
                   : map.name,
               joystick: map.width > 40 || rows > 25,
             })
@@ -490,4 +501,17 @@ function PinNote({ traced }: { traced: boolean }) {
         : 'This screen has no tracing paper yet: load an image first, then pin chars to it.'}
     </p>
   )
+}
+
+/** One axis of the Run start: the view's scroll fraction, in screen terms. */
+function runStart(
+  scrolled: number,
+  frame: number,
+  size: number,
+  cells: number,
+  screen: number,
+) {
+  const range = cells * size - frame
+  const fraction = range > 0 ? Math.min(1, Math.max(0, scrolled / range)) : 0
+  return Math.round(fraction * Math.max(0, cells - screen))
 }

@@ -54,4 +54,43 @@ describe('charmap viewer PRG', () => {
     })
     expect(rows).toBe(Math.floor(CHARMAP_VIEWER.MAP_MAX_BYTES / 1024))
   })
+
+  it('starts at the given screen, kept inside the scroll range', () => {
+    const cs = createCharset()
+    const map = createCharmap({ charsetId: cs.id, width: 80, height: 60 })
+    const start = (x: number, y: number) => {
+      const { prg } = mapViewerPrg(map, cs, { x, y })
+      const cfg = (o: number) => prg[at(CHARMAP_VIEWER.CONFIG + o)]
+      return [cfg(20) | (cfg(21) << 8), cfg(22) | (cfg(23) << 8)]
+    }
+    expect(start(0, 0)).toEqual([0, 0])
+    expect(start(12, 30)).toEqual([12, 30])
+    expect(start(70, 50)).toEqual([40, 35]) // the last screen
+    expect(start(-3, -1)).toEqual([0, 0])
+    expect(mapViewerPrg(map, cs).prg[at(CHARMAP_VIEWER.CONFIG + 22)]).toBe(0)
+  })
+
+  it('keeps the rows round the start screen of a map too big for memory', () => {
+    const cs = createCharset()
+    const cells = new Uint8Array(1024 * 1024)
+    for (let y = 0; y < 1024; y++) cells[y * 1024] = y & 0xff
+    const fit = Math.floor(CHARMAP_VIEWER.MAP_MAX_BYTES / 1024)
+    const build = (y: number) =>
+      buildCharmapViewerPrg(cs, {
+        cells,
+        width: 1024,
+        height: 1024,
+        start: { x: 0, y },
+      })
+    const { prg, rows, firstRow } = build(600)
+    expect(rows).toBe(fit)
+    expect(firstRow).toBe(Math.round(600 - (fit - 25) / 2))
+    const cfg = (o: number) => prg[at(CHARMAP_VIEWER.CONFIG + o)]
+    // Starts at row 600 of the map, which is row 600 - firstRow in memory.
+    expect(cfg(22) | (cfg(23) << 8)).toBe(600 - firstRow)
+    expect(prg[at(CHARMAP_VIEWER.MAP)]).toBe(firstRow & 0xff)
+    // Near either end the window stops at the map's edge.
+    expect(build(3).firstRow).toBe(0)
+    expect(build(1020).firstRow).toBe(1024 - fit)
+  })
 })

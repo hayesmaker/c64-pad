@@ -5,8 +5,8 @@
 // (src/emulator/charmap-viewer.ts) to make a PRG for c64-ready.
 //
 // Shows a window of the map in the charset's mode (hires, multicolour or
-// ECM). Maps bigger than the screen scroll a char at a time with joystick
-// port 2.
+// ECM). Maps bigger than the screen start at STARTX, STARTY and scroll a
+// char at a time with joystick port 2.
 //
 // Keep these addresses in sync with src/emulator/charmap-viewer.ts.
 
@@ -26,6 +26,8 @@
 .const MAXSY    = CONFIG + 16       // word: largest scroll row
 .const FILLCODE = CONFIG + 18       // screen code outside the window
 .const FILLCOL  = CONFIG + 19       // its colour RAM value
+.const STARTX   = CONFIG + 20       // word: scroll column to start at
+.const STARTY   = CONFIG + 22       // word: scroll row to start at
 .const COLOURS  = $0d00             // [256] colour RAM value per screen code
 .const CHARSET  = $2000             // 2 KB; $d018 = $18
 .const MAP      = $2800             // the map, row by row, up to $cfff
@@ -82,11 +84,15 @@ start:
         inx
         bne !-
 
-        lda #0
+        lda STARTX                  // start where the editor was looking
         sta sx
+        lda STARTX + 1
         sta sx + 1
+        lda STARTY
         sta sy
+        lda STARTY + 1
         sta sy + 1
+        lda #0
         sta delay
         jsr draw
 
