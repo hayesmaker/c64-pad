@@ -5,6 +5,7 @@ import {
   Hand,
   PaintBucket,
   Pencil,
+  Pin,
   Pipette,
   Tags,
 } from 'lucide-react'
@@ -23,6 +24,11 @@ const TOOLS = [
   ['pick', 'Pick a char from the map', Pipette],
   ['select', 'Select an area', BoxSelect],
   ['pan', 'Hand: drag to move around the map', Hand],
+  [
+    'pin',
+    'Pin for char tracing: tap a cell to trace the brush char(s) from there',
+    Pin,
+  ],
 ] as const
 
 /** The Screen Worksheet's vertical tool bar. */

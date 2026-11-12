@@ -72,6 +72,17 @@ everything or only under empty cells (transparent sprite pixels, map cells
 holding the Blank Char). Stored per sprite / map in its own IndexedDB
 database (`c64-pad-tracings`), never in projects or `.c64pad` files.
 
+**Chars trace from the screens.** The Character Worksheet has no image of its
+own: it shows the 8 × 8 part of a Screen's tracing under one map cell (the
+map's placement shifted so that cell sits on the char grid; nothing is
+cropped or copied, so nudging or replacing the screen's image carries
+through). The cell is the char's **pin**, if it has one, else each place the
+char is painted on a traced screen using this charset (Blank Char cells
+skipped), stepped through with ‹ ›. The Screen Worksheet's **Pin** tool pins
+the brush char to the tapped cell (a block brush pins each of its chars), so
+a char can be drawn before it's placed. Pins, opacity and over / under are
+kept per charset in localStorage on the device.
+
 ## Getting around a big map
 
 When a map doesn't fit the frame, a **Navigator** sits in the bottom-right

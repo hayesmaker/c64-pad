@@ -50,6 +50,9 @@ import { CharDataColumn, CharMemoryNote, DATA_W, MEM_H } from './char-data'
 import { CharNumberField, CharPreview, EcmBackgrounds } from './char-panels'
 import { CharsetPanel } from './charset-panel'
 import { useCharTools } from './use-char-tools'
+import { CharTracingPanel } from '../tracing/char-tracing-panel'
+import { clearBackground } from '../tracing/char-tracing'
+import { useCharTracing } from '../tracing/use-char-tracing'
 import type { GridView } from '../view'
 import type { Charset, CharsetMode } from '@/c64/charset'
 import type { Project } from '@/c64/project'
@@ -108,6 +111,17 @@ export function CharsetDesigner({
   }, [charset.id, selected])
 
   const mcChar = isCharMulticolor(charset, selected)
+  const users = useMemo(
+    () => mapsUsingCharset(project, charset.id),
+    [project, charset.id],
+  )
+  const trace = useCharTracing(
+    charset.id,
+    users,
+    selected,
+    charset.mode === 'ecm',
+  )
+  const traceUnder = trace.grid?.layer === 'under'
 
   const pick = (index: number) => {
     if (swapping) {
@@ -120,10 +134,17 @@ export function CharsetDesigner({
   }
 
   const bytes = getCharBytes(charset, selected)
-  const gridLayers = useMemo(
-    () => [{ pixels: Int8Array.from(renderChar(charset, selected)) }],
-    [charset, selected],
-  )
+  // Tracing under empty pixels shows through the background ones.
+  const gridLayers = useMemo(() => {
+    const pixels = renderChar(charset, selected)
+    return [
+      {
+        pixels: traceUnder
+          ? clearBackground(pixels, charset.background)
+          : Int8Array.from(pixels),
+      },
+    ]
+  }, [charset, selected, traceUnder])
   const renderGrid = (
     size: number,
     v: GridView,
@@ -141,6 +162,7 @@ export function CharsetDesigner({
       view={v}
       onViewChange={onV}
       label={`Character ${selected} pixel grid, ${mcChar ? '4' : '8'} by 8`}
+      tracing={trace.grid}
       {...tools.gridHandlers}
     />
   )
@@ -265,6 +287,7 @@ export function CharsetDesigner({
           }}
         />
         <CharPreview charset={charset} index={selected} />
+        <CharTracingPanel trace={trace} />
       </div>
 
       {/* Middle: tool rail, grid, data bytes */}
@@ -333,7 +356,7 @@ export function CharsetDesigner({
       {/* Right: the whole charset */}
       <CharsetPanel
         charset={charset}
-        users={mapsUsingCharset(project, charset.id)}
+        users={users}
         selected={selected}
         swapping={swapping}
         onSwapping={setSwapping}

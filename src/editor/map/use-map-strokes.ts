@@ -11,7 +11,8 @@ import type { useAssetHistory } from '../asset-history'
 import type { StrokeHandlers } from '../gestures'
 import type { CellRect } from './map-canvas'
 
-export type MapTool = 'paint' | 'erase' | 'fill' | 'pick' | 'select' | 'pan'
+export type MapTool =
+  'paint' | 'erase' | 'fill' | 'pick' | 'select' | 'pan' | 'pin'
 
 export type MapHistory = ReturnType<typeof useAssetHistory<'maps'>>
 
@@ -29,7 +30,13 @@ const lastBrush = new Map<string, Region>()
  * The Screen Worksheet's editing state: tool, brush, ECM background, cursor
  * and selection, and what a stroke on the map does with them.
  */
-export function useMapStrokes(map: Charmap, ecm: boolean, history: MapHistory) {
+export function useMapStrokes(
+  map: Charmap,
+  ecm: boolean,
+  history: MapHistory,
+  /** The Pin tool tapped cell (x, y) with this brush. */
+  onPin?: (x: number, y: number, brush: Region) => void,
+) {
   const [tool, setTool] = useState<MapTool>('paint')
   const [brush, setBrushState] = useState<Region>(
     () => lastBrush.get(map.id) ?? singleBrush(1),
@@ -81,6 +88,10 @@ export function useMapStrokes(map: Charmap, ecm: boolean, history: MapHistory) {
     }
     beforeStroke.current = map
     switch (tool) {
+      case 'pin':
+        onPin?.(x, y, brush)
+        stroke.current = null
+        return
       case 'pick': {
         const code = map.cells[y * map.width + x]
         if (ecm) setEcmBgState(decodeEcm(code).background)
@@ -138,8 +149,8 @@ export function useMapStrokes(map: Charmap, ecm: boolean, history: MapHistory) {
       ? {
           x: cursor[0],
           y: cursor[1],
-          width: tool === 'paint' ? brush.width : 1,
-          height: tool === 'paint' ? brush.height : 1,
+          width: tool === 'paint' || tool === 'pin' ? brush.width : 1,
+          height: tool === 'paint' || tool === 'pin' ? brush.height : 1,
         }
       : null
 
@@ -188,7 +199,8 @@ export function useMapStrokes(map: Charmap, ecm: boolean, history: MapHistory) {
     /** A char tapped in the sheet becomes the brush. */
     pickChar: (char: number) => {
       setBrush(singleBrush(ecm ? encodeEcm(char, ecmBg) : char))
-      if (tool !== 'paint' && tool !== 'fill') setTool('paint')
+      if (tool !== 'paint' && tool !== 'fill' && tool !== 'pin')
+        setTool('paint')
     },
     cursor,
     selection,
