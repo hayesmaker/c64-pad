@@ -56,7 +56,9 @@ export function Readout({
     }
   }
   return (
-    <dl className="mt-2 ml-[26px] grid shrink-0 grid-flow-col grid-rows-2 gap-x-4 gap-y-0.5 text-xs">
+    // One line per entry, clipped: a taller readout would shrink the map area
+    // above it and rescale the map mid-stroke (e.g. colouring a bitmap).
+    <dl className="mt-2 ml-[26px] grid shrink-0 grid-flow-col grid-rows-2 gap-x-4 gap-y-0.5 overflow-hidden text-xs whitespace-nowrap">
       {items.map(([label, value]) => (
         <div key={label} className="contents">
           <dt className="text-muted-foreground">{label}</dt>
