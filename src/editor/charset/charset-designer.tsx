@@ -1,5 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Maximize2, MonitorPlay, Redo2, Undo2 } from 'lucide-react'
+import {
+  Binary,
+  Maximize2,
+  MonitorPlay,
+  PanelLeft,
+  Redo2,
+  Undo2,
+} from 'lucide-react'
 import {
   charCount,
   clearChar,
@@ -27,6 +34,8 @@ import { Input } from '@/components/ui/input'
 import { EmulatorOverlay } from '@/emulator/emulator-overlay'
 import { charsetViewerPrg } from '@/emulator/charmap-viewer'
 import { safeFileName } from '@/platform/save-file'
+import { useCompact } from '@/lib/compact'
+import { cn } from '@/lib/utils'
 import { useAssetHistory } from '../asset-history'
 import { DEFAULT_VIEW, zoomAround } from '../view'
 import {
@@ -43,6 +52,12 @@ import { PixelToolRail } from '../pixel-tool-rail'
 import { PaletteGrid, PensPanel } from '../pens-panel'
 import { Segmented } from '../segmented'
 import { ZenMode, ZenPens } from '../zen-mode'
+import {
+  ALL_COLORS,
+  COMPACT_DRAWER,
+  COMPACT_PENS_H,
+  CompactDrawerBackdrop,
+} from '../compact-panel'
 import { RunExportDialog } from '../run-export-dialog'
 import { CharsetExportPanel } from '../chars-export'
 import { setSlotColor, slotColor } from './char-pens'
@@ -93,13 +108,18 @@ export function CharsetDesigner({
     title: string
     joystick: boolean
   } | null>(null)
+  const compact = useCompact()
+  /** Small screens: the left panel is a drawer, the byte column a toggle. */
+  const [detailsOpen, setDetailsOpen] = useState(false)
+  const [showBytes, setShowBytes] = useState(false)
   const cell = useCellSize({
     columns: 8,
     rows: 8,
-    min: 24,
+    min: compact ? 16 : 24,
     max: 56,
-    reserveWidth: DATA_W + 12,
-    reserveHeight: BIT_HEADER_H + 2 + MEM_H,
+    reserveWidth: !compact || showBytes ? DATA_W + 12 : 0,
+    // Compact: the pens row sits under the grid instead of the memory note.
+    reserveHeight: BIT_HEADER_H + 2 + (compact ? COMPACT_PENS_H : MEM_H),
   })
   const [view, setView] = useState<GridView>(DEFAULT_VIEW)
   useEffect(() => setView(DEFAULT_VIEW), [cell.size])
@@ -165,6 +185,22 @@ export function CharsetDesigner({
     />
   )
 
+  const pensProps = {
+    pens,
+    pen,
+    onPen: tools.choosePen,
+    penColor: penDef.slot ? slotColor(charset, selected, penDef.slot) : null,
+    isAllowed: (c: number) =>
+      !(penDef.slot === 'char' && charset.mode === 'multicolor') || c < 8,
+    onRecolor: (color: number) => {
+      const slot = penDef.slot
+      if (slot) change((cs) => setSlotColor(cs, selected, slot, color))
+    },
+  }
+  const compactPens = (
+    <ZenPens layout="row" colors={ALL_COLORS} {...pensProps} />
+  )
+
   return (
     <WorksheetLayout
       fitScreen
@@ -186,6 +222,24 @@ export function CharsetDesigner({
       actions={
         <>
           <SaveStatus status={status} error={error} />
+          {compact && (
+            <>
+              <ToolButton
+                label="Character details"
+                pressed={detailsOpen}
+                onClick={() => setDetailsOpen((o) => !o)}
+              >
+                <PanelLeft />
+              </ToolButton>
+              <ToolButton
+                label="Show data bytes"
+                pressed={showBytes}
+                onClick={() => setShowBytes((b) => !b)}
+              >
+                <Binary />
+              </ToolButton>
+            </>
+          )}
           <ToolButton
             label="Zen mode: just the grid"
             onClick={() => setZen(true)}
@@ -212,10 +266,19 @@ export function CharsetDesigner({
         </>
       }
       tabs={<EdgeTabs tabs={editorTabs(project, 'charsets', charset.id)} />}
-      className="flex gap-4 px-4 py-3"
+      className="relative flex gap-4 px-4 py-3 compact:gap-2 compact:px-2 compact:py-2"
     >
-      {/* Left: char details, mode, pens, palette, preview */}
-      <div className="-mx-1 flex w-[232px] shrink-0 flex-col gap-2.5 overflow-y-auto px-1 py-0.5">
+      {compact && detailsOpen && (
+        <CompactDrawerBackdrop onClose={() => setDetailsOpen(false)} />
+      )}
+      {/* Left: char details, mode, pens, palette, preview (a drawer when compact) */}
+      <div
+        className={cn(
+          '-mx-1 flex w-[232px] shrink-0 flex-col gap-2.5 overflow-y-auto px-1 py-0.5',
+          compact && COMPACT_DRAWER,
+          compact && !detailsOpen && 'hidden',
+        )}
+      >
         <div className="flex gap-2">
           <CharNumberField count={count} value={selected} onChange={pick} />
           <Field label="Hex" className="w-20">
@@ -262,7 +325,10 @@ export function CharsetDesigner({
             />
           </div>
         )}
-        <PensPanel pens={pens} pen={pen} onPen={tools.choosePen} />
+        {/* Compact: the pens sit under the grid instead. */}
+        {!compact && (
+          <PensPanel pens={pens} pen={pen} onPen={tools.choosePen} />
+        )}
         {charset.mode === 'bitmap' && (
           <p className="text-[11px] leading-snug text-muted-foreground">
             Multicolour bitmap: each char is a tile with its own three colours.
@@ -276,23 +342,25 @@ export function CharsetDesigner({
             onTarget={tools.chooseEcmTarget}
           />
         )}
-        <PaletteGrid
-          selected={target ? slotColor(charset, selected, target) : null}
-          disabled={!target}
-          penName={targetName}
-          label={
-            !target
-              ? 'Colour (pick a pen or background)'
-              : limitColors
-                ? 'Char colour · 0–7 in a multicolour set'
-                : `Colour for ${targetName}`
-          }
-          isAllowed={(c) => !limitColors || c < 8}
-          onPick={(color) => {
-            if (target)
-              change((cs) => setSlotColor(cs, selected, target, color))
-          }}
-        />
+        {!compact && (
+          <PaletteGrid
+            selected={target ? slotColor(charset, selected, target) : null}
+            disabled={!target}
+            penName={targetName}
+            label={
+              !target
+                ? 'Colour (pick a pen or background)'
+                : limitColors
+                  ? 'Char colour · 0–7 in a multicolour set'
+                  : `Colour for ${targetName}`
+            }
+            isAllowed={(c) => !limitColors || c < 8}
+            onPick={(color) => {
+              if (target)
+                change((cs) => setSlotColor(cs, selected, target, color))
+            }}
+          />
+        )}
         <CharPreview charset={charset} index={selected} />
         <CharTracingPanel trace={trace} />
       </div>
@@ -348,14 +416,20 @@ export function CharsetDesigner({
                   </div>
                 </div>
               </div>
-              <CharDataColumn
-                bytes={bytes}
-                cell={cell.size}
-                asHex={asHex}
-                onToggleHex={() => setAsHex((h) => !h)}
-              />
+              {(!compact || showBytes) && (
+                <CharDataColumn
+                  bytes={bytes}
+                  cell={cell.size}
+                  asHex={asHex}
+                  onToggleHex={() => setAsHex((h) => !h)}
+                />
+              )}
             </div>
-            <CharMemoryNote index={selected} bytes={bytes} />
+            {compact ? (
+              <div className="mt-2">{compactPens}</div>
+            ) : (
+              <CharMemoryNote index={selected} bytes={bytes} />
+            )}
           </div>
         </div>
       </div>
@@ -410,26 +484,7 @@ export function CharsetDesigner({
           tool={tool}
           // No Hand tool here (canPan is off).
           onTool={(t) => t !== 'pan' && tools.setTool(t)}
-          side={
-            <ZenPens
-              pens={pens}
-              pen={pen}
-              onPen={tools.choosePen}
-              colors={projectColors(project)}
-              penColor={
-                penDef.slot ? slotColor(charset, selected, penDef.slot) : null
-              }
-              isAllowed={(c) =>
-                !(penDef.slot === 'char' && charset.mode === 'multicolor') ||
-                c < 8
-              }
-              onRecolor={(color) => {
-                const slot = penDef.slot
-                if (slot)
-                  change((cs) => setSlotColor(cs, selected, slot, color))
-              }}
-            />
-          }
+          side={<ZenPens colors={projectColors(project)} {...pensProps} />}
           onUndo={history.undo}
           onRedo={history.redo}
           canUndo={history.canUndo}

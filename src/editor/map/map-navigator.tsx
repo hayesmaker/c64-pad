@@ -1,5 +1,6 @@
 import { cn } from '@/lib/utils'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCompact } from '@/lib/compact'
 import { MapIcon, Minus } from 'lucide-react'
 import { usePalette } from '@/components/c64/palette-context'
 import { drawTracing } from '../tracing/placement'
@@ -110,7 +111,8 @@ export function MapNavigator({
   /** See-through and untouchable (while painting under it). */
   faded?: boolean
 }) {
-  const [open, setOpen] = useState(true)
+  // Small screens: start folded away, it would cover much of the map.
+  const [open, setOpen] = useState(!useCompact())
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const palette = usePalette()
   const atlas = useMemo(

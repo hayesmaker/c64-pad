@@ -11,6 +11,12 @@
 /* Dark mode follows the device setting (no in-app switch for MVP). */
 @custom-variant dark (@media (prefers-color-scheme: dark));
 
+/*
+ * Small screens: handhelds like the Retroid Pocket (about 640×456 CSS px) and
+ * phones. Keep in step with COMPACT_QUERY in src/lib/compact.ts.
+ */
+@custom-variant compact (@media (max-height: 600px), (max-width: 700px));
+
 * {
   box-sizing: border-box;
 }

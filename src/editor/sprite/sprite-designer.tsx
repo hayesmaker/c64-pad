@@ -1,5 +1,12 @@
 import { useEffect, useState } from 'react'
-import { Maximize2, MonitorPlay, Redo2, Undo2 } from 'lucide-react'
+import {
+  Binary,
+  Maximize2,
+  MonitorPlay,
+  PanelLeft,
+  Redo2,
+  Undo2,
+} from 'lucide-react'
 import {
   clearSprite,
   flipSpriteHorizontal,
@@ -21,6 +28,8 @@ import { Textarea } from '@/components/ui/textarea'
 import { EmulatorOverlay } from '@/emulator/emulator-overlay'
 import { buildViewerPrg, spriteSetShowcase } from '@/emulator/sprite-viewer'
 import { safeFileName } from '@/platform/save-file'
+import { useCompact } from '@/lib/compact'
+import { cn } from '@/lib/utils'
 import { useAssetHistory } from '../asset-history'
 import { DEFAULT_VIEW, zoomAround } from '../view'
 import {
@@ -34,6 +43,11 @@ import { PaletteGrid, PensPanel } from '../pens-panel'
 import { PixelToolRail } from '../pixel-tool-rail'
 import { Segmented } from '../segmented'
 import { ZenMode, ZenPens } from '../zen-mode'
+import {
+  ALL_COLORS,
+  COMPACT_DRAWER,
+  CompactDrawerBackdrop,
+} from '../compact-panel'
 import { TracingPanel } from '../tracing/tracing-panel'
 import { TracingButtons } from '../tracing/tracing-buttons'
 import { useGridTracing } from '../tracing/use-tracing'
@@ -109,6 +123,10 @@ export function SpriteDesigner({
   // A new cell size changes the frame; start again at 1×.
   useEffect(() => setView(DEFAULT_VIEW), [cell.size])
   const [tracingOpen, setTracingOpen] = useState(false)
+  const compact = useCompact()
+  /** Small screens: the left panel is a drawer, the byte column a toggle. */
+  const [detailsOpen, setDetailsOpen] = useState(false)
+  const [showBytes, setShowBytes] = useState(false)
   const trace = useGridTracing(selected?.id ?? '', SPRITE_TARGET)
 
   useEffect(() => {
@@ -143,6 +161,18 @@ export function SpriteDesigner({
     />
   )
 
+  const animationControls = (
+    <AnimationControls
+      set={set}
+      animationId={animation?.id ?? null}
+      onAnimationId={setAnimationId}
+      playing={playing && !!animation}
+      onPlaying={setPlaying}
+      onChange={history.change}
+      background={background}
+    />
+  )
+
   return (
     <WorksheetLayout
       fitScreen
@@ -164,6 +194,24 @@ export function SpriteDesigner({
       actions={
         <>
           <SaveStatus status={status} error={error} />
+          {compact && (
+            <>
+              <ToolButton
+                label="Sprite details"
+                pressed={detailsOpen || tracingOpen}
+                onClick={() => setDetailsOpen((o) => !o)}
+              >
+                <PanelLeft />
+              </ToolButton>
+              <ToolButton
+                label="Show data bytes"
+                pressed={showBytes}
+                onClick={() => setShowBytes((b) => !b)}
+              >
+                <Binary />
+              </ToolButton>
+            </>
+          )}
           <TracingButtons
             open={tracingOpen}
             onOpen={setTracingOpen}
@@ -196,10 +244,24 @@ export function SpriteDesigner({
         </>
       }
       tabs={<EdgeTabs tabs={editorTabs(project, 'sprites', set.id)} />}
-      className="flex gap-4 px-4 py-3"
+      className="relative flex gap-4 px-4 py-3 compact:gap-2 compact:px-2 compact:py-2"
     >
-      {/* Left: sprite details, pens, palette, preview */}
-      <div className="-mx-1 flex w-[248px] shrink-0 flex-col gap-2 overflow-y-auto px-1 py-0.5">
+      {compact && (detailsOpen || tracingOpen) && (
+        <CompactDrawerBackdrop
+          onClose={() => {
+            setDetailsOpen(false)
+            setTracingOpen(false)
+          }}
+        />
+      )}
+      {/* Left: sprite details, pens, palette, preview (a drawer when compact) */}
+      <div
+        className={cn(
+          '-mx-1 flex w-[248px] shrink-0 flex-col gap-2 overflow-y-auto px-1 py-0.5',
+          compact && COMPACT_DRAWER,
+          compact && !detailsOpen && !tracingOpen && 'hidden',
+        )}
+      >
         {tracingOpen ? (
           <TracingPanel
             tracing={trace.tracing}
@@ -250,13 +312,18 @@ export function SpriteDesigner({
               ]}
               onChange={(mode) => changeSprite((s) => setSpriteMode(s, mode))}
             />
-            <PensPanel pens={pens} pen={pen} onPen={tools.choosePen} />
-            <PaletteGrid
-              selected={penDef.color}
-              disabled={!penDef.slot}
-              penName={penDef.name.split(' · ')[0].toLowerCase()}
-              onPick={tools.setPenColor}
-            />
+            {/* Compact: the pens sit beside the grid instead. */}
+            {!compact && (
+              <>
+                <PensPanel pens={pens} pen={pen} onPen={tools.choosePen} />
+                <PaletteGrid
+                  selected={penDef.color}
+                  disabled={!penDef.slot}
+                  penName={penDef.name.split(' · ')[0].toLowerCase()}
+                  onPick={tools.setPenColor}
+                />
+              </>
+            )}
             <SpritePreview
               set={set}
               sprite={
@@ -273,6 +340,7 @@ export function SpriteDesigner({
                 )
               }
             />
+            {compact && animationControls}
             <Field label="Notes" className="min-h-[56px] flex-1">
               <Textarea
                 value={sprite.notes}
@@ -343,12 +411,27 @@ export function SpriteDesigner({
           </div>
 
           {/* Data bytes aligned to the grid rows */}
-          <SpriteDataPanel
-            sprite={sprite}
-            cell={cell.size}
-            asHex={asHex}
-            onToggleHex={() => setAsHex((h) => !h)}
-          />
+          {(!compact || showBytes) && (
+            <SpriteDataPanel
+              sprite={sprite}
+              cell={cell.size}
+              asHex={asHex}
+              onToggleHex={() => setAsHex((h) => !h)}
+            />
+          )}
+          {compact && (
+            <div className="-mx-1 shrink-0 overflow-y-auto px-1 py-1">
+              <ZenPens
+                layout="column"
+                pens={pens}
+                pen={pen}
+                onPen={tools.choosePen}
+                colors={ALL_COLORS}
+                penColor={penDef.slot ? penDef.color : null}
+                onRecolor={tools.setPenColor}
+              />
+            </div>
+          )}
         </div>
 
         <div className="mt-2 shrink-0">
@@ -365,15 +448,7 @@ export function SpriteDesigner({
               changeSprite,
             })}
           >
-            <AnimationControls
-              set={set}
-              animationId={animation?.id ?? null}
-              onAnimationId={setAnimationId}
-              playing={playing && !!animation}
-              onPlaying={setPlaying}
-              onChange={history.change}
-              background={background}
-            />
+            {!compact && animationControls}
           </SpriteStrip>
         </div>
       </div>

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Maximize2, MonitorPlay, Redo2, Undo2 } from 'lucide-react'
+import { Maximize2, MonitorPlay, PanelLeft, Redo2, Undo2 } from 'lucide-react'
 import { copyRegion, fillRect, resizeCharmap, setMapBlank } from '@/c64/charmap'
 import { WorksheetLayout } from '@/components/worksheet/worksheet-layout'
 import { Breadcrumbs } from '@/components/worksheet/breadcrumbs'
@@ -9,6 +9,9 @@ import { SaveStatus } from '@/components/save-status'
 import { EmulatorOverlay } from '@/emulator/emulator-overlay'
 import { mapViewerPrg } from '@/emulator/charmap-viewer'
 import { safeFileName } from '@/platform/save-file'
+import { useCompact } from '@/lib/compact'
+import { cn } from '@/lib/utils'
+import { COMPACT_DRAWER, CompactDrawerBackdrop } from '../compact-panel'
 import { useAssetHistory } from '../asset-history'
 import { ToolButton, useUndoShortcuts } from '../grid-parts'
 import { DEFAULT_VIEW, clampViewTo, zoomAroundIn } from '../view'
@@ -114,6 +117,9 @@ export function MapDesigner({
   } | null>(null)
   const [blankOpen, setBlankOpen] = useState(false)
   const [tracingOpen, setTracingOpen] = useState(false)
+  const compact = useCompact()
+  /** Small screens: map settings live in a drawer. */
+  const [settingsOpen, setSettingsOpen] = useState(false)
   const mapTarget = { width: map.width * 8, height: map.height * 8 }
   const trace = useGridTracing(map.id, mapTarget)
 
@@ -253,6 +259,27 @@ export function MapDesigner({
     />
   )
 
+  const tracingPanel = (
+    <TracingPanel
+      tracing={trace.tracing}
+      error={trace.error}
+      target={mapTarget}
+      targetLabel={`map: ${mapTarget.width} × ${mapTarget.height} px (${map.width} × ${map.height} chars)`}
+      onLoad={(file) => void trace.load(file)}
+      onRemove={() => void trace.remove()}
+      onChange={trace.update}
+      onDone={() => setTracingOpen(false)}
+    />
+  )
+  const mapSettings = (
+    <MapSettings
+      project={project}
+      map={map}
+      onChange={history.change}
+      onResize={() => setResizing(true)}
+    />
+  )
+
   const zenCols = Math.min(40, map.width)
   const zenRows = Math.min(25, map.height)
 
@@ -277,6 +304,15 @@ export function MapDesigner({
       actions={
         <>
           <SaveStatus status={status} error={error} />
+          {compact && (
+            <ToolButton
+              label="Map settings"
+              pressed={settingsOpen}
+              onClick={() => setSettingsOpen((o) => !o)}
+            >
+              <PanelLeft />
+            </ToolButton>
+          )}
           <TracingButtons
             open={tracingOpen}
             onOpen={setTracingOpen}
@@ -309,29 +345,34 @@ export function MapDesigner({
         </>
       }
       tabs={<EdgeTabs tabs={editorTabs(project, 'maps', map.id)} />}
-      className="flex gap-3 px-4 py-3"
+      className="relative flex gap-3 px-4 py-3 compact:gap-2 compact:px-2 compact:py-2"
     >
-      {/* Left: map settings, brush, characters */}
-      <div className="-mx-1 flex w-[240px] shrink-0 flex-col gap-2.5 overflow-y-auto px-1 py-0.5">
-        {tracingOpen ? (
-          <TracingPanel
-            tracing={trace.tracing}
-            error={trace.error}
-            target={mapTarget}
-            targetLabel={`map: ${mapTarget.width} × ${mapTarget.height} px (${map.width} × ${map.height} chars)`}
-            onLoad={(file) => void trace.load(file)}
-            onRemove={() => void trace.remove()}
-            onChange={trace.update}
-            onDone={() => setTracingOpen(false)}
+      {compact && (settingsOpen || tracingOpen) && (
+        <>
+          <CompactDrawerBackdrop
+            onClose={() => {
+              setSettingsOpen(false)
+              setTracingOpen(false)
+            }}
           />
+          {/* Small screens: map settings and tracing in a drawer */}
+          <div
+            className={cn(
+              'flex flex-col gap-2.5 overflow-y-auto',
+              COMPACT_DRAWER,
+            )}
+          >
+            {tracingOpen ? tracingPanel : mapSettings}
+          </div>
+        </>
+      )}
+      {/* Left: map settings, brush, characters */}
+      <div className="-mx-1 flex w-[240px] shrink-0 flex-col gap-2.5 overflow-y-auto px-1 py-0.5 compact:w-[208px]">
+        {tracingOpen && !compact ? (
+          tracingPanel
         ) : (
           <>
-            <MapSettings
-              project={project}
-              map={map}
-              onChange={history.change}
-              onResize={() => setResizing(true)}
-            />
+            {!compact && mapSettings}
             {colouring ? (
               <CellColourPanel
                 slot={edit.cellColour.slot}

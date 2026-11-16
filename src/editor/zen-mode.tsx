@@ -298,7 +298,11 @@ function IconButton({
   )
 }
 
-/** Zen mode's pens, then the project's colours to recolour the chosen pen. */
+/**
+ * Zen mode's pens, then colours to recolour the chosen pen. The worksheets'
+ * compact layouts use it too: as a narrow column beside the sprite grid, or as
+ * a row under the char grid.
+ */
 export function ZenPens({
   pens,
   pen,
@@ -307,23 +311,40 @@ export function ZenPens({
   penColor,
   isAllowed = () => true,
   onRecolor,
+  layout = 'zen',
 }: {
   pens: ReadonlyArray<PenDef>
   pen: number
   onPen: (value: number) => void
-  /** The project's colours. */
+  /** The colours to offer: the project's in zen mode. */
   colors: ReadonlyArray<C64Color>
   /** The chosen pen's colour; null when it can't be recoloured. */
   penColor: C64Color | null
   isAllowed?: (color: C64Color) => boolean
   onRecolor: (color: C64Color) => void
+  layout?: 'zen' | 'column' | 'row'
 }) {
   const palette = usePalette()
   const chosen = pens.find((p) => p.value === pen)
+  const dense = layout !== 'zen'
   return (
-    <div className="flex w-[108px] flex-col gap-2.5">
-      <div className="text-[11px] text-muted-foreground">Pens</div>
-      <div className="grid grid-cols-2 gap-2">
+    <div
+      className={cn(
+        'flex flex-col',
+        layout === 'zen' && 'w-[108px] gap-2.5',
+        layout === 'column' && 'w-[120px] gap-1.5',
+        layout === 'row' && 'w-full gap-1',
+      )}
+    >
+      {layout !== 'row' && (
+        <div className="text-[11px] text-muted-foreground">Pens</div>
+      )}
+      <div
+        className={cn(
+          'grid',
+          layout === 'row' ? 'grid-cols-4 gap-1' : 'grid-cols-2 gap-2',
+        )}
+      >
         {pens.map((p) => (
           <button
             key={p.value}
@@ -333,7 +354,10 @@ export function ZenPens({
             title={p.name}
             onClick={() => onPen(p.value)}
             className={cn(
-              'flex h-16 flex-col items-center justify-center gap-1 rounded-[10px]',
+              'flex items-center justify-center gap-1 rounded-[10px]',
+              layout === 'zen' && 'h-16 flex-col',
+              layout === 'column' && 'h-12 flex-col',
+              layout === 'row' && 'h-9 gap-1.5',
               p.value === pen
                 ? 'bg-accent ring-2 ring-primary ring-inset'
                 : 'hover:bg-muted',
@@ -341,7 +365,10 @@ export function ZenPens({
           >
             <span
               aria-hidden="true"
-              className="size-8 rounded-full border border-rule"
+              className={cn(
+                'shrink-0 rounded-full border border-rule',
+                dense ? 'size-6' : 'size-8',
+              )}
               style={{ background: penSwatch(p, palette.hex) }}
             />
             <span className="font-mono text-[11px] text-ink-soft">
@@ -350,13 +377,26 @@ export function ZenPens({
           </button>
         ))}
       </div>
-      <div aria-hidden="true" className="h-px bg-rule-soft" />
+      {layout !== 'row' && (
+        <div aria-hidden="true" className="h-px bg-rule-soft" />
+      )}
       <div className="text-[11px] leading-tight text-muted-foreground">
-        {penColor === null
-          ? 'Project colours · pick a coloured pen'
-          : `Project colours · recolour ${chosen?.name.split(' · ')[0].toLowerCase() ?? 'pen'}`}
+        {dense
+          ? penColor === null
+            ? 'Colours · pick a coloured pen'
+            : 'Pen colour'
+          : penColor === null
+            ? 'Project colours · pick a coloured pen'
+            : `Project colours · recolour ${chosen?.name.split(' · ')[0].toLowerCase() ?? 'pen'}`}
       </div>
-      <div className="grid grid-cols-3 gap-1.5">
+      <div
+        className={cn(
+          'grid gap-1.5',
+          layout === 'zen' && 'grid-cols-3',
+          layout === 'column' && 'grid-cols-4',
+          layout === 'row' && 'grid-cols-8 gap-1',
+        )}
+      >
         {colors.map((c) => (
           <button
             key={c}
@@ -366,7 +406,8 @@ export function ZenPens({
             disabled={penColor === null || !isAllowed(c)}
             onClick={() => onRecolor(c)}
             className={cn(
-              'h-7 rounded-md border border-rule disabled:opacity-30',
+              'rounded-md border border-rule disabled:opacity-30',
+              dense ? 'h-6' : 'h-7',
               penColor === c &&
                 'ring-2 ring-primary ring-offset-2 ring-offset-paper',
             )}

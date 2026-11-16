@@ -33,7 +33,7 @@ export function ToolButton({
       disabled={disabled}
       onClick={onClick}
       className={cn(
-        'flex size-10 shrink-0 items-center justify-center rounded-lg border disabled:opacity-40 [&_svg]:size-[21px] [&_svg]:stroke-[1.7]',
+        'flex size-10 shrink-0 items-center justify-center rounded-lg border disabled:opacity-40 compact:size-9 [&_svg]:size-[21px] [&_svg]:stroke-[1.7] compact:[&_svg]:size-[19px]',
         pressed
           ? 'border-primary bg-primary text-primary-foreground'
           : 'border-rule-soft bg-paper hover:bg-muted',

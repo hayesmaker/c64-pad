@@ -4,6 +4,7 @@ import {
   ArrowRight,
   ArrowUp,
   Contrast,
+  Ellipsis,
   Eraser,
   Move,
   PaintBucket,
@@ -17,8 +18,10 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { useCompact } from '@/lib/compact'
 import { BIT_HEADER_H, ToolButton, zoomLabel } from './grid-parts'
 
 export type PixelTool = 'draw' | 'erase' | 'fill'
@@ -32,7 +35,8 @@ const SHIFTS = [
 
 /**
  * The tool bar beside a pixel grid (sprite or char): draw / erase / fill, the
- * whole-image transforms, and zoom.
+ * whole-image transforms, and zoom. On small screens the transforms fold into
+ * one menu so the rail fits the height.
  */
 export function PixelToolRail({
   tool,
@@ -64,6 +68,7 @@ export function PixelToolRail({
   /** Zoom in, or reset when zoomed. */
   onZoom: () => void
 }) {
+  const compact = useCompact()
   return (
     <div
       role="toolbar"
@@ -94,41 +99,84 @@ export function PixelToolRail({
         <PaintBucket />
       </ToolButton>
       <div aria-hidden="true" className="mx-1.5 my-1 h-px bg-rule-soft" />
-      <ToolButton label="Flip horizontally" onClick={onFlipHorizontal}>
-        <TrianglesCenterlineDashedVertical />
-      </ToolButton>
-      <ToolButton label="Flip vertically" onClick={onFlipVertical}>
-        <TrianglesCenterlineDashedHorizontal />
-      </ToolButton>
-      {rotate && (
-        <ToolButton
-          label={rotate.label}
-          disabled={rotate.disabled}
-          onClick={rotate.onRotate}
-        >
-          <RotateCw />
-        </ToolButton>
-      )}
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <ToolButton label="Shift (wraps around)">
-            <Move />
-          </ToolButton>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent side="right" align="start">
-          {SHIFTS.map(([label, dx, dy, Icon]) => (
-            <DropdownMenuItem key={label} onSelect={() => onShift(dx, dy)}>
-              <Icon aria-hidden="true" /> {label}
+      {compact ? (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <ToolButton label="More tools">
+              <Ellipsis />
+            </ToolButton>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent side="right" align="start">
+            <DropdownMenuItem onSelect={onFlipHorizontal}>
+              <TrianglesCenterlineDashedVertical aria-hidden="true" /> Flip
+              horizontally
             </DropdownMenuItem>
-          ))}
-        </DropdownMenuContent>
-      </DropdownMenu>
-      <ToolButton label="Invert" onClick={onInvert}>
-        <Contrast />
-      </ToolButton>
-      <ToolButton label={clearLabel} onClick={onClear}>
-        <Trash2 />
-      </ToolButton>
+            <DropdownMenuItem onSelect={onFlipVertical}>
+              <TrianglesCenterlineDashedHorizontal aria-hidden="true" /> Flip
+              vertically
+            </DropdownMenuItem>
+            {rotate && (
+              <DropdownMenuItem
+                disabled={rotate.disabled}
+                onSelect={rotate.onRotate}
+              >
+                <RotateCw aria-hidden="true" /> {rotate.label}
+              </DropdownMenuItem>
+            )}
+            <DropdownMenuSeparator />
+            {SHIFTS.map(([label, dx, dy, Icon]) => (
+              <DropdownMenuItem key={label} onSelect={() => onShift(dx, dy)}>
+                <Icon aria-hidden="true" /> {label} (wraps)
+              </DropdownMenuItem>
+            ))}
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onSelect={onInvert}>
+              <Contrast aria-hidden="true" /> Invert
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={onClear}>
+              <Trash2 aria-hidden="true" /> {clearLabel}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ) : (
+        <>
+          <ToolButton label="Flip horizontally" onClick={onFlipHorizontal}>
+            <TrianglesCenterlineDashedVertical />
+          </ToolButton>
+          <ToolButton label="Flip vertically" onClick={onFlipVertical}>
+            <TrianglesCenterlineDashedHorizontal />
+          </ToolButton>
+          {rotate && (
+            <ToolButton
+              label={rotate.label}
+              disabled={rotate.disabled}
+              onClick={rotate.onRotate}
+            >
+              <RotateCw />
+            </ToolButton>
+          )}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <ToolButton label="Shift (wraps around)">
+                <Move />
+              </ToolButton>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent side="right" align="start">
+              {SHIFTS.map(([label, dx, dy, Icon]) => (
+                <DropdownMenuItem key={label} onSelect={() => onShift(dx, dy)}>
+                  <Icon aria-hidden="true" /> {label}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <ToolButton label="Invert" onClick={onInvert}>
+            <Contrast />
+          </ToolButton>
+          <ToolButton label={clearLabel} onClick={onClear}>
+            <Trash2 />
+          </ToolButton>
+        </>
+      )}
       <div aria-hidden="true" className="mx-1.5 my-1 h-px bg-rule-soft" />
       <ToolButton
         label={zoom > 1 ? 'Reset zoom (pinch to zoom)' : 'Zoom in (or pinch)'}

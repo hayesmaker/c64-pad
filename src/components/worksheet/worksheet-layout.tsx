@@ -38,21 +38,24 @@ export function WorksheetLayout({
     >
       <div
         className={cn(
-          'my-3 ml-3 flex min-w-0 flex-1 flex-col overflow-hidden rounded-[10px] border border-rule bg-paper',
-          !tabs && 'mr-3',
+          'my-3 ml-3 flex min-w-0 flex-1 compact:my-1.5 compact:ml-1.5 flex-col overflow-hidden rounded-[10px] border border-rule bg-paper',
+          !tabs && 'mr-3 compact:mr-1.5',
         )}
       >
-        <header className="grid h-14 shrink-0 grid-cols-[minmax(0,1fr)_auto_minmax(max-content,1fr)] items-center gap-4 border-b border-rule-soft px-5">
+        <header className="grid h-14 shrink-0 grid-cols-[minmax(0,1fr)_auto_minmax(max-content,1fr)] items-center gap-4 border-b border-rule-soft px-5 compact:h-11 compact:grid-cols-[minmax(0,1fr)_max-content] compact:gap-2 compact:px-2.5">
           <div className="flex min-w-0 items-center gap-4">
             <div className="min-w-0 shrink">{breadcrumbs}</div>
             <DoubleRule />
           </div>
-          <h1 className="text-2xl font-light tracking-[0.01em] whitespace-nowrap">
+          {/* Small screens: the breadcrumbs and edge tabs already say where you are. */}
+          <h1 className="text-2xl font-light tracking-[0.01em] whitespace-nowrap compact:sr-only">
             {title}
           </h1>
           <div className="flex min-w-0 items-center gap-4">
             <DoubleRule />
-            <div className="flex shrink-0 items-center gap-2">{actions}</div>
+            <div className="flex shrink-0 items-center gap-2 compact:gap-1">
+              {actions}
+            </div>
           </div>
         </header>
         <div className={cn('min-h-0 flex-1', className)}>{children}</div>
@@ -66,7 +69,7 @@ function DoubleRule() {
   return (
     <div
       aria-hidden="true"
-      className="h-[3px] min-w-6 flex-1 border-y border-rule"
+      className="h-[3px] min-w-6 flex-1 border-y border-rule compact:hidden"
     />
   )
 }

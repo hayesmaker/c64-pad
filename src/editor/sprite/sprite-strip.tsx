@@ -99,7 +99,7 @@ export function SpriteStrip({
   return (
     <div className="flex items-center gap-2">
       <div className="flex shrink-0 flex-col gap-0.5">
-        <span className="text-[11px] text-muted-foreground">
+        <span className="text-[11px] text-muted-foreground compact:hidden">
           Sprites in set
         </span>
         <Select

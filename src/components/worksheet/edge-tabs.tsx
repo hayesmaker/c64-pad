@@ -13,7 +13,7 @@ export function EdgeTabs({ tabs }: { tabs: Array<EdgeTab> }) {
   return (
     <nav
       aria-label="Editors"
-      className="flex w-11 shrink-0 flex-col gap-1.5 pt-[84px]"
+      className="flex w-11 shrink-0 flex-col gap-1.5 pt-[84px] compact:w-8 compact:gap-1 compact:pt-14"
     >
       {tabs.map((tab) => (
         <Link
@@ -21,7 +21,7 @@ export function EdgeTabs({ tabs }: { tabs: Array<EdgeTab> }) {
           {...tab.link}
           aria-current={tab.current ? 'page' : undefined}
           className={cn(
-            'flex h-[120px] rotate-180 items-center justify-center rounded-l-lg text-[13px] font-semibold tracking-[0.14em] [writing-mode:vertical-rl]',
+            'flex h-[120px] rotate-180 items-center justify-center rounded-l-lg text-[13px] font-semibold tracking-[0.14em] [writing-mode:vertical-rl] compact:h-[96px] compact:text-[11px]',
             tab.current
               ? 'bg-tab text-tab-foreground'
               : 'bg-tab-inactive text-tab-inactive-foreground hover:bg-tab-inactive-hover',
