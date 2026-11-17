@@ -51,6 +51,7 @@ type DialogState =
   | { kind: 'rename'; project: ProjectSummary }
   | { kind: 'delete'; project: ProjectSummary }
   | { kind: 'cloud-delete'; project: { id: string; name: string } }
+  | { kind: 'discard'; project: ProjectSummary }
   | null
 
 function Projects() {
@@ -144,6 +145,17 @@ function Projects() {
         params: { projectId: result.id },
       })
     })
+
+  /** Throw away this device's changes: take the cloud copy instead. */
+  const revertToCloud = (id: string) =>
+    run(async () => {
+      await cloud.pull(id, 'replace')
+      await refresh()
+      showToast('Changes discarded: this is the cloud copy now')
+    })
+
+  const cloudKind = (p: ProjectSummary) =>
+    cloud.statusOf(p.id, p.updatedAt)?.kind
 
   const removeFromCloud = (id: string) =>
     run(async () => {
@@ -288,6 +300,21 @@ function Projects() {
                   <DropdownMenuItem onSelect={() => void saveToCloud(p.id)}>
                     Save to cloud
                   </DropdownMenuItem>
+                  {cloudKind(p) === 'cloud-newer' && (
+                    <DropdownMenuItem onSelect={() => void openFromCloud(p.id)}>
+                      Update from cloud
+                    </DropdownMenuItem>
+                  )}
+                  {(cloudKind(p) === 'device-newer' ||
+                    cloudKind(p) === 'conflict') && (
+                    <DropdownMenuItem
+                      onSelect={() =>
+                        setDialog({ kind: 'discard', project: p })
+                      }
+                    >
+                      Discard changes…
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
                     variant="destructive"
@@ -350,6 +377,32 @@ function Projects() {
         onClose={() => setConflict(null)}
         onPush={(id) => void saveToCloud(id, true)}
         onPull={(id, mode) => void openFromCloud(id, mode)}
+      />
+      <ConfirmDialog
+        open={dialog?.kind === 'discard'}
+        onOpenChange={(open) => !open && setDialog(null)}
+        title="Discard changes?"
+        confirmLabel="Discard changes"
+        description={
+          dialog?.kind === 'discard' && (
+            <>
+              This device's copy of “{dialog.project.name}” will be replaced by
+              the cloud copy
+              {(() => {
+                const saved = cloud.summaries?.find(
+                  (s) => s.id === dialog.project.id,
+                )
+                return saved
+                  ? ` (edited ${dateFormat.format(new Date(saved.updatedAt))})`
+                  : ''
+              })()}
+              . Changes made here since then are lost.
+            </>
+          )
+        }
+        onConfirm={() =>
+          dialog?.kind === 'discard' && void revertToCloud(dialog.project.id)
+        }
       />
       <ConfirmDialog
         open={dialog?.kind === 'cloud-delete'}

@@ -139,6 +139,15 @@ test('projects move between devices through the cloud', async ({
   await expect(card(a, 'Cloudy A')).toBeVisible()
   await expect(card(a, 'Cloudy B (cloud)')).toBeVisible()
 
+  // B gets ahead of the cloud, then thinks better of it.
+  await b.reload()
+  await rename(b, 'Cloudy B', 'Cloudy oops')
+  await expect(card(b, 'Cloudy oops')).toContainText('Newer on this device')
+  await menu(b, 'Cloudy oops', 'Discard changes…')
+  await b.getByRole('button', { name: 'Discard changes' }).click()
+  await expect(card(b, 'Cloudy B')).toContainText('Up to date')
+  await expect(card(b, 'Cloudy oops')).toHaveCount(0)
+
   await contextA.close()
   await contextB.close()
 })
