@@ -37,6 +37,7 @@ import { switchMapsToCharset } from '@/c64/charset-match'
 import { useProjectHistory } from '@/editor/project-history'
 import { ToolButton, useUndoShortcuts } from '@/editor/grid-parts'
 import { ImportAsepriteButton } from '@/import/aseprite/import-aseprite-button'
+import { ImportFromProjectButton } from '@/editor/project/import-from-project'
 import { useCurrentProject } from '@/storage/use-current-project'
 import {
   PROJECT_FILE_EXTENSION,
@@ -109,9 +110,10 @@ function ProjectPage() {
         <div className="flex items-center gap-3">
           <SaveStatus status={status} error={error} />
           <ImportAsepriteButton project={project} onImport={update} />
+          <ImportFromProjectButton project={project} onImport={update} />
           <Button variant="outline" onClick={() => void exportFile()}>
             <Download aria-hidden="true" />
-            Export
+            <span className="compact:sr-only">Export</span>
           </Button>
           <ToolButton
             label="Undo"

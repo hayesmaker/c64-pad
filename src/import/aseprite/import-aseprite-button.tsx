@@ -38,7 +38,7 @@ export function ImportAsepriteButton({
     <>
       <Button variant="outline" onClick={() => input.current?.click()}>
         <FileUp aria-hidden="true" />
-        Import Aseprite
+        <span className="compact:sr-only">Import Aseprite</span>
       </Button>
       <input
         ref={input}
