@@ -6,7 +6,7 @@ import {
   useNavigate,
   useRouter,
 } from '@tanstack/react-router'
-import { EllipsisVertical, FileUp, Plus } from 'lucide-react'
+import { Cloud, EllipsisVertical, FileUp, Plus } from 'lucide-react'
 import { createProject, renameProject } from '@/c64/project'
 import { newId } from '@/c64/ids'
 import { WorksheetLayout } from '@/components/worksheet/worksheet-layout'
@@ -28,6 +28,11 @@ import {
 } from '@/storage/project-file'
 import { discardSession, openSession } from '@/storage/sessions'
 import { safeFileName, saveTextFile } from '@/platform/save-file'
+import { CloudConflictDialog, CloudDialog } from '@/cloud/cloud-dialog'
+import { describeStatus } from '@/cloud/sync'
+import { useCloud } from '@/cloud/use-cloud'
+import { showToast } from '@/components/toast'
+import type { CloudConflict, PullMode } from '@/cloud/use-cloud'
 import type { ProjectSummary } from '@/storage/repository'
 import type { Project } from '@/c64/project'
 
@@ -45,6 +50,7 @@ type DialogState =
   | { kind: 'new' }
   | { kind: 'rename'; project: ProjectSummary }
   | { kind: 'delete'; project: ProjectSummary }
+  | { kind: 'cloud-delete'; project: { id: string; name: string } }
   | null
 
 function Projects() {
@@ -54,6 +60,9 @@ function Projects() {
   const fileInput = useRef<HTMLInputElement>(null)
   const [dialog, setDialog] = useState<DialogState>(null)
   const [error, setError] = useState<string | null>(null)
+  const cloud = useCloud()
+  const [cloudOpen, setCloudOpen] = useState(false)
+  const [conflict, setConflict] = useState<CloudConflict | null>(null)
 
   const refresh = () => router.invalidate()
 
@@ -110,6 +119,38 @@ function Projects() {
       )
     })
 
+  const saveToCloud = (id: string, force = false) =>
+    run(async () => {
+      if (!cloud.settings) {
+        setCloudOpen(true)
+        return
+      }
+      showToast('Saving to the cloud…')
+      const asked = await cloud.push(id, { force })
+      if (asked) setConflict(asked)
+      else showToast('Saved to the cloud')
+    })
+
+  const openFromCloud = (id: string, mode?: PullMode) =>
+    run(async () => {
+      const result = await cloud.pull(id, mode)
+      if ('action' in result) {
+        setConflict(result)
+        return
+      }
+      setCloudOpen(false)
+      await navigate({
+        to: '/projects/$projectId',
+        params: { projectId: result.id },
+      })
+    })
+
+  const removeFromCloud = (id: string) =>
+    run(async () => {
+      await cloud.remove(id)
+      showToast('Deleted from the cloud')
+    })
+
   const remove = (summary: ProjectSummary) =>
     run(async () => {
       discardSession(summary.id)
@@ -141,6 +182,10 @@ function Projects() {
       breadcrumbs={<Breadcrumbs items={[]} />}
       actions={
         <>
+          <Button variant="outline" onClick={() => setCloudOpen(true)}>
+            <Cloud aria-hidden="true" />
+            Cloud
+          </Button>
           <Button variant="outline" onClick={() => fileInput.current?.click()}>
             <FileUp aria-hidden="true" />
             Import
@@ -216,6 +261,7 @@ function Projects() {
               <span className="text-xs text-muted-foreground">
                 Edited {dateFormat.format(new Date(p.updatedAt))}
               </span>
+              <CloudStatus status={cloud.statusOf(p.id, p.updatedAt)} />
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
@@ -238,6 +284,9 @@ function Projects() {
                   </DropdownMenuItem>
                   <DropdownMenuItem onSelect={() => void exportFile(p)}>
                     Export
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => void saveToCloud(p.id)}>
+                    Save to cloud
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
@@ -288,6 +337,59 @@ function Projects() {
           dialog?.kind === 'delete' && void remove(dialog.project)
         }
       />
+      <CloudDialog
+        open={cloudOpen}
+        onOpenChange={setCloudOpen}
+        cloud={cloud}
+        local={projects}
+        onOpen={(id) => void openFromCloud(id)}
+        onDelete={(project) => setDialog({ kind: 'cloud-delete', project })}
+      />
+      <CloudConflictDialog
+        conflict={conflict}
+        onClose={() => setConflict(null)}
+        onPush={(id) => void saveToCloud(id, true)}
+        onPull={(id, mode) => void openFromCloud(id, mode)}
+      />
+      <ConfirmDialog
+        open={dialog?.kind === 'cloud-delete'}
+        onOpenChange={(open) => !open && setDialog(null)}
+        title="Delete from the cloud?"
+        description={
+          dialog?.kind === 'cloud-delete' && (
+            <>
+              The cloud copy of “{dialog.project.name}” will be removed. Copies
+              on your devices are kept.
+            </>
+          )
+        }
+        onConfirm={() =>
+          dialog?.kind === 'cloud-delete' &&
+          void removeFromCloud(dialog.project.id)
+        }
+      />
     </WorksheetLayout>
+  )
+}
+
+/** How this device's copy compares with the cloud's, once the list loads. */
+function CloudStatus({
+  status,
+}: {
+  status: ReturnType<ReturnType<typeof useCloud>['statusOf']>
+}) {
+  if (!status) return null
+  const attention = status.kind !== 'synced' && status.kind !== 'device-only'
+  return (
+    <span
+      className={
+        attention
+          ? 'flex items-center gap-1 text-xs text-primary'
+          : 'flex items-center gap-1 text-xs text-muted-foreground'
+      }
+    >
+      <Cloud aria-hidden="true" className="size-3" />
+      {describeStatus(status)}
+    </span>
   )
 }
