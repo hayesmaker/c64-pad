@@ -43,6 +43,8 @@ import { PaletteGrid, PensPanel } from '../pens-panel'
 import { PixelToolRail } from '../pixel-tool-rail'
 import { Segmented } from '../segmented'
 import { ZenMode, ZenPens } from '../zen-mode'
+import { GamepadHelp } from '../gamepad-help'
+import { stepPen, useGridCursor } from '../use-grid-cursor'
 import {
   ALL_COLORS,
   COMPACT_DRAWER,
@@ -135,6 +137,27 @@ export function SpriteDesigner({
 
   useUndoShortcuts(history)
 
+  /** Select the sprite `delta` places along, wrapping around. */
+  const stepSprite = (delta: number) => {
+    const i = set.sprites.findIndex((s) => s.id === selected?.id)
+    const n = set.sprites.length
+    setSelectedId(set.sprites[(i + delta + n) % n].id)
+  }
+  const pad = useGridCursor({
+    columns: selected?.mode === 'multicolor' ? 12 : 24,
+    rows: 21,
+    handlers: tools.gridHandlers,
+    actions: {
+      onToggleTool: (t) => tools.setTool(tool === t ? 'draw' : t),
+      onPen: (delta) => tools.choosePen(stepPen(pens, pen, delta)),
+      onItem: stepSprite,
+      onUndo: history.undo,
+      onRedo: history.redo,
+      onZen: () => setZen((z) => !z),
+    },
+    enabled: !running && !exporting,
+  })
+
   if (!selected || !tools.penDef) {
     return null // a set always has at least one sprite (removeSprite keeps one)
   }
@@ -157,6 +180,7 @@ export function SpriteDesigner({
       view={v}
       onViewChange={onV}
       tracing={trace.grid}
+      cursor={pad.cursor}
       {...tools.gridHandlers}
     />
   )
@@ -502,19 +526,12 @@ export function SpriteDesigner({
           onRedo={history.redo}
           canUndo={history.canUndo}
           canRedo={history.canRedo}
-          onPrev={() => {
-            const i = indexOf(sprite.id)
-            select(
-              set.sprites[(i + set.sprites.length - 1) % set.sprites.length].id,
-            )
-          }}
-          onNext={() => {
-            const i = indexOf(sprite.id)
-            select(set.sprites[(i + 1) % set.sprites.length].id)
-          }}
+          onPrev={() => stepSprite(-1)}
+          onNext={() => stepSprite(1)}
           onExit={() => setZen(false)}
         />
       )}
+      {pad.help && <GamepadHelp onClose={pad.closeHelp} />}
       {running && (
         <EmulatorOverlay
           prg={running.prg}

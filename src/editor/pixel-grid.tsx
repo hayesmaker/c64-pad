@@ -37,6 +37,7 @@ export function PixelGrid({
   onViewChange,
   label,
   tracing,
+  cursor = null,
   ...handlers
 }: {
   /** Size in hires pixels. */
@@ -55,6 +56,8 @@ export function PixelGrid({
   label: string
   /** Reference image over the grid, or under its empty pixels. */
   tracing?: GridTracing | null
+  /** The gamepad cursor, in editable pixels. */
+  cursor?: [number, number] | null
 } & StrokeHandlers) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const scheme = useColorScheme()
@@ -85,8 +88,10 @@ export function PixelGrid({
       major: cssVar('--grid-major') || '#8f8d86',
       tracing: tracing ?? null,
       hex: palette.hex,
+      cursor,
     })
   }, [
+    cursor,
     palette,
     tracing,
     scheme,
@@ -102,6 +107,27 @@ export function PixelGrid({
     width,
     height,
   ])
+
+  // Zoomed in: pan to keep the gamepad cursor in sight.
+  const cx = cursor?.[0]
+  const cy = cursor?.[1]
+  useEffect(() => {
+    if (cx === undefined || cy === undefined || view.zoom <= 1) return
+    const size = cell * view.zoom
+    const left = cx * step * size + view.x
+    const top = cy * size + view.y
+    const right = left + step * size
+    const bottom = top + size
+    let { x, y } = view
+    if (left < 0) x -= left
+    else if (right > width) x -= right - width
+    if (top < 0) y -= top
+    else if (bottom > height) y -= bottom - height
+    if (x !== view.x || y !== view.y)
+      onViewChange(clampView({ zoom: view.zoom, x, y }, width, height))
+    // Only when the cursor moves, so pinch and pan still work freely.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cx, cy])
 
   useGridGestures(canvasRef, {
     handlers,
@@ -158,6 +184,7 @@ function draw(
     tracing: GridTracing | null
     /** Palette colours by index. */
     hex: ReadonlyArray<string>
+    cursor: [number, number] | null
   },
 ) {
   ctx.clearRect(0, 0, o.width, o.height)
@@ -212,5 +239,15 @@ function draw(
     line(x * cell, 0, x * cell, h, o.major)
   for (let y = o.majorY; y < o.rows; y += o.majorY)
     line(0, y * cell, w, y * cell, o.major)
+  if (o.cursor) {
+    // Black and white rings, visible on any colour.
+    const [x, y] = o.cursor
+    const cw = o.step * cell
+    ctx.lineWidth = 2
+    ctx.strokeStyle = '#000'
+    ctx.strokeRect(x * cw + 1, y * cell + 1, cw - 2, cell - 2)
+    ctx.strokeStyle = '#fff'
+    ctx.strokeRect(x * cw + 3, y * cell + 3, cw - 6, cell - 6)
+  }
   ctx.restore()
 }

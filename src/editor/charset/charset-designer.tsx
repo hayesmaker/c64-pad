@@ -52,6 +52,8 @@ import { PixelToolRail } from '../pixel-tool-rail'
 import { PaletteGrid, PensPanel } from '../pens-panel'
 import { Segmented } from '../segmented'
 import { ZenMode, ZenPens } from '../zen-mode'
+import { GamepadHelp } from '../gamepad-help'
+import { stepPen, useGridCursor } from '../use-grid-cursor'
 import {
   ALL_COLORS,
   COMPACT_DRAWER,
@@ -151,6 +153,21 @@ export function CharsetDesigner({
     setSelected(index)
   }
 
+  const pad = useGridCursor({
+    columns: tools.pixelMode === 'multicolor' ? 4 : 8,
+    rows: 8,
+    handlers: tools.gridHandlers,
+    actions: {
+      onToggleTool: (t) => tools.setTool(tool === t ? 'draw' : t),
+      onPen: (delta) => tools.choosePen(stepPen(pens, pen, delta)),
+      onItem: (delta) => setSelected((selected + delta + count) % count),
+      onUndo: history.undo,
+      onRedo: history.redo,
+      onZen: () => setZen((z) => !z),
+    },
+    enabled: !running && !runExport,
+  })
+
   const bytes = getCharBytes(charset, selected)
   // Tracing under empty pixels shows through the background ones.
   const gridLayers = useMemo(() => {
@@ -181,6 +198,7 @@ export function CharsetDesigner({
       onViewChange={onV}
       label={`Character ${selected} pixel grid, ${mcChar ? '4' : '8'} by 8`}
       tracing={trace.grid}
+      cursor={pad.cursor}
       {...tools.gridHandlers}
     />
   )
@@ -466,6 +484,7 @@ export function CharsetDesigner({
           onClose={() => setRunExport(false)}
         />
       )}
+      {pad.help && <GamepadHelp onClose={pad.closeHelp} />}
       {running && (
         <EmulatorOverlay
           prg={running.prg}
