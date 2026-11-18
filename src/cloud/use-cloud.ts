@@ -83,10 +83,7 @@ export function useCloud() {
       return { action: 'push', id, name: project.name, status }
     const saved = await c.put(project)
     markSynced(id, project.updatedAt)
-    setSummaries((list) => [
-      saved,
-      ...(list ?? []).filter((s) => s.id !== id),
-    ])
+    setSummaries((list) => [saved, ...(list ?? []).filter((s) => s.id !== id)])
     return null
   }
 

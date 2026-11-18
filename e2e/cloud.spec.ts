@@ -80,9 +80,7 @@ async function rename(page: Page, from: string, to: string) {
   await expect(card(page, to)).toBeVisible()
 }
 
-test('projects move between devices through the cloud', async ({
-  browser,
-}) => {
+test('projects move between devices through the cloud', async ({ browser }) => {
   const attach = fakeSpace()
   const contextA = await browser.newContext()
   const contextB = await browser.newContext()

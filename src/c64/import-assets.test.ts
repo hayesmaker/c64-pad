@@ -3,7 +3,11 @@ import { createCharmap } from './charmap'
 import { createCharset } from './charset'
 import { createProject, renameAsset } from './project'
 import { createSpriteSet } from './sprite-set'
-import { importAssets, importCandidates, requiredCharsets } from './import-assets'
+import {
+  importAssets,
+  importCandidates,
+  requiredCharsets,
+} from './import-assets'
 import type { Project } from './project'
 
 /** A copy of `base` (same asset ids) that gained a charset and a map. */
