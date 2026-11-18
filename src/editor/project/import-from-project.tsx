@@ -1,12 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
-import { FolderInput } from 'lucide-react'
 import {
   importAssets,
   importCandidates,
   requiredCharsets,
 } from '@/c64/import-assets'
 import { useCloud } from '@/cloud/use-cloud'
-import { createCloudClient } from '@/cloud/spaces'
+import { createCloudClient } from '@/cloud/client'
 import { showToast } from '@/components/toast'
 import { Button } from '@/components/ui/button'
 import {
@@ -36,36 +35,33 @@ type Source = { from: 'device' | 'cloud'; id: string; name: string }
  * project on this device or in the cloud. The other project isn't changed,
  * and the import is one undo step here.
  */
-export function ImportFromProjectButton({
+export function ImportFromProjectDialog({
+  open,
+  onOpenChange,
   project,
   onImport,
 }: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
   project: Project
   onImport: (change: (p: Project) => Project) => void
 }) {
-  const [open, setOpen] = useState(false)
   return (
-    <>
-      <Button variant="outline" onClick={() => setOpen(true)}>
-        <FolderInput aria-hidden="true" />
-        <span className="compact:sr-only">From project</span>
-      </Button>
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-h-[90dvh] overflow-auto sm:max-w-lg">
-          {open && (
-            <ImportFromProject
-              project={project}
-              onImport={(change, count) => {
-                onImport(change)
-                setOpen(false)
-                showToast(`Imported ${count} ${count === 1 ? 'item' : 'items'}`)
-              }}
-              onCancel={() => setOpen(false)}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
-    </>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-h-[90dvh] overflow-auto sm:max-w-lg">
+        {open && (
+          <ImportFromProject
+            project={project}
+            onImport={(change, count) => {
+              onImport(change)
+              onOpenChange(false)
+              showToast(`Imported ${count} ${count === 1 ? 'item' : 'items'}`)
+            }}
+            onCancel={() => onOpenChange(false)}
+          />
+        )}
+      </DialogContent>
+    </Dialog>
   )
 }
 

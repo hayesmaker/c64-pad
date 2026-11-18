@@ -20,9 +20,19 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Field } from '@/components/worksheet/field'
-import { DEFAULT_FOLDER, isComplete, saveCloudSettings } from './settings'
+import { showToast } from '@/components/toast'
+import {
+  DEFAULT_FOLDER,
+  cloudLabel,
+  forgetCloudSettings,
+  isComplete,
+  saveCloudSettings,
+  savedCloudSettings,
+} from './settings'
+import { DRIVE_FOLDER } from './drive'
+import { googleDriveAvailable, signInToGoogle, signOutOfGoogle } from './google'
 import { describeStatus } from './sync'
-import type { CloudSettings } from './settings'
+import type { CloudSettings, DriveSettings, SpacesSettings } from './settings'
 import type { Cloud, CloudConflict, PullMode } from './use-cloud'
 import type { ProjectSummary } from '@/storage/repository'
 
@@ -70,7 +80,7 @@ export function CloudDialog({
             <DialogHeader>
               <DialogTitle>Cloud</DialogTitle>
               <DialogDescription>
-                Projects in {cloud.settings?.bucket}/{cloud.settings?.folder}
+                Projects in {cloud.settings ? cloudLabel(cloud.settings) : ''}
               </DialogDescription>
             </DialogHeader>
             <div className="flex gap-2">
@@ -99,6 +109,19 @@ export function CloudDialog({
               <p role="alert" className="text-sm text-destructive">
                 {cloud.error}
               </p>
+            )}
+            {cloud.needsSignIn && (
+              <Button
+                className="self-start"
+                onClick={() =>
+                  void signInToGoogle().then(
+                    () => cloud.refresh(),
+                    (e: unknown) => showToast(signInError(e), 4000),
+                  )
+                }
+              >
+                Sign in again
+              </Button>
             )}
             {cloud.summaries?.length === 0 && (
               <p className="text-sm text-muted-foreground">
@@ -153,8 +176,173 @@ function CloudSettingsForm({
   onDone: () => void
   onCancel: () => void
 }) {
-  const [form, setForm] = useState<CloudSettings>(
+  const [provider, setProvider] = useState<CloudSettings['provider']>(
+    initial?.provider ?? (googleDriveAvailable() ? 'gdrive' : 'spaces'),
+  )
+  return (
+    <div className="flex flex-col gap-3">
+      <DialogHeader>
+        <DialogTitle>Cloud settings</DialogTitle>
+        <DialogDescription>
+          Where to keep projects so your devices can share them.
+        </DialogDescription>
+      </DialogHeader>
+      <div
+        role="radiogroup"
+        aria-label="Cloud storage"
+        className="grid grid-cols-2 gap-2"
+      >
+        {(
+          [
+            ['gdrive', 'Google Drive'],
+            ['spaces', 'DigitalOcean Space'],
+          ] as const
+        ).map(([value, label]) => (
+          <button
+            key={value}
+            type="button"
+            role="radio"
+            aria-checked={provider === value}
+            onClick={() => setProvider(value)}
+            className="rounded-lg border border-rule px-3 py-2 text-sm font-medium aria-checked:border-primary aria-checked:bg-primary/10"
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      {provider === 'gdrive' ? (
+        <DriveSettingsForm
+          initial={savedCloudSettings('gdrive') ?? null}
+          inUse={initial?.provider === 'gdrive'}
+          onDone={onDone}
+          onCancel={onCancel}
+        />
+      ) : (
+        <SpacesSettingsForm
+          initial={savedCloudSettings('spaces') ?? null}
+          inUse={initial?.provider === 'spaces'}
+          onDone={onDone}
+          onCancel={onCancel}
+        />
+      )}
+    </div>
+  )
+}
+
+function DriveSettingsForm({
+  initial,
+  inUse,
+  onDone,
+  onCancel,
+}: {
+  initial: DriveSettings | null
+  /** Drive is this device's cloud now (not just signed in earlier). */
+  inUse: boolean
+  onDone: () => void
+  onCancel: () => void
+}) {
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const signIn = async () => {
+    setBusy(true)
+    setError(null)
+    try {
+      const { email } = await signInToGoogle()
+      saveCloudSettings({ provider: 'gdrive', email })
+      onDone()
+    } catch (e) {
+      setError(signInError(e))
+    } finally {
+      setBusy(false)
+    }
+  }
+  return (
+    <>
+      <p className="text-sm text-muted-foreground">
+        Projects go in a “{DRIVE_FOLDER}” folder in your Google Drive, as{' '}
+        .c64pad files. C64-Pad can only see the files it made there.
+      </p>
+      {!googleDriveAvailable() && (
+        <p className="text-sm text-destructive">
+          Google Drive isn't set up in this build of C64-Pad.
+        </p>
+      )}
+      {initial && (
+        <p className="text-sm">
+          Signed in as <span className="font-medium">{initial.email}</span>
+        </p>
+      )}
+      {error && (
+        <p role="alert" className="text-sm text-destructive">
+          {error}
+        </p>
+      )}
+      <DialogFooter className="gap-2">
+        {initial && (
+          <Button
+            type="button"
+            variant="ghost"
+            className="mr-auto text-destructive"
+            onClick={() => {
+              void signOutOfGoogle()
+              forgetCloudSettings('gdrive')
+              onCancel()
+            }}
+          >
+            Sign out
+          </Button>
+        )}
+        <Button type="button" variant="outline" onClick={onCancel}>
+          Cancel
+        </Button>
+        <Button
+          type="button"
+          variant={initial && !inUse ? 'outline' : 'default'}
+          disabled={busy || !googleDriveAvailable()}
+          onClick={() => void signIn()}
+        >
+          {initial ? 'Switch account' : 'Sign in with Google'}
+        </Button>
+        {initial && !inUse && (
+          <Button
+            type="button"
+            onClick={() => {
+              saveCloudSettings(initial)
+              onDone()
+            }}
+          >
+            Use Google Drive
+          </Button>
+        )}
+      </DialogFooter>
+    </>
+  )
+}
+
+/** Google's errors, or a cancelled sign-in, in a sentence. */
+export function signInError(e: unknown) {
+  const message = e instanceof Error ? e.message : String(e)
+  if (/cancel/i.test(message)) return 'Sign-in was cancelled.'
+  if (/popup/i.test(message))
+    return 'The Google sign-in window was blocked. Allow pop-ups and try again.'
+  return `Couldn't sign in to Google (${message}).`
+}
+
+function SpacesSettingsForm({
+  initial,
+  inUse,
+  onDone,
+  onCancel,
+}: {
+  initial: SpacesSettings | null
+  /** The Space is this device's cloud now. */
+  inUse: boolean
+  onDone: () => void
+  onCancel: () => void
+}) {
+  const [form, setForm] = useState<SpacesSettings>(
     initial ?? {
+      provider: 'spaces',
       region: '',
       bucket: '',
       accessKey: '',
@@ -162,7 +350,7 @@ function CloudSettingsForm({
       folder: DEFAULT_FOLDER,
     },
   )
-  const field = (key: keyof CloudSettings) => ({
+  const field = (key: Exclude<keyof SpacesSettings, 'provider'>) => ({
     value: form[key],
     onChange: (e: React.ChangeEvent<HTMLInputElement>) =>
       setForm((f) => ({ ...f, [key]: e.target.value })),
@@ -170,7 +358,8 @@ function CloudSettingsForm({
     autoCapitalize: 'off',
     spellCheck: false,
   })
-  const trimmed: CloudSettings = {
+  const trimmed: SpacesSettings = {
+    provider: 'spaces',
     region: form.region.trim().toLowerCase(),
     bucket: form.bucket.trim(),
     accessKey: form.accessKey.trim(),
@@ -188,13 +377,9 @@ function CloudSettingsForm({
         onDone()
       }}
     >
-      <DialogHeader>
-        <DialogTitle>Cloud settings</DialogTitle>
-        <DialogDescription>
-          A DigitalOcean Space to keep projects in. Use a Spaces key limited to
-          this Space; it's kept only on this device.
-        </DialogDescription>
-      </DialogHeader>
+      <p className="text-sm text-muted-foreground">
+        Use a Spaces key limited to this Space; it's kept only on this device.
+      </p>
       <div className="grid grid-cols-2 gap-3">
         <Field label="Region">
           <Input placeholder="lon1" {...field('region')} />
@@ -219,7 +404,7 @@ function CloudSettingsForm({
             variant="ghost"
             className="mr-auto text-destructive"
             onClick={() => {
-              saveCloudSettings(null)
+              forgetCloudSettings('spaces')
               onCancel()
             }}
           >
@@ -230,7 +415,7 @@ function CloudSettingsForm({
           Cancel
         </Button>
         <Button type="submit" disabled={!isComplete(trimmed)}>
-          Save
+          {inUse || !initial ? 'Save' : 'Save and use this Space'}
         </Button>
       </DialogFooter>
     </form>

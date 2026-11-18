@@ -1,41 +1,16 @@
 import { AwsClient } from 'aws4fetch'
 import { exportProjectFile, importProjectFile } from '@/storage/project-file'
 import { summarize } from '@/storage/repository'
-import type { CloudSettings } from './settings'
-import type { Project } from '@/c64/project'
-import type { ProjectSummary } from '@/storage/repository'
-
-/** A project in the cloud, from its small summary file. */
-export interface CloudSummary extends ProjectSummary {
-  /** When it was uploaded. */
-  savedAt: string
-}
-
-export class CloudError extends Error {
-  constructor(
-    message: string,
-    readonly notFound = false,
-  ) {
-    super(message)
-    this.name = 'CloudError'
-  }
-}
-
-export interface CloudClient {
-  list: () => Promise<Array<CloudSummary>>
-  /** One project's summary, or null if it isn't in the cloud. */
-  summary: (id: string) => Promise<CloudSummary | null>
-  get: (id: string) => Promise<Project>
-  put: (project: Project) => Promise<CloudSummary>
-  remove: (id: string) => Promise<void>
-}
+import { CloudError, toSummary } from './types'
+import type { SpacesSettings } from './settings'
+import type { CloudClient, CloudSummary } from './types'
 
 /**
  * Projects in a DigitalOcean Space (S3 API), signed on the device. Each
  * project is `<folder>/<id>.c64pad` (the export format) plus `<id>.json`, a
  * summary so the list doesn't download every project.
  */
-export function createCloudClient(settings: CloudSettings): CloudClient {
+export function createSpacesClient(settings: SpacesSettings): CloudClient {
   const aws = new AwsClient({
     accessKeyId: settings.accessKey,
     secretAccessKey: settings.secretKey,
@@ -59,7 +34,9 @@ export function createCloudClient(settings: CloudSettings): CloudClient {
       )
     }
     if (!res.ok)
-      throw new CloudError(await describeError(res), res.status === 404)
+      throw new CloudError(await describeError(res), {
+        notFound: res.status === 404,
+      })
     return res
   }
 
@@ -95,7 +72,7 @@ export function createCloudClient(settings: CloudSettings): CloudClient {
       try {
         return toSummary(await getJson(key(`${id}.json`)))
       } catch (e) {
-        if (e instanceof CloudError && e.notFound) return null
+        if (e instanceof CloudError && e.options.notFound) return null
         throw e
       }
     },
@@ -170,23 +147,4 @@ async function describeError(res: Response) {
       return 'That project is no longer in the cloud.'
   }
   return `The Space answered ${res.status}${code ? ` (${code})` : ''}.`
-}
-
-function toSummary(v: unknown): CloudSummary | null {
-  if (typeof v !== 'object' || v === null) return null
-  const o = v as Partial<CloudSummary>
-  if (typeof o.id !== 'string' || typeof o.updatedAt !== 'string') return null
-  return {
-    id: o.id,
-    name: String(o.name ?? 'Untitled'),
-    program: String(o.program ?? ''),
-    updatedAt: o.updatedAt,
-    savedAt: String(o.savedAt ?? o.updatedAt),
-    counts: {
-      spriteSets: Number(o.counts?.spriteSets ?? 0),
-      sprites: Number(o.counts?.sprites ?? 0),
-      charsets: Number(o.counts?.charsets ?? 0),
-      maps: Number(o.counts?.maps ?? 0),
-    },
-  }
 }

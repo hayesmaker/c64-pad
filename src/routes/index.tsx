@@ -30,8 +30,10 @@ import { discardSession, openSession } from '@/storage/sessions'
 import { safeFileName, saveTextFile } from '@/platform/save-file'
 import { CloudConflictDialog, CloudDialog } from '@/cloud/cloud-dialog'
 import { describeStatus } from '@/cloud/sync'
+import { cloudLabel } from '@/cloud/settings'
 import { useCloud } from '@/cloud/use-cloud'
 import { showToast } from '@/components/toast'
+import { TransferButton } from '@/components/transfer-button'
 import type { CloudConflict, PullMode } from '@/cloud/use-cloud'
 import type { ProjectSummary } from '@/storage/repository'
 import type { Project } from '@/c64/project'
@@ -194,14 +196,25 @@ function Projects() {
       breadcrumbs={<Breadcrumbs items={[]} />}
       actions={
         <>
-          <Button variant="outline" onClick={() => setCloudOpen(true)}>
-            <Cloud aria-hidden="true" />
-            Cloud
-          </Button>
-          <Button variant="outline" onClick={() => fileInput.current?.click()}>
-            <FileUp aria-hidden="true" />
-            Import
-          </Button>
+          <TransferButton
+            description="Move projects between your devices."
+            options={[
+              {
+                icon: Cloud,
+                label: 'Cloud',
+                description: cloud.settings
+                  ? `Open or download projects from ${cloudLabel(cloud.settings)}`
+                  : 'Keep projects in Google Drive or a DigitalOcean Space',
+                onSelect: () => setCloudOpen(true),
+              },
+              {
+                icon: FileUp,
+                label: 'Import',
+                description: `Open a ${PROJECT_FILE_EXTENSION} project file`,
+                onSelect: () => fileInput.current?.click(),
+              },
+            ]}
+          />
           <Button onClick={() => setDialog({ kind: 'new' })}>
             <Plus aria-hidden="true" />
             New project

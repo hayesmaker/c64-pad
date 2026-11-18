@@ -56,7 +56,9 @@ function fakeSpace() {
 
 async function setUpCloud(page: Page) {
   await page.goto('/')
-  await page.getByRole('button', { name: 'Cloud', exact: true }).click()
+  await page.getByRole('button', { name: 'Transfer' }).click()
+  await page.getByRole('button', { name: /^Cloud/ }).click()
+  await page.getByRole('radio', { name: 'DigitalOcean Space' }).click()
   await page.getByLabel('Region').fill('lon1')
   await page.getByLabel('Space name').fill('pad-test')
   await page.getByLabel('Access key').fill('KEY')
@@ -124,7 +126,8 @@ test('projects move between devices through the cloud', async ({ browser }) => {
   ).toBeVisible()
   await a.getByRole('button', { name: 'Cancel' }).click()
 
-  await a.getByRole('button', { name: 'Cloud', exact: true }).click()
+  await a.getByRole('button', { name: 'Transfer' }).click()
+  await a.getByRole('button', { name: /^Cloud/ }).click()
   await a.getByRole('button', { name: 'Open' }).click()
   await expect(
     a.getByRole('alertdialog', { name: "Replace this device's copy?" }),
@@ -139,6 +142,7 @@ test('projects move between devices through the cloud', async ({ browser }) => {
 
   // B gets ahead of the cloud, then thinks better of it.
   await b.reload()
+  await expect(card(b, 'Cloudy B')).toContainText('Up to date')
   await rename(b, 'Cloudy B', 'Cloudy oops')
   await expect(card(b, 'Cloudy oops')).toContainText('Newer on this device')
   await menu(b, 'Cloudy oops', 'Discard changes…')

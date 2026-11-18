@@ -2,10 +2,16 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { newId } from '@/c64/ids'
 import { projectRepository } from '@/storage/repository'
 import { discardSession, openSession } from '@/storage/sessions'
-import { createCloudClient } from './spaces'
-import { loadSyncBases, setSyncBase, useCloudSettings } from './settings'
+import { createCloudClient } from './client'
+import {
+  cloudScope,
+  loadSyncBases,
+  setSyncBase,
+  useCloudSettings,
+} from './settings'
 import { pullNeedsConfirm, pushNeedsConfirm, syncStatus } from './sync'
-import type { CloudSummary } from './spaces'
+import { CloudError } from './types'
+import type { CloudSummary } from './types'
 import type { SyncStatus } from './sync'
 import type { Project } from '@/c64/project'
 
@@ -30,7 +36,14 @@ export function useCloud() {
   const [summaries, setSummaries] = useState<Array<CloudSummary> | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [bases, setBases] = useState(loadSyncBases)
+  /** Google's sign-in expired (the web can't renew it without a tap). */
+  const [needsSignIn, setNeedsSignIn] = useState(false)
+  const scope = settings ? cloudScope(settings) : null
+  const [bases, setBases] = useState(() => (scope ? loadSyncBases(scope) : {}))
+  // Another store, other sync records.
+  useEffect(() => {
+    setBases(scope ? loadSyncBases(scope) : {})
+  }, [scope])
 
   const refresh = useCallback(async () => {
     if (!client) {
@@ -39,22 +52,27 @@ export function useCloud() {
     }
     setLoading(true)
     setError(null)
+    setNeedsSignIn(false)
     try {
       setSummaries(await client.list())
     } catch (e) {
       setError((e as Error).message)
+      setNeedsSignIn(e instanceof CloudError && !!e.options.needsSignIn)
     } finally {
       setLoading(false)
     }
   }, [client])
 
   useEffect(() => {
+    // A different store: drop the old one's list.
+    setSummaries(null)
     void refresh()
   }, [refresh])
 
   const markSynced = (id: string, updatedAt: string | null) => {
-    setSyncBase(id, updatedAt)
-    setBases(loadSyncBases())
+    if (!scope) return
+    setSyncBase(scope, id, updatedAt)
+    setBases(loadSyncBases(scope))
   }
 
   const require = () => {
@@ -126,6 +144,7 @@ export function useCloud() {
     summaries,
     loading,
     error,
+    needsSignIn,
     refresh,
     push,
     pull,
