@@ -4,7 +4,8 @@ import { useSyncExternalStore } from 'react'
  * Where projects are kept in the cloud. Personal and per device: Space keys
  * are typed in on each device, Google Drive signs in on each device.
  */
-export type CloudSettings = SpacesSettings | DriveSettings
+export type CloudSettings = SpacesSettings | DriveSettings | DropboxSettings
+export type CloudProvider = CloudSettings['provider']
 
 /** A DigitalOcean Space: `<bucket>.<region>.digitaloceanspaces.com`. */
 export interface SpacesSettings {
@@ -24,6 +25,22 @@ export interface DriveSettings {
   email: string
 }
 
+/** The signed-in account's Dropbox, in the app's folder (Apps/…). */
+export interface DropboxSettings {
+  provider: 'dropbox'
+  email: string
+  accountId: string
+  /** Kept on this device only; signing out revokes it. */
+  refreshToken: string
+}
+
+/** In the order the settings offer them. */
+export const PROVIDERS: ReadonlyArray<CloudProvider> = [
+  'gdrive',
+  'dropbox',
+  'spaces',
+]
+
 const KEY = 'c64-pad.cloud'
 export const DEFAULT_FOLDER = 'c64-pad'
 
@@ -32,9 +49,10 @@ export const DEFAULT_FOLDER = 'c64-pad'
  * while another is in use, so switching back needs nothing typed again.
  */
 export interface StoredClouds {
-  active: CloudSettings['provider'] | null
+  active: CloudProvider | null
   spaces?: SpacesSettings
   gdrive?: DriveSettings
+  dropbox?: DropboxSettings
 }
 
 const listeners = new Set<() => void>()
@@ -68,7 +86,7 @@ export function loadCloudSettings(): CloudSettings | null {
 }
 
 /** A provider's saved settings, in use or not. */
-export function savedCloudSettings<TProvider extends CloudSettings['provider']>(
+export function savedCloudSettings<TProvider extends CloudProvider>(
   provider: TProvider,
 ): StoredClouds[TProvider] {
   return stored()[provider]
@@ -83,13 +101,11 @@ export function saveCloudSettings(settings: CloudSettings) {
   })
 }
 
-/** Forget a provider's settings; the other one, if saved, is used instead. */
-export function forgetCloudSettings(provider: CloudSettings['provider']) {
+/** Forget a provider's settings; another saved one is used instead. */
+export function forgetCloudSettings(provider: CloudProvider) {
   const next: StoredClouds = { ...stored(), [provider]: undefined }
-  if (next.active === provider) {
-    const other = provider === 'gdrive' ? 'spaces' : 'gdrive'
-    next.active = next[other] ? other : null
-  }
+  if (next.active === provider)
+    next.active = PROVIDERS.find((p) => next[p]) ?? null
   write(next)
 }
 
@@ -105,13 +121,15 @@ export function parseStored(v: unknown): StoredClouds {
   }
   const spaces = parseSettings(o.spaces)
   const gdrive = parseSettings(o.gdrive)
+  const dropbox = parseSettings(o.dropbox)
   const result: StoredClouds = {
     active: null,
     ...(spaces?.provider === 'spaces' && { spaces }),
     ...(gdrive?.provider === 'gdrive' && { gdrive }),
+    ...(dropbox?.provider === 'dropbox' && { dropbox }),
   }
-  if ((o.active === 'spaces' || o.active === 'gdrive') && result[o.active])
-    result.active = o.active
+  const active = PROVIDERS.find((p) => p === o.active)
+  if (active && result[active]) result.active = active
   return result
 }
 
@@ -132,6 +150,15 @@ export function parseSettings(v: unknown): CloudSettings | null {
   const s = (k: string) => (typeof o[k] === 'string' ? o[k].trim() : '')
   if (o.provider === 'gdrive')
     return s('email') ? { provider: 'gdrive', email: s('email') } : null
+  if (o.provider === 'dropbox')
+    return s('accountId') && s('refreshToken')
+      ? {
+          provider: 'dropbox',
+          email: s('email'),
+          accountId: s('accountId'),
+          refreshToken: s('refreshToken'),
+        }
+      : null
   // Saved before there was a choice of provider: a Space.
   const settings: SpacesSettings = {
     provider: 'spaces',
@@ -150,16 +177,26 @@ export function isComplete(s: SpacesSettings) {
 
 /** Which cloud store the settings point at; sync records are kept per store. */
 export function cloudScope(s: CloudSettings) {
-  return s.provider === 'gdrive'
-    ? `gdrive:${s.email}`
-    : `spaces:${s.region}/${s.bucket}/${s.folder}`
+  switch (s.provider) {
+    case 'gdrive':
+      return `gdrive:${s.email}`
+    case 'dropbox':
+      return `dropbox:${s.accountId}`
+    case 'spaces':
+      return `spaces:${s.region}/${s.bucket}/${s.folder}`
+  }
 }
 
 /** Where projects are, for people. */
 export function cloudLabel(s: CloudSettings) {
-  return s.provider === 'gdrive'
-    ? `Google Drive (${s.email})`
-    : `${s.bucket}/${s.folder}`
+  switch (s.provider) {
+    case 'gdrive':
+      return `Google Drive (${s.email})`
+    case 'dropbox':
+      return `Dropbox (${s.email})`
+    case 'spaces':
+      return `${s.bucket}/${s.folder}`
+  }
 }
 
 /**

@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { driveProperties, driveSummary } from './drive'
+import { apiArg } from './dropbox'
 import {
   cloudScope,
   forgetCloudSettings,
@@ -10,7 +11,7 @@ import {
   savedCloudSettings,
   setSyncBase,
 } from './settings'
-import type { SpacesSettings } from './settings'
+import type { DropboxSettings, SpacesSettings } from './settings'
 import type { CloudSummary } from './types'
 
 const summary: CloudSummary = {
@@ -109,5 +110,29 @@ describe('cloud settings', () => {
     expect(loadCloudSettings()).toEqual(space)
     forgetCloudSettings('spaces')
     expect(loadCloudSettings()).toBeNull()
+  })
+
+  it('keeps Dropbox beside the others, and its sign-in survives a reload', () => {
+    const dropbox: DropboxSettings = {
+      provider: 'dropbox',
+      email: 'a@b.c',
+      accountId: 'dbid:1',
+      refreshToken: 'R',
+    }
+    saveCloudSettings({ provider: 'gdrive', email: 'a@b.c' })
+    saveCloudSettings(dropbox)
+    expect(loadCloudSettings()).toEqual(dropbox)
+    expect(cloudScope(dropbox)).toBe('dropbox:dbid:1')
+    expect(parseSettings({ ...dropbox, refreshToken: '' })).toBeNull()
+
+    forgetCloudSettings('dropbox')
+    expect(loadCloudSettings()).toEqual({ provider: 'gdrive', email: 'a@b.c' })
+    expect(savedCloudSettings('dropbox')).toBeUndefined()
+  })
+
+  it('writes Dropbox-API-Arg as ASCII', () => {
+    const arg = apiArg({ path: '/Größe ✨.json' })
+    expect(arg).toMatch(/^[\x20-\x7e]*$/)
+    expect(JSON.parse(arg)).toEqual({ path: '/Größe ✨.json' })
   })
 })

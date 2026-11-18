@@ -29,10 +29,22 @@ import {
   saveCloudSettings,
   savedCloudSettings,
 } from './settings'
+import { signInAgain } from './client'
 import { DRIVE_FOLDER } from './drive'
+import {
+  dropboxAvailable,
+  signInToDropbox,
+  signOutOfDropbox,
+} from './dropbox-auth'
 import { googleDriveAvailable, signInToGoogle, signOutOfGoogle } from './google'
 import { describeStatus } from './sync'
-import type { CloudSettings, DriveSettings, SpacesSettings } from './settings'
+import type {
+  CloudProvider,
+  CloudSettings,
+  DriveSettings,
+  DropboxSettings,
+  SpacesSettings,
+} from './settings'
 import type { Cloud, CloudConflict, PullMode } from './use-cloud'
 import type { ProjectSummary } from '@/storage/repository'
 
@@ -110,11 +122,11 @@ export function CloudDialog({
                 {cloud.error}
               </p>
             )}
-            {cloud.needsSignIn && (
+            {cloud.needsSignIn && cloud.settings && (
               <Button
                 className="self-start"
                 onClick={() =>
-                  void signInToGoogle().then(
+                  void signInAgain(cloud.settings!).then(
                     () => cloud.refresh(),
                     (e: unknown) => showToast(signInError(e), 4000),
                   )
@@ -176,8 +188,13 @@ function CloudSettingsForm({
   onDone: () => void
   onCancel: () => void
 }) {
-  const [provider, setProvider] = useState<CloudSettings['provider']>(
-    initial?.provider ?? (googleDriveAvailable() ? 'gdrive' : 'spaces'),
+  const [provider, setProvider] = useState<CloudProvider>(
+    initial?.provider ??
+      (googleDriveAvailable()
+        ? 'gdrive'
+        : dropboxAvailable()
+          ? 'dropbox'
+          : 'spaces'),
   )
   return (
     <div className="flex flex-col gap-3">
@@ -190,11 +207,12 @@ function CloudSettingsForm({
       <div
         role="radiogroup"
         aria-label="Cloud storage"
-        className="grid grid-cols-2 gap-2"
+        className="grid grid-cols-3 gap-2"
       >
         {(
           [
             ['gdrive', 'Google Drive'],
+            ['dropbox', 'Dropbox'],
             ['spaces', 'DigitalOcean Space'],
           ] as const
         ).map(([value, label]) => (
@@ -214,6 +232,13 @@ function CloudSettingsForm({
         <DriveSettingsForm
           initial={savedCloudSettings('gdrive') ?? null}
           inUse={initial?.provider === 'gdrive'}
+          onDone={onDone}
+          onCancel={onCancel}
+        />
+      ) : provider === 'dropbox' ? (
+        <DropboxSettingsForm
+          initial={savedCloudSettings('dropbox') ?? null}
+          inUse={initial?.provider === 'dropbox'}
           onDone={onDone}
           onCancel={onCancel}
         />
@@ -319,12 +344,106 @@ function DriveSettingsForm({
   )
 }
 
-/** Google's errors, or a cancelled sign-in, in a sentence. */
+function DropboxSettingsForm({
+  initial,
+  inUse,
+  onDone,
+  onCancel,
+}: {
+  initial: DropboxSettings | null
+  /** Dropbox is this device's cloud now (not just signed in earlier). */
+  inUse: boolean
+  onDone: () => void
+  onCancel: () => void
+}) {
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const signIn = async () => {
+    setBusy(true)
+    setError(null)
+    try {
+      const settings = await signInToDropbox()
+      if (initial && initial.refreshToken !== settings.refreshToken)
+        void signOutOfDropbox(initial)
+      saveCloudSettings(settings)
+      onDone()
+    } catch (e) {
+      setError(signInError(e))
+    } finally {
+      setBusy(false)
+    }
+  }
+  return (
+    <>
+      <p className="text-sm text-muted-foreground">
+        Projects go in C64-Pad's own folder in your Dropbox, under Apps. C64-Pad
+        can't see anything else in your Dropbox.
+      </p>
+      {!dropboxAvailable() && (
+        <p className="text-sm text-destructive">
+          Dropbox isn't set up in this build of C64-Pad.
+        </p>
+      )}
+      {initial && (
+        <p className="text-sm">
+          Signed in as <span className="font-medium">{initial.email}</span>
+        </p>
+      )}
+      {error && (
+        <p role="alert" className="text-sm text-destructive">
+          {error}
+        </p>
+      )}
+      <DialogFooter className="gap-2">
+        {initial && (
+          <Button
+            type="button"
+            variant="ghost"
+            className="mr-auto text-destructive"
+            onClick={() => {
+              void signOutOfDropbox(initial)
+              forgetCloudSettings('dropbox')
+              onCancel()
+            }}
+          >
+            Sign out
+          </Button>
+        )}
+        <Button type="button" variant="outline" onClick={onCancel}>
+          Cancel
+        </Button>
+        <Button
+          type="button"
+          variant={initial && !inUse ? 'outline' : 'default'}
+          disabled={busy || !dropboxAvailable()}
+          onClick={() => void signIn()}
+        >
+          {initial ? 'Switch account' : 'Sign in with Dropbox'}
+        </Button>
+        {initial && !inUse && (
+          <Button
+            type="button"
+            onClick={() => {
+              saveCloudSettings(initial)
+              onDone()
+            }}
+          >
+            Use Dropbox
+          </Button>
+        )}
+      </DialogFooter>
+    </>
+  )
+}
+
+/** A provider's sign-in error, or a cancelled sign-in, in a sentence. */
 export function signInError(e: unknown) {
   const message = e instanceof Error ? e.message : String(e)
   if (/cancel/i.test(message)) return 'Sign-in was cancelled.'
+  if (/blocked/i.test(message)) return message
   if (/popup/i.test(message))
     return 'The Google sign-in window was blocked. Allow pop-ups and try again.'
+  if (e instanceof Error && e.name === 'CloudError') return message
   return `Couldn't sign in to Google (${message}).`
 }
 

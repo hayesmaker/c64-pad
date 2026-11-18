@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>C64-Pad</title>
+  </head>
+  <body style="font-family: system-ui, sans-serif; padding: 2rem">
+    <p>Signing in to Dropbox…</p>
+    <script>
+      // Hands Dropbox's answer to the C64-Pad tab (src/cloud/dropbox-auth.ts).
+      new BroadcastChannel('c64pad-dropbox-auth').postMessage(location.search)
+      setTimeout(() => window.close(), 300)
+    </script>
+  </body>
+</html>
