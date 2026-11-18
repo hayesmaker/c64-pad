@@ -36,7 +36,8 @@ test('a project exports to .c64pad and imports back', async ({ page }) => {
   await page.getByLabel('Program').fill('Test game')
 
   const downloading = page.waitForEvent('download')
-  await page.getByRole('button', { name: 'Export' }).click()
+  await page.getByRole('button', { name: 'Transfer' }).click()
+  await page.getByRole('button', { name: /^Export/ }).click()
   const download = await downloading
   expect(download.suggestedFilename()).toBe('Round-Trip.c64pad')
   const file = await download.path()
@@ -51,4 +52,26 @@ test('a project exports to .c64pad and imports back', async ({ page }) => {
     'Round Trip (imported)',
   )
   await expect(page.getByLabel('Program')).toHaveValue('Test game')
+})
+
+test('Transfer gathers the import and export options', async ({ page }) => {
+  await page.goto('/')
+  await page.getByRole('button', { name: 'Transfer' }).click()
+  const picking = page.waitForEvent('filechooser')
+  await page.getByRole('button', { name: /^Import/ }).click()
+  await picking
+  await expect(page.getByRole('dialog', { name: 'Transfer' })).toHaveCount(0)
+
+  await createProject(page, 'Options')
+  await page.getByRole('button', { name: 'Transfer' }).click()
+  const dialog = page.getByRole('dialog', { name: 'Transfer' })
+  await expect(dialog.getByRole('button')).toHaveText([
+    /^Import Aseprite/,
+    /^From project/,
+    /^Export/,
+    'Close',
+  ])
+  const pickingAseprite = page.waitForEvent('filechooser')
+  await dialog.getByRole('button', { name: /^Import Aseprite/ }).click()
+  await pickingAseprite
 })

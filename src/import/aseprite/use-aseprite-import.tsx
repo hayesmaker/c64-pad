@@ -1,14 +1,15 @@
 import { useRef, useState } from 'react'
 import { Capacitor } from '@capacitor/core'
-import { FileUp } from 'lucide-react'
-import { Button } from '@/components/ui/button'
 import { ImportAsepriteDialog } from './import-dialog'
 import { AsepriteError, parseAseprite } from './parse'
 import type { Project } from '@/c64/project'
 import type { AsepriteFile } from './import-dialog'
 
-/** "Import Aseprite": pick a file, read it, and open the import dialog. */
-export function ImportAsepriteButton({
+/**
+ * Importing an Aseprite file: `pick()` opens the file picker (call it in a
+ * tap), then the import dialog. Render `element` somewhere on the page.
+ */
+export function useAsepriteImport({
   project,
   onImport,
 }: {
@@ -34,12 +35,8 @@ export function ImportAsepriteButton({
     }
   }
 
-  return (
+  const element = (
     <>
-      <Button variant="outline" onClick={() => input.current?.click()}>
-        <FileUp aria-hidden="true" />
-        <span className="compact:sr-only">Import Aseprite</span>
-      </Button>
       <input
         ref={input}
         type="file"
@@ -63,4 +60,6 @@ export function ImportAsepriteButton({
       )}
     </>
   )
+
+  return { pick: () => input.current?.click(), element }
 }

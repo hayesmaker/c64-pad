@@ -25,7 +25,8 @@ test('assets come over from another project, as one undo step', async ({
 
   await page.goto('/')
   await page.getByRole('link', { name: 'Cloudy', exact: true }).click()
-  await page.getByRole('button', { name: 'From project' }).click()
+  await page.getByRole('button', { name: 'Transfer' }).click()
+  await page.getByRole('button', { name: /^From project/ }).click()
   await page.getByRole('button', { name: /Cloudy copy/ }).click()
 
   const dialog = page.getByRole('dialog')

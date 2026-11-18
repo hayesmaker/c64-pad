@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
-import { Download, Redo2, Undo2 } from 'lucide-react'
+import { Download, FileUp, FolderInput, Redo2, Undo2 } from 'lucide-react'
 import {
   addAsset,
   duplicateAsset,
@@ -23,7 +23,6 @@ import {
   MapThumbnail,
   SpriteSetThumbnail,
 } from '@/components/c64/thumbnails'
-import { Button } from '@/components/ui/button'
 import { AssetCard, AssetMenu, AssetSection } from '@/editor/project/asset-list'
 import {
   DeleteCharsetDialog,
@@ -36,8 +35,9 @@ import { MergeCharsDialog } from '@/editor/project/merge-chars-dialog'
 import { switchMapsToCharset } from '@/c64/charset-match'
 import { useProjectHistory } from '@/editor/project-history'
 import { ToolButton, useUndoShortcuts } from '@/editor/grid-parts'
-import { ImportAsepriteButton } from '@/import/aseprite/import-aseprite-button'
-import { ImportFromProjectButton } from '@/editor/project/import-from-project'
+import { useAsepriteImport } from '@/import/aseprite/use-aseprite-import'
+import { ImportFromProjectDialog } from '@/editor/project/import-from-project'
+import { TransferButton } from '@/components/transfer-button'
 import { useCurrentProject } from '@/storage/use-current-project'
 import {
   PROJECT_FILE_EXTENSION,
@@ -79,6 +79,8 @@ function ProjectPage() {
   const update = (fn: (p: Project) => Project) => history.change(fn)
   const projectId = project.id
   const close = (open: boolean) => !open && setDialog(null)
+  const aseprite = useAsepriteImport({ project, onImport: update })
+  const [fromProject, setFromProject] = useState(false)
 
   const exportFile = async () => {
     await session.flush()
@@ -109,12 +111,31 @@ function ProjectPage() {
       actions={
         <div className="flex items-center gap-3">
           <SaveStatus status={status} error={error} />
-          <ImportAsepriteButton project={project} onImport={update} />
-          <ImportFromProjectButton project={project} onImport={update} />
-          <Button variant="outline" onClick={() => void exportFile()}>
-            <Download aria-hidden="true" />
-            <span className="compact:sr-only">Export</span>
-          </Button>
+          <TransferButton
+            description={`Bring designs into “${project.name}”, or save it as a file.`}
+            options={[
+              {
+                icon: FileUp,
+                label: 'Import Aseprite',
+                description:
+                  'Sprites, chars or a screen from an .aseprite file',
+                onSelect: aseprite.pick,
+              },
+              {
+                icon: FolderInput,
+                label: 'From project',
+                description:
+                  'Sprite sets, charsets and screens from another project',
+                onSelect: () => setFromProject(true),
+              },
+              {
+                icon: Download,
+                label: 'Export',
+                description: `Save the whole project as a ${PROJECT_FILE_EXTENSION} file`,
+                onSelect: () => void exportFile(),
+              },
+            ]}
+          />
           <ToolButton
             label="Undo"
             disabled={!history.canUndo}
@@ -311,6 +332,13 @@ function ProjectPage() {
           }
         />
       )}
+      {aseprite.element}
+      <ImportFromProjectDialog
+        open={fromProject}
+        onOpenChange={setFromProject}
+        project={project}
+        onImport={update}
+      />
     </WorksheetLayout>
   )
 }
