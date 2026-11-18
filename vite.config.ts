@@ -9,6 +9,8 @@ import { nitro } from 'nitro/vite'
 
 const config = defineConfig({
   resolve: { tsconfigPaths: true },
+  // Android builds write copies of the app there; don't reload on them.
+  server: { watch: { ignored: ['**/android/**'] } },
   plugins: [
     devtools(),
     nitro({ rollupConfig: { external: [/^@sentry\//] } }),
