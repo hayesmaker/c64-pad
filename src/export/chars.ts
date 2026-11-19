@@ -102,78 +102,180 @@ function attributeLabels(cs: Charset, prefix: string): Array<string> {
   return lines
 }
 
-/**
- * KickAssembler lines that pull in the charset .bin (made by
- * exportCharsetBin) with `.import binary`, with its register values.
- */
-export function charsetImport(cs: Charset, fileName: string): string {
-  const prefix = asmLabel(cs.name, 'charset')
-  const size = exportCharsetBin(cs).length
-  return [
-    ...registerLabels(cs, prefix),
-    '',
-    `// ${size} bytes; the VIC needs it on a $800 boundary`,
-    '.align $800',
-    `${prefix}_chars:`,
-    `    .import binary "${fileName}"`,
-    '',
-    '// Point the VIC at it (bits 1-3 of $D018), within its 16K bank:',
-    '//     lda $d018',
-    '//     and #%11110001',
-    `//     ora #((${prefix}_chars & $3fff) / $800) << 1`,
-    '//     sta $d018',
-    '',
-  ].join('\n')
+/** The .bin files of a charset to `.import binary`, by file name. */
+export interface CharsetBins {
+  chars?: string
+  colours?: string
+  /** Bitmap only. */
+  screen?: string
+  attributes?: string
 }
 
-/**
- * KickAssembler lines that pull in the charset's attributes .bin (made by
- * exportCharAttributes) with `.import binary`, plus the named attributes'
- * labels and an example lookup.
- */
-export function charAttributesImport(cs: Charset, fileName: string): string {
-  const prefix = asmLabel(cs.name, 'charset')
-  return [
-    `// Attributes of charset "${cs.name}": one byte (0-15) per screen code`,
-    ...attributeLabels(cs, prefix),
-    `${prefix}_attributes:`,
-    `    .import binary "${fileName}"`,
-    '',
-    '// The attribute of the screen code in X:',
-    `//     lda ${prefix}_attributes,x`,
-    '',
-  ].join('\n')
-}
+const importBinary = (label: string, fileName: string) => [
+  `${label}:`,
+  `    .import binary "${fileName}"`,
+]
 
 /**
- * KickAssembler lines that pull in a map .bin (made by exportMapBin) with
- * `.import binary`, with its size; a 40 x 25 char map gets a loop that copies
- * it to the screen.
+ * KickAssembler that pulls in a charset's .bin files with `.import
+ * binary`, with its register values, attribute names and how to use them.
  */
-export function mapImport(map: Charmap, cs: Charset, fileName: string): string {
-  const prefix = asmLabel(map.name, 'map')
-  const what = cs.mode === 'bitmap' ? 'tile number' : 'screen code'
-  const lines = [
-    `// Map "${map.name}": one ${what} per cell, row by row`,
-    `.label ${prefix}_width = ${map.width}`,
-    `.label ${prefix}_height = ${map.height}`,
-    '',
-    `${prefix}_data:`,
-    `    .import binary "${fileName}"`,
-    '',
-    `// The ${what} at (column, row) is at`,
-    `//     ${prefix}_data + row * ${prefix}_width + column`,
-  ]
-  if (cs.mode !== 'bitmap' && map.width === 40 && map.height === 25) {
+export function charsetBinsImport(cs: Charset, files: CharsetBins): string {
+  const prefix = asmLabel(cs.name, 'charset')
+  const per = cs.mode === 'bitmap' ? 'per tile' : 'per screen code'
+  const lines = registerLabels(cs, prefix)
+  if (files.chars) {
     lines.push(
       '',
-      '// Copy it to the screen at $0400 (1000 bytes, 4 x 250):',
+      `// Chars .bin: ${exportCharsetBin(cs).length} bytes; the VIC needs it on a $800 boundary`,
+      '.align $800',
+      ...importBinary(`${prefix}_chars`, files.chars),
+    )
+  }
+  if (files.colours) {
+    lines.push(
+      '',
+      `// Colours .bin: colour RAM value ${per}${cs.mode === 'multicolor' ? ' (8-15 = multicolour char)' : ''}`,
+      ...importBinary(`${prefix}_colours`, files.colours),
+    )
+  }
+  if (files.screen && cs.mode === 'bitmap') {
+    lines.push(
+      '',
+      `// Screen .bin: screen RAM value ${per} (01 high nibble, 10 low nibble)`,
+      ...importBinary(`${prefix}_screen`, files.screen),
+    )
+  }
+  if (files.attributes) {
+    lines.push(
+      '',
+      `// Attributes .bin: attribute (0-15, 0 = none) ${per}`,
+      ...attributeLabels(cs, prefix),
+      ...importBinary(`${prefix}_attributes`, files.attributes),
+    )
+  }
+  if (files.chars) {
+    lines.push(
+      '',
+      '// Point the VIC at the chars (bits 1-3 of $D018), within its 16K bank:',
+      '//     lda $d018',
+      '//     and #%11110001',
+      `//     ora #((${prefix}_chars & $3fff) / $800) << 1`,
+      '//     sta $d018',
+    )
+  }
+  const tables = (
+    [
+      ['colours', 'colour RAM value'],
+      ['screen', 'screen RAM value'],
+      ['attributes', 'attribute'],
+    ] as const
+  ).filter(([t]) => files[t] && (t !== 'screen' || cs.mode === 'bitmap'))
+  if (tables.length) {
+    lines.push(
+      '',
+      `// The ${tables
+        .map(([, what]) => what)
+        .join(', ')
+        .replace(
+          /, ([^,]*)$/,
+          ' and $1',
+        )} of the ${cs.mode === 'bitmap' ? 'tile' : 'screen code'} in X:`,
+      ...tables.map(([t]) => `//     lda ${prefix}_${t},x`),
+    )
+  }
+  lines.push('')
+  return lines.join('\n')
+}
+
+/** The .bin files of a map to `.import binary`, by file name. */
+export interface MapBins {
+  map?: string
+  colours?: string
+  /** Bitmap only. */
+  screen?: string
+  attributes?: string
+}
+
+/**
+ * KickAssembler that pulls in a map's .bin files with `.import binary`,
+ * with its size and how to find a cell; a 40 x 25 map gets a loop that
+ * copies it to the screen.
+ */
+export function mapBinsImport(
+  map: Charmap,
+  cs: Charset,
+  files: MapBins,
+): string {
+  const prefix = asmLabel(map.name, 'map')
+  const bitmap = cs.mode === 'bitmap'
+  const lines = [
+    `// Map "${map.name}", ${map.width} x ${map.height} cells; each table has one byte per cell, row by row`,
+    `.label ${prefix}_width = ${map.width}`,
+    `.label ${prefix}_height = ${map.height}`,
+  ]
+  const tables: Array<string> = []
+  const table = (
+    name: string,
+    fileName: string | undefined,
+    about: string,
+    extra: Array<string> = [],
+  ) => {
+    if (!fileName) return
+    tables.push(`${prefix}_${name}`)
+    lines.push(
+      '',
+      about,
+      ...extra,
+      ...importBinary(`${prefix}_${name}`, fileName),
+    )
+  }
+  table(
+    'data',
+    files.map,
+    `// Map .bin: the ${bitmap ? 'tile number' : 'screen code'} of each cell`,
+  )
+  table('colours', files.colours, '// Colours .bin: colour RAM of each cell')
+  if (bitmap)
+    table(
+      'screen',
+      files.screen,
+      '// Screen .bin: screen RAM of each cell (01 high nibble, 10 low nibble)',
+    )
+  table(
+    'attributes',
+    files.attributes,
+    '// Attributes .bin: attribute (0-15, 0 = none) of each cell',
+    attributeLabels(cs, asmLabel(cs.name, 'charset')),
+  )
+  if (tables.length) {
+    lines.push(
+      '',
+      '// The byte for the cell at (column, row) is at',
+      `//     ${tables[0]} + row * ${prefix}_width + column`,
+    )
+  }
+  const copies = [
+    [
+      bitmap
+        ? files.screen && `${prefix}_screen`
+        : files.map && `${prefix}_data`,
+      '$0400',
+    ],
+    [files.colours && `${prefix}_colours`, '$d800'],
+  ].filter((c): c is [string, string] => !!c[0])
+  if (copies.length && map.width === 40 && map.height === 25) {
+    lines.push(
+      '',
+      `// Copy it to ${copies.map(([, to]) => to).join(' and ')} (1000 bytes each, 4 x 250):`,
       '//     ldx #0',
       '//     copy:',
-      ...[0, 250, 500, 750].flatMap((o) => [
-        `//     lda ${prefix}_data${o ? ` + ${o}` : ''},x`,
-        `//     sta $0400${o ? ` + ${o}` : ''},x`,
-      ]),
+      ...copies.flatMap(([from, to]) =>
+        [0, 250, 500, 750].flatMap((o) => [
+          `//     lda ${from}${o ? ` + ${o}` : ''},x`,
+          `//     sta ${to}${o ? ` + ${o}` : ''},x`,
+        ]),
+      ),
       '//     inx',
       '//     cpx #250',
       '//     bne copy',
@@ -181,30 +283,6 @@ export function mapImport(map: Charmap, cs: Charset, fileName: string): string {
   }
   lines.push('')
   return lines.join('\n')
-}
-
-/**
- * KickAssembler lines that pull in a map's attributes .bin (made by
- * exportMapAttributes) with `.import binary`, with its size and labels.
- */
-export function mapAttributesImport(
-  map: Charmap,
-  cs: Charset,
-  fileName: string,
-): string {
-  const prefix = asmLabel(map.name, 'map')
-  return [
-    `// Attributes of map "${map.name}": one byte (0-15) per cell, row by row`,
-    `.label ${prefix}_width = ${map.width}`,
-    `.label ${prefix}_height = ${map.height}`,
-    ...attributeLabels(cs, asmLabel(cs.name, 'charset')),
-    `${prefix}_attributes:`,
-    `    .import binary "${fileName}"`,
-    '',
-    `// The attribute of the cell at (column, row) is at`,
-    `//     ${prefix}_attributes + row * ${prefix}_width + column`,
-    '',
-  ].join('\n')
 }
 
 /** Screen codes, one byte per cell, left to right then top to bottom. */

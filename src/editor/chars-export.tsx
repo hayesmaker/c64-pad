@@ -2,8 +2,7 @@ import { useMemo, useState } from 'react'
 import { Download } from 'lucide-react'
 import { renderCharsetSheet } from '@/c64/render'
 import {
-  charAttributesImport,
-  charsetImport,
+  charsetBinsImport,
   exportCharAttributes,
   exportCharColors,
   exportCharScreenColors,
@@ -17,8 +16,7 @@ import {
   exportMapKickAss,
   exportMapScreenRam,
   hasAttributes,
-  mapAttributesImport,
-  mapImport,
+  mapBinsImport,
   renderMapImage,
 } from '@/export/chars'
 import { IndexedCanvas } from '@/components/c64/indexed-canvas'
@@ -172,6 +170,8 @@ export function CharsetExportPanel({
     asm: `KickAssembler source: register values, the charset and its colours${hasAttributes(charset) ? ', attributes and attribute names' : ''}.`,
     png: 'An image of the whole charset, 16 chars per row.',
   }
+  const BINS: Array<Format> = ['chars', 'colours', 'screen', 'attributes']
+  const file = (f: Format) => `${fileName}${outputs[f].extension}`
   const outputs: Record<Format, Output> = {
     chars: {
       extension: '-chars.bin',
@@ -223,20 +223,19 @@ export function CharsetExportPanel({
         onChange={setFormat}
       />
       {format === 'asm' && <AsmPreview text={asm} />}
-      {format === 'chars' && (
+      {BINS.includes(format) && (
+        // One block for all the .bins, whichever tab it's opened on.
         <ImportCode
           code={() =>
-            charsetImport(charset, `${fileName}${outputs.chars.extension}`)
-          }
-        />
-      )}
-      {format === 'attributes' && (
-        <ImportCode
-          code={() =>
-            charAttributesImport(
-              charset,
-              `${fileName}${outputs.attributes.extension}`,
-            )
+            charsetBinsImport(charset, {
+              chars: file('chars'),
+              colours: file('colours'),
+              screen: bitmap ? file('screen') : undefined,
+              attributes:
+                hasAttributes(charset) || format === 'attributes'
+                  ? file('attributes')
+                  : undefined,
+            })
           }
         />
       )}
@@ -348,6 +347,8 @@ export function MapExportPanel({
     ctm: 'A CharPad project (.ctm version 7) with the charset, a colour and material (attribute) per char and this map. Opens in CharPad 2.8 and later.',
     png: 'An image of the whole map.',
   }
+  const BINS: Array<Format> = ['map', 'colours', 'screen', 'attributes']
+  const file = (f: Format) => `${fileName}${outputs[f]!.extension}`
   const outputs: Record<Format, Output | null> = {
     map: {
       extension: '-map.bin',
@@ -448,21 +449,19 @@ export function MapExportPanel({
           <AsmPreview text={asm} />
         </>
       )}
-      {format === 'map' && (
+      {BINS.includes(format) && (
+        // One block for all the .bins, whichever tab it's opened on.
         <ImportCode
           code={() =>
-            mapImport(map, charset, `${fileName}${outputs.map!.extension}`)
-          }
-        />
-      )}
-      {format === 'attributes' && (
-        <ImportCode
-          code={() =>
-            mapAttributesImport(
-              map,
-              charset,
-              `${fileName}${outputs.attributes!.extension}`,
-            )
+            mapBinsImport(map, charset, {
+              map: file('map'),
+              colours: file('colours'),
+              screen: bitmap ? file('screen') : undefined,
+              attributes:
+                hasAttributes(charset) || format === 'attributes'
+                  ? file('attributes')
+                  : undefined,
+            })
           }
         />
       )}

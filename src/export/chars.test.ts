@@ -10,8 +10,7 @@ import {
   setCharsetRegisters,
 } from '@/c64/charset'
 import {
-  charAttributesImport,
-  charsetImport,
+  charsetBinsImport,
   exportCharAttributes,
   exportCharColors,
   exportCharpadCtm,
@@ -21,8 +20,7 @@ import {
   exportMapBin,
   exportMapColors,
   exportMapKickAss,
-  mapAttributesImport,
-  mapImport,
+  mapBinsImport,
   renderMapImage,
 } from './chars'
 
@@ -168,42 +166,56 @@ describe('char attributes', () => {
     expect(asm).toContain('    .byte $00,$02,$00')
   })
 
-  it('gives KickAss code that imports the charset .bin', () => {
-    const asm = charsetImport(sample().cs, 'P-Level tiles-chars.bin')
+  it('gives one KickAss block that imports all the charset .bins', () => {
+    const asm = charsetBinsImport(tagged().cs, {
+      chars: 'P-chars.bin',
+      colours: 'P-colours.bin',
+      attributes: 'P-attributes.bin',
+    })
     expect(asm).toContain('.label level_tiles_d022 = 9')
     expect(asm).toContain(
-      '.align $800\nlevel_tiles_chars:\n    .import binary "P-Level tiles-chars.bin"',
+      '.align $800\nlevel_tiles_chars:\n    .import binary "P-chars.bin"',
+    )
+    expect(asm).toContain(
+      'level_tiles_colours:\n    .import binary "P-colours.bin"',
+    )
+    expect(asm).toContain('.label level_tiles_attr_solid_wall = 2')
+    expect(asm).toContain(
+      'level_tiles_attributes:\n    .import binary "P-attributes.bin"',
+    )
+    expect(asm).toContain('//     lda level_tiles_attributes,x')
+    // Screen RAM is for bitmap charsets only.
+    expect(
+      charsetBinsImport(sample().cs, { screen: 'P-screen.bin' }),
+    ).not.toContain('P-screen.bin')
+    // Left out: not imported.
+    expect(charsetBinsImport(sample().cs, { chars: 'c.bin' })).not.toContain(
+      '_colours',
     )
   })
 
-  it('gives KickAss code that imports the map .bin', () => {
-    const { cs, map } = sample()
-    const asm = mapImport(map, cs, 'P-Level 1-map.bin')
+  it('gives one KickAss block that imports all the map .bins', () => {
+    const { cs, map } = tagged()
+    const asm = mapBinsImport(map, cs, {
+      map: 'P-map.bin',
+      colours: 'P-colours.bin',
+      attributes: 'P-attributes.bin',
+    })
     expect(asm).toContain('.label level_1_width = 3')
+    expect(asm).toContain('level_1_data:\n    .import binary "P-map.bin"')
     expect(asm).toContain(
-      'level_1_data:\n    .import binary "P-Level 1-map.bin"',
+      'level_1_colours:\n    .import binary "P-colours.bin"',
     )
+    expect(asm).toContain('.label level_tiles_attr_solid_wall = 2')
+    expect(asm).toContain('//     level_1_data + row * level_1_width + column')
     // Only a full screen gets the copy loop.
     expect(asm).not.toContain('bne copy')
     const screen = createCharmap({ charsetId: cs.id, width: 40, height: 25 })
-    const full = mapImport(screen, cs, 'm.bin')
+    const full = mapBinsImport(screen, cs, { map: 'm.bin', colours: 'c.bin' })
     expect(full).toContain('//     lda map_data + 750,x')
     expect(full).toContain('//     sta $0400 + 750,x')
-  })
-
-  it('gives KickAss code that imports the attributes .bin', () => {
-    const { cs, map } = tagged()
-    const chars = charAttributesImport(cs, 'P-Level tiles-attributes.bin')
-    expect(chars).toContain('.label level_tiles_attr_solid_wall = 2')
-    expect(chars).toContain(
-      'level_tiles_attributes:\n    .import binary "P-Level tiles-attributes.bin"',
-    )
-    const cells = mapAttributesImport(map, cs, 'P-Level 1-attributes.bin')
-    expect(cells).toContain('.label level_1_width = 3')
-    expect(cells).toContain('.label level_tiles_attr_solid_wall = 2')
-    expect(cells).toContain(
-      'level_1_attributes:\n    .import binary "P-Level 1-attributes.bin"',
-    )
+    expect(full).toContain('//     lda map_colours + 750,x')
+    expect(full).toContain('//     sta $d800 + 750,x')
   })
 
   it('writes attributes per map cell in KickAss when asked', () => {
