@@ -55,6 +55,12 @@ body {
   --color-ok-foreground: var(--ok-foreground);
   --color-warn: var(--warn);
   --color-warn-foreground: var(--warn-foreground);
+  --color-code-comment: var(--code-comment);
+  --color-code-directive: var(--code-directive);
+  --color-code-mnemonic: var(--code-mnemonic);
+  --color-code-number: var(--code-number);
+  --color-code-string: var(--code-string);
+  --color-code-label: var(--code-label);
   --color-c64-screen: var(--c64-screen);
   --color-c64-border: var(--c64-border);
   --color-sidebar-ring: var(--sidebar-ring);
@@ -158,6 +164,13 @@ body {
   --sidebar-accent-foreground: #2e2c9b;
   --sidebar-border: var(--rule-soft);
   --sidebar-ring: #2e2c9b;
+  /* KickAssembler source (src/editor/asm-code.tsx), on --muted. */
+  --code-comment: #74716a;
+  --code-directive: #2e2c9b;
+  --code-mnemonic: #8a2f8f;
+  --code-number: #a14a12;
+  --code-string: #2c6e35;
+  --code-label: #0d6672;
 }
 
 /* Dark: the worksheet on a desk at night. Charcoal paper, pale pencil rules,
@@ -208,6 +221,12 @@ body {
     --sidebar-accent: #2b2a52;
     --sidebar-accent-foreground: #c9c7ff;
     --sidebar-ring: #8b88f2;
+    --code-comment: #8f8d85;
+    --code-directive: #aeabff;
+    --code-mnemonic: #e6a1ec;
+    --code-number: #f2b27a;
+    --code-string: #a3dc9e;
+    --code-label: #7fd3dc;
   }
 }
 

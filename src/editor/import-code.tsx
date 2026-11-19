@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Check, Copy } from 'lucide-react'
+import { AsmCode } from './asm-code'
 import { Button } from '@/components/ui/button'
 
 /** "Show KickAss code to import the .bin": code to copy into your source. */
@@ -20,9 +21,7 @@ export function ImportCode({ code }: { code: () => string }) {
       </label>
       {on && (
         <div className="relative">
-          <pre className="max-h-48 overflow-auto rounded-lg border border-rule-soft bg-muted p-3 pr-24 font-mono text-[11px] leading-snug select-text">
-            {text}
-          </pre>
+          <AsmCode text={text} className="pr-24" />
           <Button
             size="sm"
             variant="outline"

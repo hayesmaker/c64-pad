@@ -23,6 +23,7 @@ import {
 import { indexedImageToPng } from '@/platform/png'
 import { usePalette } from '@/components/c64/palette-context'
 import { safeFileName, saveFile } from '@/platform/save-file'
+import { AsmCode } from '../asm-code'
 import { ImportCode } from '../import-code'
 import { Segmented } from '../segmented'
 import type { PadByte, SpriteRange } from '@/export/sprites'
@@ -309,12 +310,7 @@ export function RunExportSpritesDialog({
               />
             )}
 
-            {format === 'asm' && asm && (
-              <pre className="max-h-48 overflow-auto rounded-lg border border-rule-soft bg-muted p-3 font-mono text-[11px] leading-snug">
-                {asm.split('\n').slice(0, 40).join('\n')}
-                {asm.split('\n').length > 40 ? '\n…' : ''}
-              </pre>
-            )}
+            {format === 'asm' && asm && <AsmCode text={asm} maxLines={40} />}
 
             {format === 'spd' && spd && (
               <div className="flex flex-col gap-1 text-sm">

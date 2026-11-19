@@ -27,6 +27,7 @@ import { DialogFooter } from '@/components/ui/dialog'
 import { indexedImageToPng } from '@/platform/png'
 import { usePalette } from '@/components/c64/palette-context'
 import { safeFileName, saveFile } from '@/platform/save-file'
+import { AsmCode } from './asm-code'
 import { ImportCode } from './import-code'
 import { Segmented } from './segmented'
 import type { IndexedImage } from '@/c64/render'
@@ -256,13 +257,7 @@ export function CharsetExportPanel({
 }
 
 function AsmPreview({ text }: { text: string }) {
-  const lines = text.split('\n')
-  return (
-    <pre className="max-h-48 overflow-auto rounded-lg border border-rule-soft bg-muted p-3 font-mono text-[11px] leading-snug">
-      {lines.slice(0, 40).join('\n')}
-      {lines.length > 40 ? '\n…' : ''}
-    </pre>
-  )
+  return <AsmCode text={text} maxLines={40} />
 }
 
 /** Export tab of the Screen Worksheet. */
