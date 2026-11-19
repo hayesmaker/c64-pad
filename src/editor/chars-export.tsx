@@ -18,6 +18,7 @@ import {
   exportMapScreenRam,
   hasAttributes,
   mapAttributesImport,
+  mapImport,
   renderMapImage,
 } from '@/export/chars'
 import { IndexedCanvas } from '@/components/c64/indexed-canvas'
@@ -446,6 +447,13 @@ export function MapExportPanel({
           </div>
           <AsmPreview text={asm} />
         </>
+      )}
+      {format === 'map' && (
+        <ImportCode
+          code={() =>
+            mapImport(map, charset, `${fileName}${outputs.map!.extension}`)
+          }
+        />
       )}
       {format === 'attributes' && (
         <ImportCode

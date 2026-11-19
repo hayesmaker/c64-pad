@@ -146,6 +146,44 @@ export function charAttributesImport(cs: Charset, fileName: string): string {
 }
 
 /**
+ * KickAssembler lines that pull in a map .bin (made by exportMapBin) with
+ * `.import binary`, with its size; a 40 x 25 char map gets a loop that copies
+ * it to the screen.
+ */
+export function mapImport(map: Charmap, cs: Charset, fileName: string): string {
+  const prefix = asmLabel(map.name, 'map')
+  const what = cs.mode === 'bitmap' ? 'tile number' : 'screen code'
+  const lines = [
+    `// Map "${map.name}": one ${what} per cell, row by row`,
+    `.label ${prefix}_width = ${map.width}`,
+    `.label ${prefix}_height = ${map.height}`,
+    '',
+    `${prefix}_data:`,
+    `    .import binary "${fileName}"`,
+    '',
+    `// The ${what} at (column, row) is at`,
+    `//     ${prefix}_data + row * ${prefix}_width + column`,
+  ]
+  if (cs.mode !== 'bitmap' && map.width === 40 && map.height === 25) {
+    lines.push(
+      '',
+      '// Copy it to the screen at $0400 (1000 bytes, 4 x 250):',
+      '//     ldx #0',
+      '//     copy:',
+      ...[0, 250, 500, 750].flatMap((o) => [
+        `//     lda ${prefix}_data${o ? ` + ${o}` : ''},x`,
+        `//     sta $0400${o ? ` + ${o}` : ''},x`,
+      ]),
+      '//     inx',
+      '//     cpx #250',
+      '//     bne copy',
+    )
+  }
+  lines.push('')
+  return lines.join('\n')
+}
+
+/**
  * KickAssembler lines that pull in a map's attributes .bin (made by
  * exportMapAttributes) with `.import binary`, with its size and labels.
  */

@@ -22,6 +22,7 @@ import {
   exportMapColors,
   exportMapKickAss,
   mapAttributesImport,
+  mapImport,
   renderMapImage,
 } from './chars'
 
@@ -173,6 +174,21 @@ describe('char attributes', () => {
     expect(asm).toContain(
       '.align $800\nlevel_tiles_chars:\n    .import binary "P-Level tiles-chars.bin"',
     )
+  })
+
+  it('gives KickAss code that imports the map .bin', () => {
+    const { cs, map } = sample()
+    const asm = mapImport(map, cs, 'P-Level 1-map.bin')
+    expect(asm).toContain('.label level_1_width = 3')
+    expect(asm).toContain(
+      'level_1_data:\n    .import binary "P-Level 1-map.bin"',
+    )
+    // Only a full screen gets the copy loop.
+    expect(asm).not.toContain('bne copy')
+    const screen = createCharmap({ charsetId: cs.id, width: 40, height: 25 })
+    const full = mapImport(screen, cs, 'm.bin')
+    expect(full).toContain('//     lda map_data + 750,x')
+    expect(full).toContain('//     sta $0400 + 750,x')
   })
 
   it('gives KickAss code that imports the attributes .bin', () => {
