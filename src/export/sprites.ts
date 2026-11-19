@@ -160,6 +160,44 @@ export function exportSpritesKickAss(
   return lines.join('\n')
 }
 
+/**
+ * KickAssembler lines that pull in a sprites .bin (made by exportSpritesBin)
+ * with `.import binary`: colours and a label per sprite.
+ */
+export function spritesImport(
+  set: SpriteSet,
+  fileName: string,
+  { range = fullRange(set) }: { range?: SpriteRange } = {},
+): string {
+  const sprites = spritesIn(set, range)
+  const prefix = asmLabel(set.name, 'sprites')
+  const colour = (c: C64Color) => `${c} // ${COLOR_NAMES[c]}`
+  return [
+    `// Sprite set "${set.name}": sprites ${range.from}-${range.to}, 64 bytes each`,
+    `.label ${prefix}_count = ${sprites.length}`,
+    `.label ${prefix}_mc1 = ${colour(set.multicolor1)} ($d025)`,
+    `.label ${prefix}_mc2 = ${colour(set.multicolor2)} ($d026)`,
+    ...sprites.map(
+      (sprite, i) =>
+        `.label ${prefix}_${range.from + i}_color = ${colour(sprite.color)} ($d027+n)`,
+    ),
+    '',
+    '// Sprite pointers are address / 64, so keep it on a 64-byte boundary',
+    '.align $40',
+    `${prefix}:`,
+    `    .import binary "${fileName}"`,
+    ...sprites.map(
+      (sprite, i) =>
+        `.label ${prefix}_${range.from + i} = ${prefix} + ${i * SPRITE_STRIDE}  // ${sprite.name.replace(/[\r\n]/g, ' ')}`,
+    ),
+    '',
+    `// Show sprite ${range.from} as sprite 0 (screen at $0400, VIC bank 0):`,
+    `//     lda #(${prefix}_${range.from} & $3fff) / 64`,
+    '//     sta $07f8',
+    '',
+  ].join('\n')
+}
+
 export interface SpdResult {
   bytes: Uint8Array
   /** Things SPD V1 can't store, which were left out. */

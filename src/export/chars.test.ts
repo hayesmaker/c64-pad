@@ -11,6 +11,7 @@ import {
 } from '@/c64/charset'
 import {
   charAttributesImport,
+  charsetImport,
   exportCharAttributes,
   exportCharColors,
   exportCharpadCtm,
@@ -164,6 +165,14 @@ describe('char attributes', () => {
     expect(asm).toContain('.label level_tiles_attr_solid_wall_3 = 3')
     expect(asm).toContain('level_tiles_attributes:')
     expect(asm).toContain('    .byte $00,$02,$00')
+  })
+
+  it('gives KickAss code that imports the charset .bin', () => {
+    const asm = charsetImport(sample().cs, 'P-Level tiles-chars.bin')
+    expect(asm).toContain('.label level_tiles_d022 = 9')
+    expect(asm).toContain(
+      '.align $800\nlevel_tiles_chars:\n    .import binary "P-Level tiles-chars.bin"',
+    )
   })
 
   it('gives KickAss code that imports the attributes .bin', () => {

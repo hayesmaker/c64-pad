@@ -8,6 +8,7 @@ import {
   exportSpritesSpd,
   renderSpriteSheet,
   spriteAttributeByte,
+  spritesImport,
 } from './sprites'
 
 function sampleSet() {
@@ -95,6 +96,21 @@ describe('KickAssembler source', () => {
       .split('\n')
       .filter((l) => l.trimStart().startsWith('.byte'))
     expect(dataLines).toHaveLength(3 * 22)
+  })
+})
+
+describe('KickAss code to import the .bin', () => {
+  it('labels each sprite in the range by its offset', () => {
+    const src = spritesImport(sampleSet(), 'P-Ships.bin', {
+      range: { from: 1, to: 2 },
+    })
+    expect(src).toContain('.label ships_count = 2')
+    expect(src).toContain('.label ships_1_color = 7 // Yellow ($d027+n)')
+    expect(src).toContain(
+      '.align $40\nships:\n    .import binary "P-Ships.bin"',
+    )
+    expect(src).toContain('.label ships_1 = ships + 0  // Flame')
+    expect(src).toContain('.label ships_2 = ships + 64  // Blank')
   })
 })
 

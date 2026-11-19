@@ -6,6 +6,7 @@ import {
   exportSpritesKickAss,
   exportSpritesSpd,
   renderSpriteSheet,
+  spritesImport,
 } from '@/export/sprites'
 import { IndexedCanvas } from '@/components/c64/indexed-canvas'
 import { Field } from '@/components/worksheet/field'
@@ -22,6 +23,7 @@ import {
 import { indexedImageToPng } from '@/platform/png'
 import { usePalette } from '@/components/c64/palette-context'
 import { safeFileName, saveFile } from '@/platform/save-file'
+import { ImportCode } from '../import-code'
 import { Segmented } from '../segmented'
 import type { PadByte, SpriteRange } from '@/export/sprites'
 import type { C64Color } from '@/c64/palette'
@@ -299,6 +301,12 @@ export function RunExportSpritesDialog({
                   />
                 </div>
               </div>
+            )}
+
+            {format === 'bin' && range && (
+              <ImportCode
+                code={() => spritesImport(set, `${baseName}.bin`, { range })}
+              />
             )}
 
             {format === 'asm' && asm && (

@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react'
-import { Check, Copy, Download } from 'lucide-react'
+import { Download } from 'lucide-react'
 import { renderCharsetSheet } from '@/c64/render'
 import {
   charAttributesImport,
+  charsetImport,
   exportCharAttributes,
   exportCharColors,
   exportCharScreenColors,
@@ -26,6 +27,7 @@ import { DialogFooter } from '@/components/ui/dialog'
 import { indexedImageToPng } from '@/platform/png'
 import { usePalette } from '@/components/c64/palette-context'
 import { safeFileName, saveFile } from '@/platform/save-file'
+import { ImportCode } from './import-code'
 import { Segmented } from './segmented'
 import type { IndexedImage } from '@/c64/render'
 import type { Charmap } from '@/c64/charmap'
@@ -219,8 +221,15 @@ export function CharsetExportPanel({
         onChange={setFormat}
       />
       {format === 'asm' && <AsmPreview text={asm} />}
+      {format === 'chars' && (
+        <ImportCode
+          code={() =>
+            charsetImport(charset, `${fileName}${outputs.chars.extension}`)
+          }
+        />
+      )}
       {format === 'attributes' && (
-        <AttributesImport
+        <ImportCode
           code={() =>
             charAttributesImport(
               charset,
@@ -253,51 +262,6 @@ function AsmPreview({ text }: { text: string }) {
       {lines.slice(0, 40).join('\n')}
       {lines.length > 40 ? '\n…' : ''}
     </pre>
-  )
-}
-
-/** "KickAss import" on the Attributes tab: code to copy into your source. */
-function AttributesImport({ code }: { code: () => string }) {
-  const [on, setOn] = useState(false)
-  const [copied, setCopied] = useState(false)
-  const text = on ? code() : ''
-  return (
-    <>
-      <label className="flex items-center gap-2 text-sm">
-        <input
-          type="checkbox"
-          className="size-4 accent-primary"
-          checked={on}
-          onChange={(e) => setOn(e.target.checked)}
-        />
-        Show KickAss code to import the .bin
-      </label>
-      {on && (
-        <div className="relative">
-          <pre className="max-h-48 overflow-auto rounded-lg border border-rule-soft bg-muted p-3 pr-24 font-mono text-[11px] leading-snug select-text">
-            {text}
-          </pre>
-          <Button
-            size="sm"
-            variant="outline"
-            className="absolute top-2 right-2"
-            onClick={() => {
-              void navigator.clipboard.writeText(text).then(() => {
-                setCopied(true)
-                setTimeout(() => setCopied(false), 1500)
-              })
-            }}
-          >
-            {copied ? (
-              <Check aria-hidden="true" />
-            ) : (
-              <Copy aria-hidden="true" />
-            )}
-            {copied ? 'Copied' : 'Copy'}
-          </Button>
-        </div>
-      )}
-    </>
   )
 }
 
@@ -489,7 +453,7 @@ export function MapExportPanel({
         </>
       )}
       {format === 'attributes' && (
-        <AttributesImport
+        <ImportCode
           code={() =>
             mapAttributesImport(
               map,

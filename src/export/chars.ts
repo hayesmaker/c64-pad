@@ -103,6 +103,30 @@ function attributeLabels(cs: Charset, prefix: string): Array<string> {
 }
 
 /**
+ * KickAssembler lines that pull in the charset .bin (made by
+ * exportCharsetBin) with `.import binary`, with its register values.
+ */
+export function charsetImport(cs: Charset, fileName: string): string {
+  const prefix = asmLabel(cs.name, 'charset')
+  const size = exportCharsetBin(cs).length
+  return [
+    ...registerLabels(cs, prefix),
+    '',
+    `// ${size} bytes; the VIC needs it on a $800 boundary`,
+    '.align $800',
+    `${prefix}_chars:`,
+    `    .import binary "${fileName}"`,
+    '',
+    '// Point the VIC at it (bits 1-3 of $D018), within its 16K bank:',
+    '//     lda $d018',
+    '//     and #%11110001',
+    `//     ora #((${prefix}_chars & $3fff) / $800) << 1`,
+    '//     sta $d018',
+    '',
+  ].join('\n')
+}
+
+/**
  * KickAssembler lines that pull in the charset's attributes .bin (made by
  * exportCharAttributes) with `.import binary`, plus the named attributes'
  * labels and an example lookup.
@@ -243,7 +267,8 @@ const MODE_NAME = {
   bitmap: 'multicolour bitmap',
 } as const
 
-function charsetSource(cs: Charset, prefix: string): Array<string> {
+/** The charset's name, mode and register values as `.label`s. */
+function registerLabels(cs: Charset, prefix: string): Array<string> {
   const r = charsetRegisters(cs)
   const lines = [
     `// Charset "${cs.name}", ${MODE_NAME[cs.mode]}`,
@@ -268,6 +293,11 @@ function charsetSource(cs: Charset, prefix: string): Array<string> {
       `.label ${prefix}_d024 = ${r.d024}  // ECM background 3`,
     )
   }
+  return lines
+}
+
+function charsetSource(cs: Charset, prefix: string): Array<string> {
+  const lines = registerLabels(cs, prefix)
   const data = exportCharsetBin(cs)
   lines.push(
     '',
