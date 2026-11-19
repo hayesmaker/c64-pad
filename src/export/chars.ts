@@ -102,6 +102,49 @@ function attributeLabels(cs: Charset, prefix: string): Array<string> {
   return lines
 }
 
+/**
+ * KickAssembler lines that pull in the charset's attributes .bin (made by
+ * exportCharAttributes) with `.import binary`, plus the named attributes'
+ * labels and an example lookup.
+ */
+export function charAttributesImport(cs: Charset, fileName: string): string {
+  const prefix = asmLabel(cs.name, 'charset')
+  return [
+    `// Attributes of charset "${cs.name}": one byte (0-15) per screen code`,
+    ...attributeLabels(cs, prefix),
+    `${prefix}_attributes:`,
+    `    .import binary "${fileName}"`,
+    '',
+    '// The attribute of the screen code in X:',
+    `//     lda ${prefix}_attributes,x`,
+    '',
+  ].join('\n')
+}
+
+/**
+ * KickAssembler lines that pull in a map's attributes .bin (made by
+ * exportMapAttributes) with `.import binary`, with its size and labels.
+ */
+export function mapAttributesImport(
+  map: Charmap,
+  cs: Charset,
+  fileName: string,
+): string {
+  const prefix = asmLabel(map.name, 'map')
+  return [
+    `// Attributes of map "${map.name}": one byte (0-15) per cell, row by row`,
+    `.label ${prefix}_width = ${map.width}`,
+    `.label ${prefix}_height = ${map.height}`,
+    ...attributeLabels(cs, asmLabel(cs.name, 'charset')),
+    `${prefix}_attributes:`,
+    `    .import binary "${fileName}"`,
+    '',
+    `// The attribute of the cell at (column, row) is at`,
+    `//     ${prefix}_attributes + row * ${prefix}_width + column`,
+    '',
+  ].join('\n')
+}
+
 /** Screen codes, one byte per cell, left to right then top to bottom. */
 export function exportMapBin(map: Charmap): Uint8Array {
   return map.cells.slice()

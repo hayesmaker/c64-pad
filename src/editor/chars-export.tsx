@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react'
-import { Download } from 'lucide-react'
+import { Check, Copy, Download } from 'lucide-react'
 import { renderCharsetSheet } from '@/c64/render'
 import {
+  charAttributesImport,
   exportCharAttributes,
   exportCharColors,
   exportCharScreenColors,
@@ -15,6 +16,7 @@ import {
   exportMapKickAss,
   exportMapScreenRam,
   hasAttributes,
+  mapAttributesImport,
   renderMapImage,
 } from '@/export/chars'
 import { IndexedCanvas } from '@/components/c64/indexed-canvas'
@@ -153,6 +155,7 @@ export function CharsetExportPanel({
     [format, charset, project.name],
   )
   const charsBin = exportCharsetBin(charset)
+  const fileName = `${safeFileName(project.name)}-${safeFileName(charset.name)}`
   const about: Record<Format, string> = {
     chars: `The charset as the VIC reads it, 8 bytes per char${charset.mode === 'ecm' ? ' (ECM: the 64 shapes)' : ''}. Load it on a $800 boundary.`,
     colours: bitmap
@@ -216,6 +219,16 @@ export function CharsetExportPanel({
         onChange={setFormat}
       />
       {format === 'asm' && <AsmPreview text={asm} />}
+      {format === 'attributes' && (
+        <AttributesImport
+          code={() =>
+            charAttributesImport(
+              charset,
+              `${fileName}${outputs.attributes.extension}`,
+            )
+          }
+        />
+      )}
       {format === 'png' && (
         <PngOptions
           image={sheet}
@@ -225,7 +238,7 @@ export function CharsetExportPanel({
         />
       )}
       <SaveFooter
-        fileName={`${safeFileName(project.name)}-${safeFileName(charset.name)}`}
+        fileName={fileName}
         output={outputs[format]}
         onClose={onClose}
       />
@@ -240,6 +253,51 @@ function AsmPreview({ text }: { text: string }) {
       {lines.slice(0, 40).join('\n')}
       {lines.length > 40 ? '\n…' : ''}
     </pre>
+  )
+}
+
+/** "KickAss import" on the Attributes tab: code to copy into your source. */
+function AttributesImport({ code }: { code: () => string }) {
+  const [on, setOn] = useState(false)
+  const [copied, setCopied] = useState(false)
+  const text = on ? code() : ''
+  return (
+    <>
+      <label className="flex items-center gap-2 text-sm">
+        <input
+          type="checkbox"
+          className="size-4 accent-primary"
+          checked={on}
+          onChange={(e) => setOn(e.target.checked)}
+        />
+        Show KickAss code to import the .bin
+      </label>
+      {on && (
+        <div className="relative">
+          <pre className="max-h-48 overflow-auto rounded-lg border border-rule-soft bg-muted p-3 pr-24 font-mono text-[11px] leading-snug select-text">
+            {text}
+          </pre>
+          <Button
+            size="sm"
+            variant="outline"
+            className="absolute top-2 right-2"
+            onClick={() => {
+              void navigator.clipboard.writeText(text).then(() => {
+                setCopied(true)
+                setTimeout(() => setCopied(false), 1500)
+              })
+            }}
+          >
+            {copied ? (
+              <Check aria-hidden="true" />
+            ) : (
+              <Copy aria-hidden="true" />
+            )}
+            {copied ? 'Copied' : 'Copy'}
+          </Button>
+        </div>
+      )}
+    </>
   )
 }
 
@@ -313,6 +371,7 @@ export function MapExportPanel({
     [format, map, charset],
   )
   const cells = map.width * map.height
+  const fileName = `${safeFileName(project.name)}-${safeFileName(map.name)}`
   const about: Record<Format, string> = {
     map: bitmap
       ? `Tile (char) numbers, one byte per cell, row by row (${map.width} per row).`
@@ -429,6 +488,17 @@ export function MapExportPanel({
           <AsmPreview text={asm} />
         </>
       )}
+      {format === 'attributes' && (
+        <AttributesImport
+          code={() =>
+            mapAttributesImport(
+              map,
+              charset,
+              `${fileName}${outputs.attributes!.extension}`,
+            )
+          }
+        />
+      )}
       {format === 'ctm' &&
         ctm?.warnings.map((w) => (
           <p key={w} className="text-sm text-destructive">
@@ -444,7 +514,7 @@ export function MapExportPanel({
         />
       )}
       <SaveFooter
-        fileName={`${safeFileName(project.name)}-${safeFileName(map.name)}`}
+        fileName={fileName}
         output={outputs[format]}
         onClose={onClose}
       />

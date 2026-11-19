@@ -10,6 +10,7 @@ import {
   setCharsetRegisters,
 } from '@/c64/charset'
 import {
+  charAttributesImport,
   exportCharAttributes,
   exportCharColors,
   exportCharpadCtm,
@@ -19,6 +20,7 @@ import {
   exportMapBin,
   exportMapColors,
   exportMapKickAss,
+  mapAttributesImport,
   renderMapImage,
 } from './chars'
 
@@ -162,6 +164,21 @@ describe('char attributes', () => {
     expect(asm).toContain('.label level_tiles_attr_solid_wall_3 = 3')
     expect(asm).toContain('level_tiles_attributes:')
     expect(asm).toContain('    .byte $00,$02,$00')
+  })
+
+  it('gives KickAss code that imports the attributes .bin', () => {
+    const { cs, map } = tagged()
+    const chars = charAttributesImport(cs, 'P-Level tiles-attributes.bin')
+    expect(chars).toContain('.label level_tiles_attr_solid_wall = 2')
+    expect(chars).toContain(
+      'level_tiles_attributes:\n    .import binary "P-Level tiles-attributes.bin"',
+    )
+    const cells = mapAttributesImport(map, cs, 'P-Level 1-attributes.bin')
+    expect(cells).toContain('.label level_1_width = 3')
+    expect(cells).toContain('.label level_tiles_attr_solid_wall = 2')
+    expect(cells).toContain(
+      'level_1_attributes:\n    .import binary "P-Level 1-attributes.bin"',
+    )
   })
 
   it('writes attributes per map cell in KickAss when asked', () => {
