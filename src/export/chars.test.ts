@@ -192,6 +192,12 @@ describe('char attributes', () => {
     expect(charsetBinsImport(sample().cs, { chars: 'c.bin' })).not.toContain(
       '_colours',
     )
+    // One table alone (its own tab): no register values, no $D018.
+    const alone = charsetBinsImport(tagged().cs, { attributes: 'a.bin' })
+    expect(alone).toContain('// Charset "Level tiles"')
+    expect(alone).not.toContain('_d022')
+    expect(alone).not.toContain('$D018')
+    expect(alone).toContain('//     lda level_tiles_attributes,x')
   })
 
   it('gives one KickAss block that imports all the map .bins', () => {

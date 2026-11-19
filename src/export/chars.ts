@@ -123,7 +123,9 @@ const importBinary = (label: string, fileName: string) => [
 export function charsetBinsImport(cs: Charset, files: CharsetBins): string {
   const prefix = asmLabel(cs.name, 'charset')
   const per = cs.mode === 'bitmap' ? 'per tile' : 'per screen code'
-  const lines = registerLabels(cs, prefix)
+  // The registers go with the chars; a lone table needs only the name.
+  const registers = registerLabels(cs, prefix)
+  const lines = files.chars ? registers : registers.slice(0, 1)
   if (files.chars) {
     lines.push(
       '',

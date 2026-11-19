@@ -145,19 +145,30 @@ export function CharsetExportPanel({
 }) {
   type Format = 'chars' | 'colours' | 'screen' | 'attributes' | 'asm' | 'png'
   const [format, setFormat] = useState<Format>('chars')
+  const [asmStyle, setAsmStyle] = useState<AsmStyle>('bytes')
   const bitmap = charset.mode === 'bitmap'
   const [scale, setScale] = useState(4)
   const palette = usePalette().id
   const sheet = useMemo(() => renderCharsetSheet(charset), [charset])
-  const asm = useMemo(
-    () =>
-      format === 'asm'
-        ? exportCharsetKickAss(charset, { projectName: project.name })
-        : '',
-    [format, charset, project.name],
-  )
+  const fileName = charsetFileName(project, charset)
+  const asm = useMemo(() => {
+    if (format !== 'asm') return ''
+    if (asmStyle === 'bytes')
+      return exportCharsetKickAss(charset, { projectName: project.name })
+    const file = (ext: string) => `${fileName}${ext}`
+    return withHeader(
+      project,
+      charsetBinsImport(charset, {
+        chars: file(CHARS_EXTENSION),
+        colours: file('-colours.bin'),
+        screen: bitmap ? file('-screen.bin') : undefined,
+        attributes: hasAttributes(charset)
+          ? file('-attributes.bin')
+          : undefined,
+      }),
+    )
+  }, [format, asmStyle, charset, project, fileName, bitmap])
   const charsBin = exportCharsetBin(charset)
-  const fileName = `${safeFileName(project.name)}-${safeFileName(charset.name)}`
   const about: Record<Format, string> = {
     chars: `The charset as the VIC reads it, 8 bytes per char${charset.mode === 'ecm' ? ' (ECM: the 64 shapes)' : ''}. Load it on a $800 boundary.`,
     colours: bitmap
@@ -167,14 +178,15 @@ export function CharsetExportPanel({
       'Screen RAM value for each tile 0-255: the colour of 01 in the high nibble, of 10 in the low one.',
     attributes:
       'Attribute (0-15, 0 = none) for each screen code 0-255: a lookup table for game code (solid, ladder, …).',
-    asm: `KickAssembler source: register values, the charset and its colours${hasAttributes(charset) ? ', attributes and attribute names' : ''}.`,
+    asm:
+      asmStyle === 'bytes'
+        ? `KickAssembler source: register values, the charset and its colours${hasAttributes(charset) ? ', attributes and attribute names' : ''}.`
+        : 'KickAssembler source that imports the .bin files (save each from its tab) with their labels and examples.',
     png: 'An image of the whole charset, 16 chars per row.',
   }
-  const BINS: Array<Format> = ['chars', 'colours', 'screen', 'attributes']
-  const file = (f: Format) => `${fileName}${outputs[f].extension}`
   const outputs: Record<Format, Output> = {
     chars: {
-      extension: '-chars.bin',
+      extension: CHARS_EXTENSION,
       data: () => charsBin,
       size: bytes(charsBin.length),
     },
@@ -222,19 +234,21 @@ export function CharsetExportPanel({
         ]}
         onChange={setFormat}
       />
-      {format === 'asm' && <AsmPreview text={asm} />}
-      {BINS.includes(format) && (
-        // One block for all the .bins, whichever tab it's opened on.
+      {format === 'asm' && (
+        <>
+          <AsmStyleToggle value={asmStyle} onChange={setAsmStyle} />
+          <AsmPreview text={asm} />
+        </>
+      )}
+      {(format === 'chars' ||
+        format === 'colours' ||
+        format === 'screen' ||
+        format === 'attributes') && (
+        // Imports this tab's .bin only; the KickAss tab imports them all.
         <ImportCode
           code={() =>
             charsetBinsImport(charset, {
-              chars: file('chars'),
-              colours: file('colours'),
-              screen: bitmap ? file('screen') : undefined,
-              attributes:
-                hasAttributes(charset) || format === 'attributes'
-                  ? file('attributes')
-                  : undefined,
+              [format]: `${fileName}${outputs[format].extension}`,
             })
           }
         />
@@ -253,6 +267,40 @@ export function CharsetExportPanel({
         onClose={onClose}
       />
     </>
+  )
+}
+
+type AsmStyle = 'bytes' | 'bins'
+
+const CHARS_EXTENSION = '-chars.bin'
+
+const charsetFileName = (project: Project, charset: Charset) =>
+  `${safeFileName(project.name)}-${safeFileName(charset.name)}`
+
+const withHeader = (project: Project, source: string) =>
+  `// ${project.name} · made with C64-Pad\n${source}`
+
+/** KickAss tab: the data as .byte rows, or .import binary of the .bins. */
+function AsmStyleToggle({
+  value,
+  onChange,
+}: {
+  value: AsmStyle
+  onChange: (style: AsmStyle) => void
+}) {
+  return (
+    <div className="w-[260px]">
+      <Segmented
+        label="KickAss source"
+        size="sm"
+        value={value}
+        options={[
+          { value: 'bytes', label: 'Raw bytes' },
+          { value: 'bins', label: '.bin imports' },
+        ]}
+        onChange={onChange}
+      />
+    </div>
   )
 }
 
@@ -285,6 +333,7 @@ export function MapExportPanel({
     | 'ctm'
     | 'png'
   const [format, setFormat] = useState<Format>('map')
+  const [asmStyle, setAsmStyle] = useState<AsmStyle>('bytes')
   const bitmap = charset.mode === 'bitmap'
   const big = map.width > 40 || map.height > 25
   const [withColours, setWithColours] = useState(true)
@@ -305,32 +354,46 @@ export function MapExportPanel({
     () => (format === 'png' ? renderMapImage(map, charset) : null),
     [format, map, charset],
   )
-  const asm = useMemo(
-    () =>
-      format === 'asm'
-        ? exportMapKickAss(map, charset, {
-            projectName: project.name,
-            colours: withColours,
-            attributes: withAttributes,
-            charset: withCharset,
-          })
-        : '',
-    [
-      format,
-      map,
-      charset,
-      project.name,
-      withColours,
-      withAttributes,
-      withCharset,
-    ],
-  )
+  const fileName = `${safeFileName(project.name)}-${safeFileName(map.name)}`
+  const asm = useMemo(() => {
+    if (format !== 'asm') return ''
+    if (asmStyle === 'bytes')
+      return exportMapKickAss(map, charset, {
+        projectName: project.name,
+        colours: withColours,
+        attributes: withAttributes,
+        charset: withCharset,
+      })
+    const file = (ext: string) => `${fileName}${ext}`
+    const source = mapBinsImport(map, charset, {
+      map: file('-map.bin'),
+      colours: withColours ? file('-colours.bin') : undefined,
+      screen: withColours && bitmap ? file('-screen.bin') : undefined,
+      attributes: withAttributes ? file('-attributes.bin') : undefined,
+    })
+    const chars = withCharset
+      ? `\n${charsetBinsImport(charset, {
+          chars: `${charsetFileName(project, charset)}${CHARS_EXTENSION}`,
+        })}`
+      : ''
+    return withHeader(project, source + chars)
+  }, [
+    format,
+    asmStyle,
+    map,
+    charset,
+    project,
+    fileName,
+    bitmap,
+    withColours,
+    withAttributes,
+    withCharset,
+  ])
   const ctm = useMemo(
     () => (format === 'ctm' ? exportCharpadCtm(map, charset) : null),
     [format, map, charset],
   )
   const cells = map.width * map.height
-  const fileName = `${safeFileName(project.name)}-${safeFileName(map.name)}`
   const about: Record<Format, string> = {
     map: bitmap
       ? `Tile (char) numbers, one byte per cell, row by row (${map.width} per row).`
@@ -343,12 +406,13 @@ export function MapExportPanel({
     koala: `A Koala Painter picture (.kla, 10003 bytes): bitmap, screen and colour RAM${big ? ` of the screen in view (from column ${start?.x ?? 0}, row ${start?.y ?? 0})` : ''}.`,
     attributes:
       'Attribute (0-15, 0 = none) for every cell, from each char’s attribute, row by row like the map.',
-    asm: 'KickAssembler source: the map’s size and rows, with its colour RAM, attributes and charset if you like.',
+    asm:
+      asmStyle === 'bytes'
+        ? 'KickAssembler source: the map’s size and rows, with its colour RAM, attributes and charset if you like.'
+        : 'KickAssembler source that imports the .bin files (save each from its tab, and the charset’s Chars .bin) with their labels and examples.',
     ctm: 'A CharPad project (.ctm version 7) with the charset, a colour and material (attribute) per char and this map. Opens in CharPad 2.8 and later.',
     png: 'An image of the whole map.',
   }
-  const BINS: Array<Format> = ['map', 'colours', 'screen', 'attributes']
-  const file = (f: Format) => `${fileName}${outputs[f]!.extension}`
   const outputs: Record<Format, Output | null> = {
     map: {
       extension: '-map.bin',
@@ -417,6 +481,7 @@ export function MapExportPanel({
       />
       {format === 'asm' && (
         <>
+          <AsmStyleToggle value={asmStyle} onChange={setAsmStyle} />
           <div className="flex gap-4 text-sm">
             <label className="flex items-center gap-2">
               <input
@@ -449,18 +514,15 @@ export function MapExportPanel({
           <AsmPreview text={asm} />
         </>
       )}
-      {BINS.includes(format) && (
-        // One block for all the .bins, whichever tab it's opened on.
+      {(format === 'map' ||
+        format === 'colours' ||
+        format === 'screen' ||
+        format === 'attributes') && (
+        // Imports this tab's .bin only; the KickAss tab imports them all.
         <ImportCode
           code={() =>
             mapBinsImport(map, charset, {
-              map: file('map'),
-              colours: file('colours'),
-              screen: bitmap ? file('screen') : undefined,
-              attributes:
-                hasAttributes(charset) || format === 'attributes'
-                  ? file('attributes')
-                  : undefined,
+              [format]: `${fileName}${outputs[format]!.extension}`,
             })
           }
         />
