@@ -6,6 +6,7 @@ import {
   Contrast,
   Ellipsis,
   Eraser,
+  Hand,
   Move,
   PaintBucket,
   Pencil,
@@ -24,7 +25,7 @@ import {
 import { useCompact } from '@/lib/compact'
 import { BIT_HEADER_H, ToolButton, zoomLabel } from './grid-parts'
 
-export type PixelTool = 'draw' | 'erase' | 'fill'
+export type PixelTool = 'draw' | 'erase' | 'fill' | 'pan'
 
 const SHIFTS = [
   ['Shift up', 0, -1, ArrowUp],
@@ -34,7 +35,8 @@ const SHIFTS = [
 ] as const
 
 /**
- * The tool bar beside a pixel grid (sprite or char): draw / erase / fill, the
+ * The tool bar beside a pixel grid (sprite or char): draw / erase / fill /
+ * hand, the
  * whole-image transforms, and zoom. On small screens the transforms fold into
  * one menu so the rail fits the height.
  */
@@ -97,6 +99,13 @@ export function PixelToolRail({
         onClick={() => onTool('fill')}
       >
         <PaintBucket />
+      </ToolButton>
+      <ToolButton
+        label="Hand: drag to move around (pinching picks it)"
+        pressed={tool === 'pan'}
+        onClick={() => onTool('pan')}
+      >
+        <Hand />
       </ToolButton>
       <div aria-hidden="true" className="mx-1.5 my-1 h-px bg-rule-soft" />
       {compact ? (

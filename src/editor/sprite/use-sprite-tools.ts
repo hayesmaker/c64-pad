@@ -65,6 +65,7 @@ export function useSpriteTools(
     onStrokeMove: (x, y) => paint(x, y, false),
     onStrokeEnd: history.endGroup,
     onStrokeCancel: history.cancelGroup,
+    onPinch: () => setTool('pan'),
     onDoubleTap: (x, y) => {
       if (tool !== 'draw') return
       // Clear the pixel, as one undo step with the first tap.
@@ -79,10 +80,10 @@ export function useSpriteTools(
     pens,
     pen,
     penDef,
-    /** Choose a pen (for this mode); Erase goes back to Draw. */
+    /** Choose a pen (for this mode); Erase and Hand go back to Draw. */
     choosePen: (v: number) => {
       setPenByMode((p) => ({ ...p, [mode]: v }))
-      if (tool === 'erase') setTool('draw')
+      if (tool === 'erase' || tool === 'pan') setTool('draw')
     },
     /** Recolour the selected pen: the sprite's colour or the set's MC1/MC2. */
     setPenColor: (color: C64Color) => {

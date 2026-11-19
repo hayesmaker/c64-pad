@@ -181,6 +181,7 @@ export function SpriteDesigner({
       onViewChange={onV}
       tracing={trace.grid}
       cursor={pad.cursor}
+      pan={tool === 'pan'}
       {...tools.gridHandlers}
     />
   )
@@ -510,8 +511,8 @@ export function SpriteDesigner({
           rows={21}
           renderGrid={renderGrid}
           tool={tool}
-          // No Hand tool here (canPan is off).
-          onTool={(t) => t !== 'pan' && tools.setTool(t)}
+          onTool={tools.setTool}
+          canPan
           side={
             <ZenPens
               pens={pens}

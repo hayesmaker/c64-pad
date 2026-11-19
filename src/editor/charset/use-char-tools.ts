@@ -106,6 +106,7 @@ export function useCharTools(
     onStrokeMove: (x, y) => paint(x, y, false),
     onStrokeEnd: history.endGroup,
     onStrokeCancel: history.cancelGroup,
+    onPinch: () => setTool('pan'),
     onDoubleTap: (x, y) => {
       if (tool !== 'draw') return
       // Clear the pixel, as one undo step with the first tap.
@@ -125,11 +126,11 @@ export function useCharTools(
     pens,
     pen,
     penDef,
-    /** Choose a pen (for this pixel mode); Erase goes back to Draw. */
+    /** Choose a pen (for this pixel mode); Erase and Hand go back to Draw. */
     choosePen: (v: number) => {
       setPenByMode((p) => ({ ...p, [pixelMode]: v }))
       setEcmTarget(null)
-      if (tool === 'erase') setTool('draw')
+      if (tool === 'erase' || tool === 'pan') setTool('draw')
     },
     ecmTarget,
     /** Recolour an ECM background (pen 0 draws on it). */

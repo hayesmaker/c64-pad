@@ -38,6 +38,7 @@ export function PixelGrid({
   label,
   tracing,
   cursor = null,
+  pan = false,
   ...handlers
 }: {
   /** Size in hires pixels. */
@@ -58,6 +59,8 @@ export function PixelGrid({
   tracing?: GridTracing | null
   /** The gamepad cursor, in editable pixels. */
   cursor?: [number, number] | null
+  /** Hand tool: one finger drags the view instead of drawing. */
+  pan?: boolean
 } & StrokeHandlers) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const scheme = useColorScheme()
@@ -133,6 +136,7 @@ export function PixelGrid({
     handlers,
     view,
     onViewChange,
+    pan,
     toCell: (p) => {
       const size = cell * view.zoom
       const hx = Math.floor((p.x - view.x) / size)
@@ -150,7 +154,7 @@ export function PixelGrid({
       ref={canvasRef}
       role="img"
       aria-label={label}
-      className="touch-surface block cursor-crosshair"
+      className={`touch-surface block ${pan ? 'cursor-grab active:cursor-grabbing' : 'cursor-crosshair'}`}
       style={{ width, height }}
     />
   )

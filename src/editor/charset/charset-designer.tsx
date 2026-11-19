@@ -199,6 +199,7 @@ export function CharsetDesigner({
       label={`Character ${selected} pixel grid, ${mcChar ? '4' : '8'} by 8`}
       tracing={trace.grid}
       cursor={pad.cursor}
+      pan={tools.tool === 'pan'}
       {...tools.gridHandlers}
     />
   )
@@ -501,8 +502,8 @@ export function CharsetDesigner({
           rows={8}
           renderGrid={renderGrid}
           tool={tool}
-          // No Hand tool here (canPan is off).
-          onTool={(t) => t !== 'pan' && tools.setTool(t)}
+          onTool={tools.setTool}
+          canPan
           side={<ZenPens colors={projectColors(project)} {...pensProps} />}
           onUndo={history.undo}
           onRedo={history.redo}

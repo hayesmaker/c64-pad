@@ -24,6 +24,11 @@ export interface StrokeHandlers {
   /** A second finger landed: undo the stroke in progress. */
   onStrokeCancel: () => void
   /**
+   * Two fingers started a pinch (after any stroke was cancelled): editors
+   * switch to the Hand tool, so the fingers lifting don't paint.
+   */
+  onPinch?: () => void
+  /**
    * The same cell was tapped twice quickly. The first tap was a normal stroke;
    * the second starts no stroke.
    */
@@ -133,6 +138,7 @@ export function useGridGestures(
         lastTap = null
         gesture = { ...pinchState(), view: live.current.view }
         gestureLock = true
+        live.current.handlers.onPinch?.()
         return
       }
       if (pointers.size > 1 || gestureLock) return

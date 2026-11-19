@@ -186,6 +186,7 @@ export function useMapStrokes(
       stroke.current = null
       history.cancelGroup()
     },
+    onPinch: () => setTool('pan'),
     // Only painting has a double-tap; other tools take both taps.
     onDoubleTap:
       tool !== 'paint'

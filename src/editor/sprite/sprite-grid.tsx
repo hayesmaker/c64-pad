@@ -36,6 +36,7 @@ export function SpriteGrid({
   onViewChange: (view: GridView) => void
   tracing?: GridTracing | null
   cursor?: [number, number] | null
+  pan?: boolean
 } & StrokeHandlers) {
   const palette = usePalette()
   const { base, overlay } = layers
