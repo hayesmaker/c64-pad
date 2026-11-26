@@ -10,7 +10,10 @@ async function pinch(page: Page, target: Locator) {
   const cx = box.x + box.width / 2
   const cy = box.y + box.height / 2
   const cdp = await page.context().newCDPSession(page)
-  const touch = (type: string, spread: number) =>
+  const touch = (
+    type: 'touchStart' | 'touchMove' | 'touchEnd',
+    spread: number,
+  ) =>
     cdp.send('Input.dispatchTouchEvent', {
       type,
       touchPoints:
