@@ -1,0 +1,103 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="208" viewBox="0 0 720 208" role="img" aria-label="C64-Pad">
+  <title>C64-Pad</title>
+  <rect x="4" y="4" width="712" height="200" rx="12" fill="#fdfcf8" stroke="#8f8d86" stroke-width="2"/>
+  <g>
+    <rect x="44" y="44" width="120" height="120" fill="#fdfcf8"/>
+    <line x1="44" y1="44" x2="44" y2="164" stroke="#8f8d86" stroke-width="1"/>
+    <line x1="44" y1="44" x2="164" y2="44" stroke="#8f8d86" stroke-width="1"/>
+    <line x1="54" y1="44" x2="54" y2="164" stroke="#e0ded6" stroke-width="1"/>
+    <line x1="44" y1="54" x2="164" y2="54" stroke="#e0ded6" stroke-width="1"/>
+    <line x1="64" y1="44" x2="64" y2="164" stroke="#e0ded6" stroke-width="1"/>
+    <line x1="44" y1="64" x2="164" y2="64" stroke="#e0ded6" stroke-width="1"/>
+    <line x1="74" y1="44" x2="74" y2="164" stroke="#e0ded6" stroke-width="1"/>
+    <line x1="44" y1="74" x2="164" y2="74" stroke="#e0ded6" stroke-width="1"/>
+    <line x1="84" y1="44" x2="84" y2="164" stroke="#8f8d86" stroke-width="1"/>
+    <line x1="44" y1="84" x2="164" y2="84" stroke="#8f8d86" stroke-width="1"/>
+    <line x1="94" y1="44" x2="94" y2="164" stroke="#e0ded6" stroke-width="1"/>
+    <line x1="44" y1="94" x2="164" y2="94" stroke="#e0ded6" stroke-width="1"/>
+    <line x1="104" y1="44" x2="104" y2="164" stroke="#e0ded6" stroke-width="1"/>
+    <line x1="44" y1="104" x2="164" y2="104" stroke="#e0ded6" stroke-width="1"/>
+    <line x1="114" y1="44" x2="114" y2="164" stroke="#e0ded6" stroke-width="1"/>
+    <line x1="44" y1="114" x2="164" y2="114" stroke="#e0ded6" stroke-width="1"/>
+    <line x1="124" y1="44" x2="124" y2="164" stroke="#8f8d86" stroke-width="1"/>
+    <line x1="44" y1="124" x2="164" y2="124" stroke="#8f8d86" stroke-width="1"/>
+    <line x1="134" y1="44" x2="134" y2="164" stroke="#e0ded6" stroke-width="1"/>
+    <line x1="44" y1="134" x2="164" y2="134" stroke="#e0ded6" stroke-width="1"/>
+    <line x1="144" y1="44" x2="144" y2="164" stroke="#e0ded6" stroke-width="1"/>
+    <line x1="44" y1="144" x2="164" y2="144" stroke="#e0ded6" stroke-width="1"/>
+    <line x1="154" y1="44" x2="154" y2="164" stroke="#e0ded6" stroke-width="1"/>
+    <line x1="44" y1="154" x2="164" y2="154" stroke="#e0ded6" stroke-width="1"/>
+    <line x1="164" y1="44" x2="164" y2="164" stroke="#8f8d86" stroke-width="1"/>
+    <line x1="44" y1="164" x2="164" y2="164" stroke="#8f8d86" stroke-width="1"/>
+    <rect x="95" y="45" width="9" height="9" fill="#2e2c9b"/>
+    <rect x="105" y="45" width="9" height="9" fill="#2e2c9b"/>
+    <rect x="85" y="55" width="9" height="9" fill="#2e2c9b"/>
+    <rect x="95" y="55" width="9" height="9" fill="#2e2c9b"/>
+    <rect x="105" y="55" width="9" height="9" fill="#2e2c9b"/>
+    <rect x="115" y="55" width="9" height="9" fill="#2e2c9b"/>
+    <rect x="85" y="65" width="9" height="9" fill="#2e2c9b"/>
+    <rect x="95" y="65" width="9" height="9" fill="#706deb"/>
+    <rect x="105" y="65" width="9" height="9" fill="#706deb"/>
+    <rect x="115" y="65" width="9" height="9" fill="#2e2c9b"/>
+    <rect x="85" y="75" width="9" height="9" fill="#2e2c9b"/>
+    <rect x="95" y="75" width="9" height="9" fill="#706deb"/>
+    <rect x="105" y="75" width="9" height="9" fill="#706deb"/>
+    <rect x="115" y="75" width="9" height="9" fill="#2e2c9b"/>
+    <rect x="85" y="85" width="9" height="9" fill="#2e2c9b"/>
+    <rect x="95" y="85" width="9" height="9" fill="#2e2c9b"/>
+    <rect x="105" y="85" width="9" height="9" fill="#2e2c9b"/>
+    <rect x="115" y="85" width="9" height="9" fill="#2e2c9b"/>
+    <rect x="85" y="95" width="9" height="9" fill="#2e2c9b"/>
+    <rect x="95" y="95" width="9" height="9" fill="#2e2c9b"/>
+    <rect x="105" y="95" width="9" height="9" fill="#2e2c9b"/>
+    <rect x="115" y="95" width="9" height="9" fill="#2e2c9b"/>
+    <rect x="75" y="105" width="9" height="9" fill="#2e2c9b"/>
+    <rect x="85" y="105" width="9" height="9" fill="#2e2c9b"/>
+    <rect x="95" y="105" width="9" height="9" fill="#2e2c9b"/>
+    <rect x="105" y="105" width="9" height="9" fill="#2e2c9b"/>
+    <rect x="115" y="105" width="9" height="9" fill="#2e2c9b"/>
+    <rect x="125" y="105" width="9" height="9" fill="#2e2c9b"/>
+    <rect x="65" y="115" width="9" height="9" fill="#2e2c9b"/>
+    <rect x="75" y="115" width="9" height="9" fill="#2e2c9b"/>
+    <rect x="85" y="115" width="9" height="9" fill="#2e2c9b"/>
+    <rect x="95" y="115" width="9" height="9" fill="#2e2c9b"/>
+    <rect x="105" y="115" width="9" height="9" fill="#2e2c9b"/>
+    <rect x="115" y="115" width="9" height="9" fill="#2e2c9b"/>
+    <rect x="125" y="115" width="9" height="9" fill="#2e2c9b"/>
+    <rect x="135" y="115" width="9" height="9" fill="#2e2c9b"/>
+    <rect x="65" y="125" width="9" height="9" fill="#2e2c9b"/>
+    <rect x="75" y="125" width="9" height="9" fill="#2e2c9b"/>
+    <rect x="95" y="125" width="9" height="9" fill="#2e2c9b"/>
+    <rect x="105" y="125" width="9" height="9" fill="#2e2c9b"/>
+    <rect x="125" y="125" width="9" height="9" fill="#2e2c9b"/>
+    <rect x="135" y="125" width="9" height="9" fill="#2e2c9b"/>
+    <rect x="95" y="135" width="9" height="9" fill="#c46c71"/>
+    <rect x="105" y="135" width="9" height="9" fill="#c46c71"/>
+    <rect x="85" y="145" width="9" height="9" fill="#c46c71"/>
+    <rect x="95" y="145" width="9" height="9" fill="#edf171"/>
+    <rect x="105" y="145" width="9" height="9" fill="#edf171"/>
+    <rect x="115" y="145" width="9" height="9" fill="#c46c71"/>
+    <rect x="95" y="155" width="9" height="9" fill="#c46c71"/>
+    <rect x="105" y="155" width="9" height="9" fill="#c46c71"/>
+  </g>
+  <text x="200" y="104" font-family="'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif" font-size="68" font-weight="300" fill="#2b2b28">C64-Pad</text>
+  <line x1="202" y1="122" x2="676" y2="122" stroke="#8f8d86" stroke-width="1.5"/>
+  <line x1="202" y1="127" x2="676" y2="127" stroke="#8f8d86" stroke-width="1.5"/>
+  <text x="202" y="154" font-family="'IBM Plex Mono', Menlo, Consolas, monospace" font-size="17" fill="#66645e">Commodore 64 graphics, drawn on a worksheet</text>
+  <rect x="202" y="168" width="27" height="10" rx="2" fill="#000000" stroke="#c9c7bf" stroke-width="0.5"/>
+  <rect x="231.6" y="168" width="27" height="10" rx="2" fill="#ffffff" stroke="#c9c7bf" stroke-width="0.5"/>
+  <rect x="261.2" y="168" width="27" height="10" rx="2" fill="#813338" stroke="#c9c7bf" stroke-width="0.5"/>
+  <rect x="290.8" y="168" width="27" height="10" rx="2" fill="#75cec8" stroke="#c9c7bf" stroke-width="0.5"/>
+  <rect x="320.4" y="168" width="27" height="10" rx="2" fill="#8e3c97" stroke="#c9c7bf" stroke-width="0.5"/>
+  <rect x="350" y="168" width="27" height="10" rx="2" fill="#56ac4d" stroke="#c9c7bf" stroke-width="0.5"/>
+  <rect x="379.6" y="168" width="27" height="10" rx="2" fill="#2e2c9b" stroke="#c9c7bf" stroke-width="0.5"/>
+  <rect x="409.20000000000005" y="168" width="27" height="10" rx="2" fill="#edf171" stroke="#c9c7bf" stroke-width="0.5"/>
+  <rect x="438.8" y="168" width="27" height="10" rx="2" fill="#8e5029" stroke="#c9c7bf" stroke-width="0.5"/>
+  <rect x="468.40000000000003" y="168" width="27" height="10" rx="2" fill="#553800" stroke="#c9c7bf" stroke-width="0.5"/>
+  <rect x="498" y="168" width="27" height="10" rx="2" fill="#c46c71" stroke="#c9c7bf" stroke-width="0.5"/>
+  <rect x="527.6" y="168" width="27" height="10" rx="2" fill="#4a4a4a" stroke="#c9c7bf" stroke-width="0.5"/>
+  <rect x="557.2" y="168" width="27" height="10" rx="2" fill="#7b7b7b" stroke="#c9c7bf" stroke-width="0.5"/>
+  <rect x="586.8" y="168" width="27" height="10" rx="2" fill="#a9ff9f" stroke="#c9c7bf" stroke-width="0.5"/>
+  <rect x="616.4000000000001" y="168" width="27" height="10" rx="2" fill="#706deb" stroke="#c9c7bf" stroke-width="0.5"/>
+  <rect x="646" y="168" width="27" height="10" rx="2" fill="#b2b2b2" stroke="#c9c7bf" stroke-width="0.5"/>
+</svg>

@@ -1,259 +1,101 @@
-Welcome to your new TanStack Start app!
+<p align="center">
+  <img src="docs/userguide/images/logo.svg" alt="C64-Pad" width="640">
+</p>
 
-# Getting Started
+<p align="center">
+  <strong>Draw Commodore 64 sprites, character sets and screens on a tablet, or anywhere else.</strong>
+</p>
 
-To run this application:
+<p align="center">
+  <a href="docs/userguide/README.md"><strong>📖 Read the user guide</strong></a>
+</p>
+
+---
+
+C64-Pad is a touch-first editor for C64 graphics, modelled on the paper
+worksheets C64 artists used to plan their work. It keeps everything inside
+what the real hardware can show, runs your work on a built-in C64 emulator,
+and exports it for your own programs.
+
+- **Sprite Worksheet**: hires and multicolour sprites, hires overlays,
+  animations, X/Y expand
+- **Character Worksheet**: hires, multicolour, ECM and multicolour bitmap
+  charsets, PETSCII starters, char attributes for game code
+- **Screen Worksheet**: maps from one screen up to 1024 × 1024 chars, block
+  brushes, a Navigator for big levels
+- **Tracing paper**: draw over a reference image
+- **Run on C64**: see it on the built-in c64-ready emulator and save a `.prg`
+- **Export**: raw `.bin`, KickAssembler source, SpritePad `.spd`, CharPad
+  `.ctm`, Koala `.kla` and PNG
+- **Import**: Aseprite files (tilemaps as charsets and screens; frames
+  and sprite sheets as sprite sets, with tags as animations), and assets
+  from other projects
+- **Moves with you**: `.c64pad` project files, or the cloud (Google Drive,
+  Dropbox or a DigitalOcean Space)
+- Stylus, finger, mouse or gamepad; light and dark; works offline
+
+<p align="center">
+  <img src="docs/userguide/images/screen-worksheet.jpg" alt="The Screen Worksheet on a tablet, painting a level from a custom charset" width="800">
+</p>
+
+## Quickstart
+
+### 1. Run it
+
+You need [Node.js](https://nodejs.org/) (version 24 is what CI uses).
 
 ```bash
+git clone https://github.com/hayesmaker/c64-pad.git
+cd c64-pad
 npm install
 npm run dev
 ```
 
-# Building For Production
-
-To build this application for production:
-
-```bash
-npm run build
-```
-
-## Testing
-
-```bash
-npm test             # unit tests (Vitest): the C64 model, encoders, importers
-npm run test:e2e     # browser tests (Playwright, Chromium) in e2e/
-npm run test:e2e:ui  # the same, in Playwright's UI mode
-```
-
-The browser tests start their own dev server on port 3100 (or reuse one already
-running there), so `npm run dev` on 3000 can stay open. The first time, install
-the browser with `npx playwright install chromium`. CI runs both suites.
-
-## Styling
-
-This project uses [Tailwind CSS](https://tailwindcss.com/) for styling.
-
-### Removing Tailwind CSS
-
-If you prefer not to use Tailwind CSS:
-
-1. Remove the demo pages in `src/routes/demo/`
-2. Replace the Tailwind import in `src/styles.css` with your own styles
-3. Remove `tailwindcss()` from the plugins array in `vite.config.ts`
-4. Remove `@tailwindcss/vite` and `tailwindcss` from `package.json`
-
-## Linting & Formatting
-
-This project uses [eslint](https://eslint.org/) and [prettier](https://prettier.io/) for linting and formatting. Eslint is configured using [tanstack/eslint-config](https://tanstack.com/config/latest/docs/eslint). The following scripts are available:
-
-```bash
-npm run lint
-npm run format
-npm run check
-```
-
-## Deploy with Nitro
-
-This project uses Nitro as a generic server adapter, so it can run on any Node-compatible host.
-
-```bash
-npm run build
-node .output/server/index.mjs
-```
-
-The build output is a self-contained Node server. To deploy, push the `.output/` directory to your host (Render, Fly.io, your own VPS, etc.) and run the server command above.
-
-For host-specific presets (Vercel, Netlify, Cloudflare, AWS Lambda, etc.) and tuning, see https://v3.nitro.build/deploy.
-
-## Routing
-
-This project uses [TanStack Router](https://tanstack.com/router) with file-based routing. Routes are managed as files in `src/routes`.
-
-### Adding A Route
-
-To add a new route to your application just add a new file in the `./src/routes` directory.
-
-TanStack will automatically generate the content of the route file for you.
-
-Now that you have two routes you can use a `Link` component to navigate between them.
-
-### Adding Links
-
-To use SPA (Single Page Application) navigation you will need to import the `Link` component from `@tanstack/react-router`.
-
-```tsx
-import { Link } from '@tanstack/react-router'
-```
-
-Then anywhere in your JSX you can use it like so:
-
-```tsx
-<Link to="/about">About</Link>
-```
-
-This will create a link that will navigate to the `/about` route.
-
-More information on the `Link` component can be found in the [Link documentation](https://tanstack.com/router/v1/docs/framework/react/api/router/linkComponent).
-
-### Using A Layout
-
-In the File Based Routing setup the layout is located in `src/routes/__root.tsx`. Anything you add to the root route will appear in all the routes. The route content will appear in the JSX where you render `{children}` in the `shellComponent`.
-
-Here is an example layout that includes a header:
-
-```tsx
-import { HeadContent, Scripts, createRootRoute } from '@tanstack/react-router'
-
-export const Route = createRootRoute({
-  head: () => ({
-    meta: [
-      { charSet: 'utf-8' },
-      { name: 'viewport', content: 'width=device-width, initial-scale=1' },
-      { title: 'My App' },
-    ],
-  }),
-  shellComponent: ({ children }) => (
-    <html lang="en">
-      <head>
-        <HeadContent />
-      </head>
-      <body>
-        <header>
-          <nav>
-            <Link to="/">Home</Link>
-            <Link to="/about">About</Link>
-          </nav>
-        </header>
-        {children}
-        <Scripts />
-      </body>
-    </html>
-  ),
-})
-```
-
-More information on layouts can be found in the [Layouts documentation](https://tanstack.com/router/latest/docs/framework/react/guide/routing-concepts#layouts).
-
-## Server Functions
-
-TanStack Start provides server functions that allow you to write server-side code that seamlessly integrates with your client components.
-
-```tsx
-import { createServerFn } from '@tanstack/react-start'
-
-const getServerTime = createServerFn({
-  method: 'GET',
-}).handler(async () => {
-  return new Date().toISOString()
-})
-
-// Use in a component
-function MyComponent() {
-  const [time, setTime] = useState('')
-
-  useEffect(() => {
-    getServerTime().then(setTime)
-  }, [])
-
-  return <div>Server time: {time}</div>
-}
-```
-
-## API Routes
-
-You can create API routes by using the `server` property in your route definitions:
-
-```tsx
-import { createFileRoute } from '@tanstack/react-router'
-import { json } from '@tanstack/react-start'
-
-export const Route = createFileRoute('/api/hello')({
-  server: {
-    handlers: {
-      GET: () => json({ message: 'Hello, World!' }),
-    },
-  },
-})
-```
-
-## Data Fetching
-
-There are multiple ways to fetch data in your application. You can use TanStack Query to fetch data from a server. But you can also use the `loader` functionality built into TanStack Router to load the data for a route before it's rendered.
-
-For example:
-
-```tsx
-import { createFileRoute } from '@tanstack/react-router'
-
-export const Route = createFileRoute('/people')({
-  loader: async () => {
-    const response = await fetch('https://swapi.dev/api/people')
-    return response.json()
-  },
-  component: PeopleComponent,
-})
-
-function PeopleComponent() {
-  const data = Route.useLoaderData()
-  return (
-    <ul>
-      {data.results.map((person) => (
-        <li key={person.name}>{person.name}</li>
-      ))}
-    </ul>
-  )
-}
-```
-
-Loaders simplify your data fetching logic dramatically. Check out more information in the [Loader documentation](https://tanstack.com/router/latest/docs/framework/react/guide/data-loading#loader-parameters).
-
-# Learn More
-
-You can learn more about all of the offerings from TanStack in the [TanStack documentation](https://tanstack.com).
-
-For TanStack Start specific documentation, visit [TanStack Start](https://tanstack.com/start).
-
-## Running on an Android device
-
-Builds the web app, syncs it into `android/` and installs a debug build.
-
-```zsh
-adb devices -l                                  # find the device serial / ip:port
-ANDROID_TARGET=192.168.0.34:5555 npm run android:run
-```
-
-Without `ANDROID_TARGET`, adb uses the only connected device (it stops if
-there are several).
-
-**Your projects are safe across installs.** `android:run` installs with
-`adb install -r`, which keeps the app's data. It never uninstalls: if the
-device's copy was signed with a different key, it stops and explains instead
-(uninstalling deletes every project on the device). Debug builds are signed
-with `android/app/debug.keystore`, which is committed, so every computer and
-Android Studio sign the same way. It's a standard debug key, never for release.
-
-Over USB, no IP is needed: use the serial from `adb devices -l` as the target
-(e.g. `ANDROID_TARGET=PDNP06J000033459`).
-
-**Linux: "no permissions (missing udev rules?)"** means adb can see the device
-but your user can't open it. Find the vendor ID with `lsusb` (`19d2` for
-ZTE/RedMagic), add a rule, then replug and accept "Allow USB debugging?" on
-the tablet (your user must be in `plugdev`):
-
-```zsh
-echo 'SUBSYSTEM=="usb", ATTR{idVendor}=="19d2", MODE="0660", GROUP="plugdev"' \
-  | sudo tee /etc/udev/rules.d/51-android.rules
-sudo udevadm control --reload-rules && sudo udevadm trigger
-```
-
-Wireless adb via a one-off USB connection (works on any Android):
-
-```zsh
-adb shell ip -f inet addr show wlan0 | grep inet  # the tablet's IP (or Settings → About → Status)
-adb tcpip 5555 && adb connect <tablet-ip>:5555   # then unplug
-```
-
-"Connection refused" straight after `adb tcpip` just means the tablet's adb
-hadn't restarted yet: run `adb connect <tablet-ip>:5555` again.
-
-TCP mode lasts until the tablet reboots.
+Open <http://localhost:3000> in your browser. (To try it from a tablet on the
+same network, run `npm run dev -- --host` and open the address it prints.)
+A fuller install guide, including the Android app, is on the way;
+until then, developer notes are in [docs/development.md](docs/development.md).
+
+### 2. Draw a sprite
+
+1. Tap **New project**, name it and tap **Create**.
+2. Tap the **Sprites 1** card to open the Sprite Worksheet.
+3. Draw on the grid. Double-tap a pixel to clear it; pinch to zoom.
+4. Under _Sprite mode_, tap **Multi-colour** for four colours with wide
+   pixels, and pick a pen to draw with.
+
+### 3. Build a screen
+
+1. Tap **CHARS** on the right edge of the sheet and draw a few characters.
+2. Tap **SCREEN**, pick a char from the brush panel and paint it onto the
+   map.
+
+### 4. See it on a C64
+
+Tap **Run & export** → **Run on C64** → **Run**. When you're happy, use
+**Export files** to save it for your assembler.
+
+Everything saves automatically on your device. To back up a project, use
+**⋮ → Export** on My Projects, or **Save to cloud**.
+
+## User guide
+
+| Section                                                                 | What's in it                                             |
+| ----------------------------------------------------------------------- | -------------------------------------------------------- |
+| [Getting started](docs/userguide/01-getting-started.md)                 | Projects and assets, finding your way around, saving     |
+| [Projects](docs/userguide/02-projects.md)                               | My Projects, the Project Worksheet, palettes, imports    |
+| [Drawing on the grids](docs/userguide/03-drawing-on-the-grids.md)       | Tools, gestures, undo, Zen mode, gamepads, small screens |
+| [Sprites](docs/userguide/04-sprites.md)                                 | Multicolour, overlays, animation                         |
+| [Characters](docs/userguide/05-characters.md)                           | Charset modes, PETSCII, ECM, bitmap tiles, attributes    |
+| [Screens](docs/userguide/06-screens.md)                                 | Brushes, block brushes, big maps, the Navigator          |
+| [Tracing paper](docs/userguide/07-tracing-paper.md)                     | Drawing over reference images, tracing chars             |
+| [Run and export](docs/userguide/08-run-and-export.md)                   | The built-in C64 and every export format                 |
+| [Moving projects between devices](docs/userguide/09-moving-projects.md) | Project files and the cloud                              |
+| [C64 graphics basics](docs/userguide/10-c64-graphics-basics.md)         | The hardware rules behind the worksheets, and a glossary |
+
+## More
+
+- [Using sprite exports in KickAssembler](docs/kickass-sprites.md)
+- [Using charset and map exports in KickAssembler](docs/kickass-chars.md)
+- [Setting up a DigitalOcean Space for the cloud](docs/cloud.md)
+- [Developing C64-Pad](docs/development.md): tests, linting, Android builds
