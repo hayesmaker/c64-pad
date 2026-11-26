@@ -1,7 +1,8 @@
 /**
- * Reader for Aseprite's .aseprite / .ase files: just what the tileset + tilemap
- * importer needs (layers, cels, tilesets, palette, user data of the first
- * frame's objects). Spec: aseprite/docs/ase-file-specs.md.
+ * Reader for Aseprite's .aseprite / .ase files: what the importers need
+ * (layers, cels with their pixels or tilemaps, tilesets, palette, tags, frame
+ * durations, user data of the first frame's objects).
+ * Spec: aseprite/docs/ase-file-specs.md.
  */
 
 export class AsepriteError extends Error {
@@ -21,7 +22,12 @@ export interface AseLayer {
   readonly index: number
   readonly name: string
   readonly kind: 'image' | 'group' | 'tilemap'
+  /** The layer's own eye; see `layerShown` for groups. */
   readonly visible: boolean
+  /** Nesting depth: a layer belongs to the nearest layer above it one level up. */
+  readonly childLevel: number
+  /** 0-255. */
+  readonly opacity: number
   /** Tilemap layers: index of their tileset. */
   readonly tilesetIndex?: number
   readonly userData?: string
@@ -52,14 +58,38 @@ export interface AseTilemap {
   readonly flipped: number
 }
 
+export interface AseImage {
+  readonly width: number
+  readonly height: number
+  /** RGBA, row-major. */
+  readonly pixels: Uint8ClampedArray
+}
+
 export interface AseCel {
   readonly frame: number
   readonly layer: number
   /** Position on the canvas in pixels. */
   readonly x: number
   readonly y: number
+  /** 0-255. */
+  readonly opacity: number
   readonly kind: 'image' | 'linked' | 'tilemap'
   readonly tilemap?: AseTilemap
+  /** Image cels. */
+  readonly image?: AseImage
+  /** Linked cels: the frame whose cel (same layer) this one shows. */
+  readonly linkedFrame?: number
+}
+
+export type TagDirection =
+  'forward' | 'reverse' | 'pingpong' | 'pingpong-reverse'
+
+/** A named run of frames, e.g. "walk" (frames 0-3). */
+export interface AseTag {
+  readonly name: string
+  readonly from: number
+  readonly to: number
+  readonly direction: TagDirection
 }
 
 export interface AsepriteDoc {
@@ -67,12 +97,47 @@ export interface AsepriteDoc {
   readonly height: number
   readonly depth: ColorDepth
   readonly frames: number
+  /** Duration of each frame in milliseconds. */
+  readonly durations: ReadonlyArray<number>
+  /**
+   * Pixel shape, width : height. 2:1 is Aseprite's double-wide pixel mode,
+   * as used for C64 multicolour art.
+   */
+  readonly pixelRatio: readonly [number, number]
   /** Indexed images: the palette entry drawn as transparent. */
   readonly transparentIndex: number
   readonly palette: ReadonlyArray<Rgba>
   readonly layers: ReadonlyArray<AseLayer>
   readonly tilesets: ReadonlyArray<AseTileset>
   readonly cels: ReadonlyArray<AseCel>
+  readonly tags: ReadonlyArray<AseTag>
+}
+
+/** Visible, with every group it's in visible too. */
+export function layerShown(doc: Pick<AsepriteDoc, 'layers'>, index: number) {
+  let level = Infinity
+  for (let i = index; i >= 0; i--) {
+    const layer = doc.layers[i]
+    if (layer.childLevel >= level) continue
+    if (!layer.visible) return false
+    level = layer.childLevel
+    if (level === 0) break
+  }
+  return true
+}
+
+/** The cel a layer shows in a frame, following links. */
+export function celAt(
+  doc: Pick<AsepriteDoc, 'cels'>,
+  frame: number,
+  layer: number,
+): AseCel | undefined {
+  const cel = doc.cels.find((c) => c.frame === frame && c.layer === layer)
+  if (cel?.kind !== 'linked' || cel.linkedFrame === undefined) return cel
+  const target = doc.cels.find(
+    (c) => c.frame === cel.linkedFrame && c.layer === layer,
+  )
+  return target && { ...target, frame, x: target.x, y: target.y }
 }
 
 const FILE_MAGIC = 0xa5e0
@@ -84,8 +149,16 @@ const CHUNK = {
   cel: 0x2005,
   palette: 0x2019,
   userData: 0x2020,
+  tags: 0x2018,
   tileset: 0x2023,
 } as const
+
+const TAG_DIRECTIONS: ReadonlyArray<TagDirection> = [
+  'forward',
+  'reverse',
+  'pingpong',
+  'pingpong-reverse',
+]
 
 /** Inflate zlib data with the platform's DecompressionStream. */
 async function inflate(data: Uint8Array): Promise<Uint8Array> {
@@ -203,6 +276,11 @@ export async function parseAseprite(bytes: Uint8Array): Promise<AsepriteDoc> {
   }
   const layersHaveUuid = (r.view.getUint32(14, true) & 4) !== 0
   const transparentIndex = r.view.getUint8(28)
+  const ratioW = r.view.getUint8(34)
+  const ratioH = r.view.getUint8(35)
+  // 0 means "square" in older files.
+  const pixelRatio: readonly [number, number] =
+    ratioW && ratioH ? [ratioW, ratioH] : [1, 1]
   r.pos = 128
 
   const palette: Array<Rgba> = []
@@ -210,6 +288,15 @@ export async function parseAseprite(bytes: Uint8Array): Promise<AsepriteDoc> {
   const layers: Array<AseLayer> = []
   const tilesets: Array<PendingTileset> = []
   const cels: Array<AseCel> = []
+  const tags: Array<AseTag> = []
+  const durations: Array<number> = []
+  const pendingImages: Array<{
+    cel: Omit<AseCel, 'image'>
+    width: number
+    height: number
+    data: Uint8Array
+    compressed: boolean
+  }> = []
   const pendingTilemaps: Array<{
     cel: Omit<AseCel, 'tilemap'>
     width: number
@@ -232,7 +319,8 @@ export async function parseAseprite(bytes: Uint8Array): Promise<AsepriteDoc> {
     const frameSize = r.u32()
     if (r.u16() !== FRAME_MAGIC) throw new AsepriteError('Damaged frame')
     const oldChunks = r.u16()
-    r.skip(4) // duration, reserved
+    durations.push(r.u16())
+    r.skip(2) // reserved
     const newChunks = r.u32()
     const chunkCount = newChunks || oldChunks
 
@@ -270,7 +358,10 @@ export async function parseAseprite(bytes: Uint8Array): Promise<AsepriteDoc> {
       } else if (type === CHUNK.layer) {
         const flags = r.u16()
         const kindCode = r.u16()
-        r.skip(2 + 2 + 2 + 2 + 1 + 3) // child level, size, blend, opacity, reserved
+        const childLevel = r.u16()
+        r.skip(2 + 2 + 2) // default size, blend mode
+        const opacity = r.u8()
+        r.skip(3)
         const name = r.string()
         const kind =
           kindCode === 1 ? 'group' : kindCode === 2 ? 'tilemap' : 'image'
@@ -281,6 +372,8 @@ export async function parseAseprite(bytes: Uint8Array): Promise<AsepriteDoc> {
           name,
           kind,
           visible: (flags & 1) !== 0,
+          childLevel,
+          opacity,
           tilesetIndex,
         })
         target = { kind: 'layer', index: layers.length - 1 }
@@ -288,10 +381,10 @@ export async function parseAseprite(bytes: Uint8Array): Promise<AsepriteDoc> {
         const layer = r.u16()
         const x = r.i16()
         const y = r.i16()
-        r.skip(1) // opacity
+        const opacity = r.u8()
         const celType = r.u16()
         r.skip(2 + 5) // z-index, reserved
-        const base = { frame, layer, x, y }
+        const base = { frame, layer, x, y, opacity }
         if (celType === 3) {
           const w = r.u16()
           const h = r.u16()
@@ -312,8 +405,29 @@ export async function parseAseprite(bytes: Uint8Array): Promise<AsepriteDoc> {
             flipMask: xFlip | yFlip | diagonal,
             data: r.take(end - r.pos),
           })
-        } else {
-          cels.push({ ...base, kind: celType === 1 ? 'linked' : 'image' })
+        } else if (celType === 1) {
+          cels.push({ ...base, kind: 'linked', linkedFrame: r.u16() })
+        } else if (celType === 0 || celType === 2) {
+          const w = r.u16()
+          const h = r.u16()
+          pendingImages.push({
+            cel: { ...base, kind: 'image' },
+            width: w,
+            height: h,
+            data: r.take(end - r.pos),
+            compressed: celType === 2,
+          })
+        }
+        target = null
+      } else if (type === CHUNK.tags) {
+        const count = r.u16()
+        r.skip(8)
+        for (let i = 0; i < count; i++) {
+          const from = r.u16()
+          const to = r.u16()
+          const direction = TAG_DIRECTIONS[r.u8()] ?? 'forward'
+          r.skip(2 + 6 + 3 + 1) // repeat, reserved, colour, extra
+          tags.push({ name: r.string(), from, to, direction })
         }
         target = null
       } else if (type === CHUNK.tileset) {
@@ -375,6 +489,21 @@ export async function parseAseprite(bytes: Uint8Array): Promise<AsepriteDoc> {
     })
   }
 
+  for (const t of pendingImages) {
+    const raw = t.compressed ? await inflate(t.data) : t.data
+    const pixels = toRgba(raw, depth, palette, transparentIndex)
+    if (pixels.length < t.width * t.height * 4)
+      throw new AsepriteError('Damaged image')
+    cels.push({
+      ...t.cel,
+      image: {
+        width: t.width,
+        height: t.height,
+        pixels: pixels.subarray(0, t.width * t.height * 4),
+      },
+    })
+  }
+
   for (const t of pendingTilemaps) {
     const raw = await inflate(t.data)
     const n = t.width * t.height
@@ -398,10 +527,13 @@ export async function parseAseprite(bytes: Uint8Array): Promise<AsepriteDoc> {
     height,
     depth,
     frames,
+    durations,
+    pixelRatio,
     transparentIndex,
     palette,
     layers,
     tilesets: finishedTilesets,
     cels,
+    tags,
   }
 }

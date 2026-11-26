@@ -215,11 +215,46 @@ export function analyseColours(
   projectPalette: PaletteId,
 ): ColourReport {
   const px = tileset.pixels ?? new Uint8ClampedArray()
+  const size = TILE_SIZE * TILE_SIZE * 4
+  const images = Array.from({ length: tileset.count }, (_, t) => {
+    const tile = new Uint8ClampedArray(size)
+    tile.set(px.subarray(t * size, (t + 1) * size))
+    return tile
+  })
+  // Tile 0 is Aseprite's empty tile; it doesn't say anything.
+  const { images: tiles, ...rest } = analysePixels(
+    doc,
+    images,
+    projectPalette,
+    (t) => t > 0,
+  )
+  return { ...rest, tiles }
+}
+
+export type PixelReport = Omit<ColourReport, 'tiles'> & {
+  /** Per image, one C64 colour index per pixel; -1 = transparent. */
+  readonly images: ReadonlyArray<Int8Array>
+}
+
+/**
+ * Read RGBA images as C64 colours: match the colours to a palette (the
+ * project's, or one the file uses exactly or nearly), then map each pixel.
+ * `countsTransparent(i)` says whether image i's transparent pixels mean the
+ * art has a see-through background (default: every image).
+ */
+export function analysePixels(
+  doc: Pick<AsepriteDoc, 'depth' | 'palette' | 'transparentIndex'>,
+  images: ReadonlyArray<Uint8ClampedArray>,
+  projectPalette: PaletteId,
+  countsTransparent: (image: number) => boolean = () => true,
+): PixelReport {
   const distinct = new Map<number, readonly [number, number, number]>()
-  for (let i = 0; i < px.length; i += 4) {
-    if (px[i + 3] < 128) continue
-    const key = (px[i] << 16) | (px[i + 1] << 8) | px[i + 2]
-    distinct.set(key, [px[i], px[i + 1], px[i + 2]])
+  for (const px of images) {
+    for (let i = 0; i < px.length; i += 4) {
+      if (px[i + 3] < 128) continue
+      const key = (px[i] << 16) | (px[i + 1] << 8) | px[i + 2]
+      distinct.set(key, [px[i], px[i + 1], px[i + 2]])
+    }
   }
   const colors = [...distinct.values()]
   const matches = matchPalette(colors)
@@ -245,22 +280,20 @@ export function analyseColours(
     if (distance > NEAR_DISTANCE) guessed.push(hex(...rgb))
   }
 
-  const pixelsPerTile = TILE_SIZE * TILE_SIZE
-  const tiles: Array<Int8Array> = []
   let transparent = false
-  for (let t = 0; t < tileset.count; t++) {
-    const tile = new Int8Array(pixelsPerTile)
-    for (let i = 0; i < pixelsPerTile; i++) {
-      const o = (t * pixelsPerTile + i) * 4
-      if (o + 3 >= px.length || px[o + 3] < 128) {
-        tile[i] = -1
-        // Tile 0 is Aseprite's empty tile; it doesn't say anything.
-        if (t > 0) transparent = true
+  const out: Array<Int8Array> = []
+  for (const [n, px] of images.entries()) {
+    const image = new Int8Array(px.length / 4)
+    for (let i = 0; i < image.length; i++) {
+      const o = i * 4
+      if (px[o + 3] < 128) {
+        image[i] = -1
+        if (countsTransparent(n)) transparent = true
       } else {
-        tile[i] = lookup.get((px[o] << 16) | (px[o + 1] << 8) | px[o + 2])!
+        image[i] = lookup.get((px[o] << 16) | (px[o + 1] << 8) | px[o + 2])!
       }
     }
-    tiles.push(tile)
+    out.push(image)
   }
   // Indexed files draw transparent pixels in the transparent index's colour
   // (e.g. Rainbow Islands' orange): that's the background, if it's a C64 one.
@@ -279,7 +312,7 @@ export function analyseColours(
     worst,
     matches,
     guessed,
-    tiles,
+    images: out,
     transparent,
     fileBackground,
   }

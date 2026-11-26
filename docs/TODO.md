@@ -138,6 +138,7 @@ Plan: [`docs/aseprite-import.md`](aseprite-import.md)
 
 - [x] Part 1: per-project colour palette (Colodore default; Pepto, VICE, CCS64, Frodo, C64HQ, Community Colors): palette tables, project field with v2 migration, rendering via `usePalette`, selector on the Project Worksheet
 - [x] Part 2: Aseprite import on the Project Worksheet: parser, validator (tileset + tilemap gate, palette match, C64 colour fit), converter to charset + map, import dialog (fixtures in `src/import/aseprite/__fixtures__/`)
+- [x] Part 3: Aseprite sprites: image layers flattened per frame and cut into 24×21 cells (one sprite per frame, or a sheet; 2:1 pixel ratio = 12×21 multicolour), empty cells dropped and repeats shared; shared MC1 / MC2 fitted so the most sprites are exact as hires, multicolour or multicolour + hi-res overlay (`c64/sprite-fit.ts`); tags → animations (direction → loop / ping-pong, durations → speed); an opaque background's corner colour is read as see-through. “Import as” picks when a file has both a tilemap and images
 
 ### M11: Refactor and hardening
 

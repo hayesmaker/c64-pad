@@ -1,9 +1,9 @@
 import { useMemo, useState } from 'react'
 import { addAsset, setProjectPalette } from '@/c64/project'
-import { COLOR_NAMES, PALETTES } from '@/c64/palette'
+import { COLOR_NAMES } from '@/c64/palette'
 import { renderCharsetSheet } from '@/c64/render'
 import { IndexedCanvas } from '@/components/c64/indexed-canvas'
-import { PaletteScope, usePalette } from '@/components/c64/palette-context'
+import { PaletteScope } from '@/components/c64/palette-context'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -14,11 +14,6 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import {
   Select,
   SelectContent,
   SelectItem,
@@ -27,11 +22,11 @@ import {
 } from '@/components/ui/select'
 import { Segmented } from '@/editor/segmented'
 import { CheckLine, Note, ReportSection } from '@/components/report'
-import { ColorMenuGrid } from '@/components/c64/color-menu-grid'
 import { tileAttributes } from './attributes'
 import { baseName, buildCharset, buildMap, uniqueName } from './convert'
 import { analyseColours, checkStructure, fitCharset, mapSize } from './validate'
-import type { C64Color } from '@/c64/palette'
+import { SpriteImport } from './sprite-import'
+import { PaletteSection, RegisterPicker, canSwitchTo } from './import-parts'
 import type { Project } from '@/c64/project'
 import type { AsepriteDoc } from './parse'
 import type { FitChoice } from './validate'
@@ -44,9 +39,10 @@ export type AsepriteFile =
 const MAX_LISTED = 6
 
 /**
- * Import an Aseprite tileset + tilemap as a new charset and screen map: checks
- * the file, matches its palette, fits the colours to the C64, previews the
- * charset and adds it. Nothing in the project is replaced.
+ * Import an Aseprite file: a tileset + tilemap as a new charset and screen
+ * map, or image layers as a new sprite set. Checks the file, matches its
+ * palette, fits the colours to the C64, previews the result and adds it.
+ * Nothing in the project is replaced.
  */
 export function ImportAsepriteDialog({
   file,
@@ -104,19 +100,58 @@ function depthLabel(doc: AsepriteDoc) {
       : 'RGBA'
 }
 
-function ImportBody({
-  fileName,
-  doc,
-  project,
-  onImport,
-  onCancel,
-}: {
+interface BodyProps {
   fileName: string
   doc: AsepriteDoc
   project: Project
   onImport: (change: (p: Project) => Project) => void
   onCancel: () => void
-}) {
+}
+
+type ImportKind = 'charset' | 'sprites'
+
+/**
+ * Tilemap layers import as a charset and screen; image layers as sprites.
+ * When a file has both, you choose.
+ */
+function ImportBody(props: BodyProps) {
+  const { doc } = props
+  const hasTilemap = doc.layers.some((l) => l.kind === 'tilemap')
+  const hasImages = doc.cels.some(
+    (c) => c.kind !== 'tilemap' && doc.layers[c.layer].kind === 'image',
+  )
+  const [kind, setKind] = useState<ImportKind>(
+    hasTilemap ? 'charset' : 'sprites',
+  )
+  return (
+    <div className="flex flex-col gap-5 text-sm">
+      {hasTilemap && hasImages && (
+        <Segmented
+          label="Import as"
+          value={kind}
+          options={[
+            { value: 'charset', label: 'Charset & screen (tilemap)' },
+            { value: 'sprites', label: 'Sprites (image layers)' },
+          ]}
+          onChange={setKind}
+        />
+      )}
+      {kind === 'charset' ? (
+        <CharsetImport {...props} />
+      ) : (
+        <SpriteImport {...props} />
+      )}
+    </div>
+  )
+}
+
+function CharsetImport({
+  fileName,
+  doc,
+  project,
+  onImport,
+  onCancel,
+}: BodyProps) {
   const [layerIndex, setLayerIndex] = useState<number | undefined>()
   const [choice, setChoice] = useState<FitChoice>({})
   const [switchPalette, setSwitchPalette] = useState(false)
@@ -150,10 +185,7 @@ function ImportBody({
     [colours, fit],
   )
 
-  const canSwitch =
-    !!colours &&
-    colours.palette !== project.palette &&
-    (colours.verdict === 'other-exact' || colours.verdict === 'near')
+  const canSwitch = !!colours && canSwitchTo(colours, project)
   const shownPalette =
     canSwitch && switchPalette ? colours.palette : project.palette
   const size = mapSize(doc)
@@ -182,7 +214,7 @@ function ImportBody({
   }
 
   return (
-    <div className="flex flex-col gap-5 text-sm">
+    <>
       <ReportSection title="File">
         <ul className="flex flex-col gap-1">
           {structure.checks.map((c) => (
@@ -226,39 +258,13 @@ function ImportBody({
 
       {colours && fit && sheet && (
         <>
-          <ReportSection title="Palette">
-            <p>{paletteText(colours, project.palette)}</p>
-            {canSwitch && (
-              <>
-                <Segmented
-                  label="Project palette"
-                  value={switchPalette ? 'switch' : 'keep'}
-                  options={[
-                    {
-                      value: 'switch',
-                      label: `Switch project to ${PALETTES[colours.palette].name}`,
-                    },
-                    {
-                      value: 'keep',
-                      label: `Keep ${PALETTES[project.palette].name}`,
-                    },
-                  ]}
-                  onChange={(v) => setSwitchPalette(v === 'switch')}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Both import the same chars and colours; this only changes how
-                  the whole project looks.
-                </p>
-              </>
-            )}
-            {colours.guessed.length > 0 && (
-              <Note>
-                No C64 palette is close to {colours.guessed.join(', ')}; they
-                were matched to the nearest {PALETTES[colours.palette].name}{' '}
-                colours.
-              </Note>
-            )}
-          </ReportSection>
+          <PaletteSection
+            colours={colours}
+            project={project}
+            canSwitch={canSwitch}
+            switchPalette={switchPalette}
+            onSwitchPalette={setSwitchPalette}
+          />
 
           <ReportSection title="C64 colours">
             <p>
@@ -378,7 +384,7 @@ function ImportBody({
           Import
         </Button>
       </DialogFooter>
-    </div>
+    </>
   )
 }
 
@@ -387,58 +393,6 @@ function listTiles(tiles: ReadonlyArray<number>) {
   return tiles.length > MAX_LISTED
     ? `${shown} and ${tiles.length - MAX_LISTED} more`
     : shown
-}
-
-function paletteText(
-  colours: NonNullable<ReturnType<typeof analyseColours>>,
-  project: Project['palette'],
-) {
-  const name = (id: Project['palette']) => PALETTES[id].name
-  switch (colours.verdict) {
-    case 'project':
-      return `The file uses the project's palette (${name(project)}).`
-    case 'other-exact':
-      return `The file uses the ${name(colours.palette)} palette; the project uses ${name(project)}.`
-    case 'near':
-      return `The file's colours are close to ${name(colours.palette)} (off by up to ${Math.round(colours.worst)}), and are read as ${name(colours.palette)} colours.`
-    case 'far':
-      return `The file's colours aren't close to any C64 palette; each is read as the nearest ${name(project)} colour.`
-  }
-}
-
-/** A VIC colour register: swatch button opening a 16-colour grid. */
-function RegisterPicker({
-  label,
-  value,
-  onChange,
-}: {
-  label: string
-  value: C64Color
-  onChange: (color: C64Color) => void
-}) {
-  const palette = usePalette()
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <button
-          type="button"
-          className="flex h-10 items-center gap-2 rounded-lg border border-rule px-3"
-          aria-label={`${label}: ${COLOR_NAMES[value]}`}
-        >
-          <span
-            aria-hidden="true"
-            className="size-5 rounded-[5px] border border-rule"
-            style={{ background: palette.hex[value] }}
-          />
-          <span className="text-xs text-muted-foreground">{label}</span>
-          {COLOR_NAMES[value]}
-        </button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-56">
-        <ColorMenuGrid value={value} onPick={onChange} />
-      </DropdownMenuContent>
-    </DropdownMenu>
-  )
 }
 
 /** Which tile tags become which char attributes. */
